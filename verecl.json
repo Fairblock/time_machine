@@ -1,0 +1,11 @@
+{
+    "version": 2,
+    "devCommand": "npm run dev",
+    "crons": [
+      {
+        "path": "/api/cron/update-deadline",
+        "schedule": "0 0 * * 5"
+      }
+    ]
+  }
+  

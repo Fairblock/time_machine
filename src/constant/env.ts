@@ -1,3 +1,5 @@
+import { supabase } from "@/lib/supabaseClient";
+
 export const isProd = process.env.NODE_ENV === 'production';
 export const isLocal = process.env.NODE_ENV === 'development';
 
@@ -15,6 +17,8 @@ export const PUBLIC_ENVIRONMENT = {
   NEXT_PUBLIC_ADMIN_ADDRESSES: process.env.NEXT_PUBLIC_ADMIN_ADDRESSES as string,
   NEXT_PUBLIC_VERCEL_GIT_COMMIT_REF: process.env.NEXT_PUBLIC_VERCEL_GIT_COMMIT_REF as string,
   NEXT_PUBLIC_GAME_URL: process.env.NEXT_PUBLIC_GAME_URL as string,
+  NEXT_PUBLIC_SUPABASE_URL: process.env.NEXT_PUBLIC_SUPABASE_URL as string,
+  NEXT_PUBLIC_SUPABASE_SERVICE_ROLE_KEY: process.env.SUPABASE_SERVICE_ROLE_KEY as string,
 };
 
 /* 
@@ -32,4 +36,6 @@ export const FAIRYRING_ENV = {
   chainID: PUBLIC_ENVIRONMENT.NEXT_PUBLIC_CHAIN_ID,
   faucetAddress: PUBLIC_ENVIRONMENT.NEXT_PUBLIC_FAUCET_ADDRESS,
   explorerUrl: PUBLIC_ENVIRONMENT.NEXT_PUBLIC_BLOCK_EXPLORER_URL,
+  supabase: PUBLIC_ENVIRONMENT.NEXT_PUBLIC_SUPABASE_URL,
+  supabaseKey: PUBLIC_ENVIRONMENT.NEXT_PUBLIC_SUPABASE_SERVICE_ROLE_KEY,
 };
