@@ -18,13 +18,7 @@ export default function Home() {
 
   return (
     <div className="relative min-h-screen font-sans">
-      <Image
-        src="/bgHome.png"
-        alt=""
-        fill
-        priority
-        className="object-cover -z-20"
-      />
+      <Image src="/bgHome.png" alt="" fill priority className="object-cover -z-20" />
 
       <Header />
 
@@ -81,8 +75,12 @@ export default function Home() {
             /* vertical lift keeps capsule above the fold on 13″ */
             md:-translate-y-16 lg:-translate-y-12 xl:-translate-y-10 2xl:-translate-y-10
 
-            /* stronger left shift on wider screens so it hugs the copy */
-            md:-translate-x-2 lg:-translate-x-4 xl:-translate-x-6 2xl:-translate-x-8
+            /* NEW: stronger *left* shift on ≥lg, ≥xl, ≥2xl */
+            md:-translate-x-2      /* 13″ (≤1023 px) – unchanged    */
+            lg:-translate-x-6      /* 1024‑1279 px                 */
+            xl:-translate-x-8      /* 1280‑1535 px  ← 14″ MBP      */
+            2xl:-translate-x-32    /* 1536‑1919 px  ← 14″ FHD      */
+            [2000px]:-translate-x-12 /* ultra‑wide                  */
           "
         >
           <Image
