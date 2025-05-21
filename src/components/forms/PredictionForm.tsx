@@ -193,7 +193,7 @@ export default function PredictionForm() {
 
   // 5️⃣ Render
   return (
-    <div className="relative min-h-[200px]">
+    <div className="relative">
       {submitted ? (
         <div className="text-green-600">✅ Prediction submitted!</div>
       ) : (
@@ -223,12 +223,12 @@ export default function PredictionForm() {
         </form>
       )}
 
-      {/* Loading overlay */}
-      {(isChecking || isSending) && (
-        <div className="absolute inset-0 z-10 flex items-center justify-center bg-white bg-opacity-50 backdrop-blur-sm">
-          <Loader2 className="animate-spin h-12 w-12" />
-        </div>
-      )}
+   {(isChecking || isSending) && (
+    <div className="absolute inset-0 z-10 grid place-items-center
+                  bg-[#F2F4F3]">
+    <Loader2 className="h-10 w-10 animate-spin text-gray-600" />
+     </div>
+   )}
     </div>
   );
 }

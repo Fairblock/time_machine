@@ -9,7 +9,7 @@ html, body {
 }
 @custom-variant dark (&:is(.dark *));
 .gradient-text {
-  background: linear-gradient(to bottom, #000000, #e7e5e5);
+  background: linear-gradient(to bottom, #000000, #b8b5b5);
   /* clip the background to the text glyphs… */
   -webkit-background-clip: text;
           background-clip: text;
