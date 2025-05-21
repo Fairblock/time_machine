@@ -5,7 +5,7 @@ import { supabase }     from '@/lib/supabaseClient'
 export async function GET() {
   const { data, error } = await supabase
     .from('deadlines')
-    .select('deadline_date, target_block')
+    .select('deadline_date, target_block, coingecko_id, symbol')
     .gt('deadline_date', new Date().toISOString())
     .order('deadline_date', { ascending: true })
     .limit(1)

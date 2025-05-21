@@ -110,19 +110,18 @@ export async function getOHLC(
   return (await res.json()) as [number, number, number, number, number][];
 }
 
-export async function fetchSolanaPriceAt(date: Date): Promise<number> {
+export async function fetchPriceAt(date: Date, token: string): Promise<number> {
   try {
-    // 1️⃣ Millisecond timestamps for the 24 h window
+ 
     const startMs = date.getTime()
     const endMs   = startMs + 24 * 60 * 60 * 1000
 
-    // 2️⃣ getPrices(startMs, endMs, 'solana') → Array<{ timestamp, price }>
-    const pricePoints = await getPrices(startMs, endMs, 'solana')
+   
+    const pricePoints = await getPrices(startMs, endMs, token)
 
-    // 3️⃣ return the first price (or 0 if none)
     return pricePoints[0]?.price ?? 0
   } catch (error) {
-    console.error(`Error fetching SOL price at ${date.toISOString()}:`, error)
+    console.error(`Error fetching token price at ${date.toISOString()}:`, error)
     return 0
   }
 }

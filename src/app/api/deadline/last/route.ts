@@ -6,7 +6,7 @@ export async function GET() {
   // 1️⃣ Query deadlines before “now”, order newest-first, take the top one
   const { data, error } = await supabase
     .from('deadlines')
-    .select('deadline_date, target_block')
+    .select('deadline_date, target_block, coingecko_id, symbol')
     .lt('deadline_date', new Date().toISOString())
     .order('deadline_date', { ascending: false })
     .limit(1)

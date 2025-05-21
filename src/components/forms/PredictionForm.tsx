@@ -15,6 +15,7 @@ import { Lock, Loader2 } from 'lucide-react';
 import { TxRaw, TxBody } from 'cosmjs-types/cosmos/tx/v1beta1/tx';
 import { MsgSubmitEncryptedTx } from '@/types/fairyring/codec/pep/tx';
 import { Buffer } from 'buffer';
+import { useActiveToken } from '@/hooks/useActiveToken';
 
 const MEMO = 'price-predict';
 const PER_PAGE = 100;
@@ -26,7 +27,7 @@ export default function PredictionForm() {
   const [isSending, setIsSending]   = useState(false);
   const [isChecking, setIsChecking] = useState(true);
   const [targetHeight, setTargetHeight] = useState<number | null>(null);
-
+  const { data: token, isLoading } = useActiveToken();
   const client = useClient();
   const { data: account } = useAccount();
   const address = account?.bech32Address;

@@ -1,13 +1,14 @@
 import { supabaseAdmin }         from '../lib/supabaseClient'
 import {  getLastFridayStart,
          getNextFridayDeadline } from '../lib/utils'
-import { fetchSolanaPriceAt }     from '../lib/utils'
+import { fetchPriceAt }     from '../lib/utils'
 import { useClient }                 from '../hooks/fairyring/useClient'
 import { useLastDeadline } from '@/hooks/useDeadline'
 
 async function run() {
-const {date, block, isLoading, isError } = useLastDeadline()
-  const actualPrice = await fetchSolanaPriceAt(date)
+const {date, block, coingecko, symbol, isLoading, isError } = useLastDeadline()
+
+  const actualPrice = await fetchPriceAt(date, coingecko)
   const client      = useClient()
   
   // 1) fetch all revealed predictions in window

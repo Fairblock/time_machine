@@ -1,6 +1,6 @@
 'use client';
 
-import SOLChart from '@/components/charts/SOLChart';
+import SOLChart from '@/components/charts/TokenChart';
 import CountdownTimer from '@/components/countdown-timer/CountdownTimer';
 import PredictionForm from '@/components/forms/PredictionForm';
 import { EVMProfile } from '@/components/profile/EVMProfile';

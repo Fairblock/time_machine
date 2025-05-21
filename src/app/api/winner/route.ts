@@ -7,7 +7,8 @@ import {
 } from '@/constant/events'
 import { getBlock } from '@/services/fairyring/block'
 
-import { getLastFridayStart, fetchSolanaPriceAt } from '@/lib/utils'
+import { getLastFridayStart, fetchPriceAt } from '@/lib/utils'
+import { useLastToken } from '@/hooks/useActiveToken'
 
 /* ── Supabase (service‑role key required) ─────────────────────────────── */
 const supabase = createClient(
@@ -70,33 +71,46 @@ async function fetchRevealedTxs(heights: number[]): Promise<RevealedTx[]> {
   return out
 }
 
+
+
+/** What the caller will receive */
+export interface LastTarget {
+  targetBlock : number
+  coingeckoId : string
+  symbol      : string
+}
+
 function calcScore(predicted: number, actual: number): number {
   const diff = Math.abs(predicted - actual)
   return Math.floor(1000 * Math.exp(-diff / 5))
 }
-async function fetchCurrentTargetHeight(): Promise<number> {
-  // table: target_heights (id serial, height int, created_at timestamptz default now())
+export async function fetchLastTarget(): Promise<LastTarget | null> {
   const { data, error } = await supabase
-  .from('deadlines')
-  .select('deadline_date, target_block')
-  .lt('deadline_date', new Date().toISOString())
-  .order('deadline_date', { ascending: false })
-  .limit(1)
+    .from('deadlines')
+    .select('deadline_date, target_block, coingecko_id, symbol')
+    .lt('deadline_date', new Date().toISOString())
+    .order('deadline_date', { ascending: false })
+    .limit(1)
+    .maybeSingle()        // automatically unwrap the first (or null)
 
-if (error) {
-  return -1
-}
+  if (error) {
+    console.error('Supabase error fetching current target:', error)
+    return null
+  }
 
-// 2️⃣ If there’s no past deadline yet, return null
-const last = data?.[0] || null
-console.log('last', last)
-return last.target_block
+  if (!data) return null     // no past deadlines yet
+
+  return {
+    targetBlock : data.target_block,
+    coingeckoId : data.coingecko_id,
+    symbol      : data.symbol,
+  }
 }
 /* ── API handler ─────────────────────────────────────────────────────── */
 export async function GET() {
   try {
-        const res = await fetchCurrentTargetHeight()
-        const targetHeight = Number(res)
+        const res = await fetchLastTarget()
+        const targetHeight = Number(res?.targetBlock)
         console.log('targetHeight', targetHeight)
     if (!targetHeight) {
       return NextResponse.json(
@@ -106,7 +120,8 @@ export async function GET() {
     }
 
     const lastFriday = getLastFridayStart()
-    const actualPrice = await fetchSolanaPriceAt(lastFriday)
+    
+    const actualPrice = await fetchPriceAt(lastFriday, res?.coingeckoId || '')
 
     // 1️⃣ Gather reveal events for this height
     const revealed = await fetchRevealedTxs([targetHeight])
