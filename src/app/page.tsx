@@ -40,7 +40,7 @@ export default function Home() {
             <span className="block">Encrypt&nbsp;It.</span>
           </h1>
 
-          <p className="text-base sm:text-lg md:text-xl text-gray-700">
+          <p className="text-base sm:text-lg md:text-2xl text-gray-700">
             Encrypt your price prediction.&nbsp;No one can see it, not even us.
             We’ll decrypt it next week.&nbsp;The closer you are, the more stars
             you earn.
