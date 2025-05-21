@@ -1,156 +1,116 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import Image from 'next/image';
+import Link  from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { FAIRYRING_ENV, PUBLIC_ENVIRONMENT } from '@/constant/env';
 import { useClient } from '@/hooks/fairyring/useClient';
 import { useKeysharePubKey } from '@/hooks/fairyring/useKeysharePubKey';
-import { getCurrentBlockHeight } from '@/services/fairyring/block';
 import { encryptSignedTx, signOfflineWithCustomNonce } from '@/services/fairyring/sign';
 import { Amount } from '@/types/fairyring';
 import { useAccount } from 'graz';
-import { Lock, Loader2 } from 'lucide-react';
-
+import { Lock, Loader2, X as CloseIcon } from 'lucide-react';
 import { TxRaw, TxBody } from 'cosmjs-types/cosmos/tx/v1beta1/tx';
 import { MsgSubmitEncryptedTx } from '@/types/fairyring/codec/pep/tx';
 import { Buffer } from 'buffer';
 import { useActiveToken } from '@/hooks/useActiveToken';
 
-const MEMO = 'price-predict';
-const PER_PAGE = 100;
-const RPC = FAIRYRING_ENV.rpcURL.replace(/^ws/, 'http');
+/* ---------- constants ------------------------------------------------ */
+const MEMO      = 'price-predict';
+const PER_PAGE  = 100;
+const RPC       = FAIRYRING_ENV.rpcURL.replace(/^ws/, 'http');
+const SHARE_URL = 'https://twitter.com/intent/tweet';
 
+/* ---------- component ------------------------------------------------ */
 export default function PredictionForm() {
-  const [prediction, setPrediction] = useState('');
-  const [submitted, setSubmitted]   = useState(false);
-  const [isSending, setIsSending]   = useState(false);
-  const [isChecking, setIsChecking] = useState(true);
+  /* form & tx state */
+  const [prediction,   setPrediction]   = useState('');
+  const [submitted,    setSubmitted]    = useState(false);
+  const [showModal,    setShowModal]    = useState(false);
+  const [isSending,    setIsSending]    = useState(false);
+  const [isChecking,   setIsChecking]   = useState(true);
   const [targetHeight, setTargetHeight] = useState<number | null>(null);
-  const { data: token, isLoading } = useActiveToken();
-  const client = useClient();
-  const { data: account } = useAccount();
-  const address = account?.bech32Address;
-  const { data: pubkey }  = useKeysharePubKey();
 
-  // 1️⃣ Fetch the upcoming auction’s target block
+  const { data: token }    = useActiveToken();
+  const client             = useClient();
+  const { data: account }  = useAccount();
+  const address            = account?.bech32Address;
+  const { data: pubkey }   = useKeysharePubKey();
+
+  /* 1️⃣ fetch upcoming target block ----------------------------------- */
   useEffect(() => {
-    async function fetchTarget() {
-      try {
-        const res = await fetch('/api/deadline/next');
-        if (!res.ok) throw new Error('Failed to fetch next deadline');
-        const { nextDeadline } = await res.json();
-        if (nextDeadline?.target_block != null) {
-          setTargetHeight(Number(nextDeadline.target_block));
-        }
-      } catch (err) {
-        console.error('Error fetching next deadline:', err);
-      }
-    }
-    fetchTarget();
+    fetch('/api/deadline/next')
+      .then(r => r.json())
+      .then(({ nextDeadline }) => {
+        if (nextDeadline?.target_block) setTargetHeight(+nextDeadline.target_block);
+      })
+      .catch(console.error);
   }, []);
 
-  // 2️⃣ Scan on-chain for a matching submission whenever wallet or target changes
+  /* 2️⃣ watch chain for already‑submitted txs -------------------------- */
   useEffect(() => {
     setSubmitted(false);
-    if (!address || targetHeight == null) {
-      setIsChecking(false);
-      return;
-    }
+    if (!address || targetHeight == null) { setIsChecking(false); return; }
     setIsChecking(true);
+
     let cancelled = false;
+    (async () => {
+      const lastRes   = await fetch('/api/deadline/last').then(r => r.json());
+      const cutoffBlk = Number(lastRes.lastDeadline?.target_block ?? 0);
+      const actionTag = "message.action='/fairyring.pep.MsgSubmitEncryptedTx'";
+      const query     = `%22${encodeURIComponent(actionTag)}%22`;
+      let page        = 1;
 
-    async function scanTxs() {
-      try {
-        // fetch the previous auction’s block to know where to stop
-        const lastRes = await fetch('/api/deadline/last').then(r => r.json());
-        const cutoffBlock = Number(lastRes.lastDeadline?.target_block ?? 0);
+      while (!cancelled) {
+        const res = await fetch(
+          `${RPC}/tx_search?query=${query}&order_by=%22desc%22&per_page=${PER_PAGE}&page=${page}`
+        ).then(r => r.json());
 
-        const actionTag = "message.action='/fairyring.pep.MsgSubmitEncryptedTx'";
-        const query     = `%22${encodeURIComponent(actionTag)}%22`;
-        let page = 1;
+        for (const row of res.result?.txs ?? []) {
+          if (+row.height <= cutoffBlk) return;
 
-        while (!cancelled) {
-          const url = `${RPC}/tx_search?query=${query}` +
-                      `&order_by=%22desc%22&per_page=${PER_PAGE}&page=${page}`;
-          const res = await fetch(url).then(r => r.json());
-          const txs = res.result?.txs || [];
+          const raw  = TxRaw.decode(Buffer.from(row.tx, 'base64'));
+          const body = TxBody.decode(raw.bodyBytes);
+          if (body.memo !== MEMO)            continue;
 
-          for (const row of txs) {
-            const height = Number(row.height);
+          const m = body.messages.find(m => m.typeUrl === '/fairyring.pep.MsgSubmitEncryptedTx');
+          if (!m)                             continue;
 
-            // stop as soon as we hit blocks at-or-before the last auction
-            if (height <= cutoffBlock) {
-              return;
-            }
-
-            // decode and filter
-            const raw  = TxRaw.decode(Buffer.from(row.tx, 'base64'));
-            const body = TxBody.decode(raw.bodyBytes);
-            if (body.memo !== MEMO) continue;
-
-            const anyMsg = body.messages.find(
-              m => m.typeUrl === '/fairyring.pep.MsgSubmitEncryptedTx'
-            );
-            if (!anyMsg) continue;
-
-            const msg = MsgSubmitEncryptedTx.decode(new Uint8Array(anyMsg.value));
-            if (
-              Number(msg.targetBlockHeight) === targetHeight &&
-              msg.creator === address
-            ) {
-              setSubmitted(true);
-              return;
-            }
+          const msg = MsgSubmitEncryptedTx.decode(new Uint8Array(m.value));
+          if (+msg.targetBlockHeight === targetHeight && msg.creator === address) {
+            setSubmitted(true); setShowModal(true); return;
           }
-
-          if (txs.length < PER_PAGE) break;
-          page++;
         }
-      } catch (err) {
-        console.error('Error scanning txs:', err);
-      } finally {
-        if (!cancelled) setIsChecking(false);
+        if ((res.result?.txs ?? []).length < PER_PAGE) break;
+        page++;
       }
-    }
+    })().finally(() => !cancelled && setIsChecking(false));
 
-    scanTxs();
     return () => { cancelled = true; };
   }, [address, targetHeight]);
 
-  // 3️⃣ Submit a new prediction on-chain
-  const submitOnChain = async (request: { prediction: number; startBlock: number }) => {
-    if (!address || targetHeight == null) {
-      console.error('Missing account or targetHeight');
-      return;
-    }
-
+  /* 3️⃣ submit on‑chain ------------------------------------------------ */
+  async function submitOnChain(pred: number) {
+    if (!address || targetHeight == null) return;
     setIsSending(true);
-    try {
-      // compute a fresh nonce
-      const { data: { pepNonce } } =
-        await client.FairyringPep.query.queryPepNonce(address);
-      let userSent = 0;
-      const { data: { encryptedTxArray } } =
-        await client.FairyringPep.query.queryEncryptedTxAll();
-      if (encryptedTxArray) {
-        for (const txs of encryptedTxArray) {
-          if (txs.encryptedTx) {
-            for (const tx of txs.encryptedTx) {
-              if (tx.creator === address) userSent++;
-            }
-          }
-        }
-      }
-      const nonceUsing = pepNonce?.nonce
-        ? parseInt(pepNonce.nonce) + userSent
-        : userSent;
 
-      // build the bank send, sign, and encrypt
-      const amount: Amount[] = [{ amount: '1', denom: 'ufairy' }];
-      const payload = { amount, toAddress: PUBLIC_ENVIRONMENT.NEXT_PUBLIC_FAUCET_ADDRESS!, fromAddress: address };
-      const memo    = JSON.stringify({ tag: MEMO, memo: request, payload });
-      const sendMsg = client.CosmosBankV1Beta1.tx.msgSend({ value: payload });
+    try {
+      /* fetch current nonce */
+      const { data: { pepNonce } } = await client.FairyringPep.query.queryPepNonce(address);
+      let sent = 0;
+      const { data: { encryptedTxArray } } = await client.FairyringPep.query.queryEncryptedTxAll();
+      encryptedTxArray?.forEach(txs =>
+        txs.encryptedTx?.forEach(tx => tx.creator === address && sent++)
+      );
+      const nonce = pepNonce?.nonce ? +pepNonce.nonce + sent : sent;
+
+      /* build + sign */
+      const amount: Amount[] = [{ denom: 'ufairy', amount: '1' }];
+      const payload          = { amount, fromAddress: address, toAddress: PUBLIC_ENVIRONMENT.NEXT_PUBLIC_FAUCET_ADDRESS! };
+      const memo             = JSON.stringify({ tag: MEMO, memo: { prediction: pred }, payload });
+      const sendMsg          = client.CosmosBankV1Beta1.tx.msgSend({ value: payload });
 
       const signed = await signOfflineWithCustomNonce(
         address,
@@ -159,43 +119,90 @@ export default function PredictionForm() {
         [sendMsg],
         { amount: [{ denom: 'ufairy', amount: '0' }], gas: '500000' },
         memo,
-        nonceUsing,
+        nonce
       );
 
-      const obPub = pubkey as any;
-      const expiry = obPub.activePubKey?.expiry;
-      const key = expiry && (Number(expiry) - targetHeight > 0)
-        ? obPub.activePubKey.publicKey
-        : obPub.queuedPubKey.publicKey;
-
+      /* encrypt & broadcast */
+      const key = (pubkey as any).activePubKey?.publicKey ?? (pubkey as any).queuedPubKey.publicKey;
       const encryptedHex = await encryptSignedTx(key, targetHeight, signed);
-      const txResult = await client.FairyringPep.tx.sendMsgSubmitEncryptedTx({
+      const txResult     = await client.FairyringPep.tx.sendMsgSubmitEncryptedTx({
         value: { creator: address, data: encryptedHex, targetBlockHeight: targetHeight },
-        fee:   { amount: [{ denom: 'ufairy', amount: '0' }], gas: '543210' },
-        memo: MEMO,
+        fee  : { amount: [{ denom: 'ufairy', amount: '0' }], gas: '543210' },
+        memo : MEMO,
       });
       if (txResult.code) throw new Error(txResult.rawLog);
 
       setSubmitted(true);
+      setShowModal(true);
     } catch (err) {
       console.error('Submission failed:', err);
       setSubmitted(false);
     } finally {
       setIsSending(false);
     }
-  };
+  }
 
-  // 4️⃣ Handle form submit
-  const handleSubmit = (e: React.FormEvent) => {
+  /* 4️⃣ form handler --------------------------------------------------- */
+  function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    submitOnChain({ prediction: parseFloat(prediction), startBlock: 0 });
-  };
+    submitOnChain(parseFloat(prediction));
+  }
 
-  // 5️⃣ Render
+  /* 5️⃣ modal UI ------------------------------------------------------- */
+  const tweetText = encodeURIComponent(
+    `I just encrypted my ${token?.symbol ?? ''} price prediction on @FairblockHQ. ` +
+    `Join the weekly game and earn stars!`
+  );
+  const tweetUrl  = `${SHARE_URL}?text=${tweetText}&url=${encodeURIComponent('https://fairblock.network')}`;
+
+  const Modal = () => (
+    <div className="fixed inset-0 z-50 grid place-items-center bg-black/40" onClick={() => setShowModal(false)}>
+      <div
+        onClick={(e) => e.stopPropagation()}
+        className="relative bg-white rounded-lg px-10 py-12 w-[90%] max-w-md text-center space-y-8"
+      >
+        {/* close button */}
+        <button
+          onClick={() => setShowModal(false)}
+          className="absolute top-4 right-4 text-gray-400 hover:text-gray-600"
+        >
+          <CloseIcon size={18} />
+        </button>
+
+        {/* shining stars (decor) */}
+        <div className="absolute inset-0 pointer-events-none bg-[url('/stars.png')] bg-contain bg-center" />
+
+        {/* X logo */}
+        <div className="relative z-10">
+          <Image src="/x-logo.png" alt="X logo" width={160} height={160} className="mx-auto" />
+        </div>
+
+        {/* text */}
+        <div className="relative z-10 space-y-2">
+          <p className="text-lg font-medium">Prediction encrypted</p>
+          <p className="text-xl">
+            Share on&nbsp;<span className="font-bold">X</span>&nbsp;to&nbsp;
+            <span className="font-bold text-indigo-600">earn 200&nbsp;points!</span>
+          </p>
+        </div>
+
+        {/* CTA */}
+        <Link
+          href={tweetUrl}
+          target="_blank"
+          className="relative z-10 inline-block bg-black text-white px-8 py-3 rounded-md font-semibold hover:bg-gray-900 transition-colors"
+        >
+          Share on X
+        </Link>
+      </div>
+    </div>
+  );
+
+  /* 6️⃣ render main ---------------------------------------------------- */
   return (
     <div className="relative">
       {submitted ? (
-        <div className="text-green-600">✅ Prediction submitted!</div>
+        <div className="text-green-600 text-center">✅ Prediction submitted!</div>
       ) : (
         <form
           onSubmit={handleSubmit}
@@ -223,12 +230,15 @@ export default function PredictionForm() {
         </form>
       )}
 
-   {(isChecking || isSending) && (
-    <div className="absolute inset-0 z-10 grid place-items-center
-                  bg-[#F2F4F3]">
-    <Loader2 className="h-10 w-10 animate-spin text-gray-600" />
-     </div>
-   )}
+      {/* loader */}
+      {(isChecking || isSending) && (
+        <div className="absolute inset-0 z-10 grid place-items-center bg-[#F2F4F3]">
+          <Loader2 className="h-10 w-10 animate-spin text-gray-600" />
+        </div>
+      )}
+
+      {/* success modal */}
+      {showModal && <Modal />}
     </div>
   );
 }
