@@ -6,7 +6,6 @@ import Link   from 'next/link';
 import Header from '@/components/header/Header';
 import { useActiveToken } from '@/hooks/useActiveToken';
 
-/* 1️⃣  token list */
 const TOKENS = [
   { id: 'solana',   symbol: 'SOL',  logo: '/sol.png'  },
   { id: 'bitcoin',  symbol: 'BTC',  logo: '/btc.png'  },
@@ -19,7 +18,6 @@ export default function Home() {
 
   return (
     <div className="relative min-h-screen font-sans">
-      {/* background ― full‑bleed */}
       <Image
         src="/bgHome.png"
         alt=""
@@ -30,19 +28,19 @@ export default function Home() {
 
       <Header />
 
-      {/* ── hero ─────────────────────────────────────────────────────── */}
       <section
         className="
           relative z-10
           flex flex-col-reverse md:flex-row items-start justify-between
-          gap-14 lg:gap-20
+          gap-12 lg:gap-20
           px-6 sm:px-10 lg:px-20 xl:px-28
-          pt-14 sm:pt-20 lg:pt-24 xl:pt-28
-          pb-24
+          pt-12 sm:pt-18 lg:pt-24 xl:pt-28
+          pb-16 sm:pb-20 lg:pb-24
+          overflow-hidden
         "
       >
-        {/* copy block */}
-        <div className="max-w-xl space-y-8">
+        {/* copy */}
+        <div className="max-w-xl space-y-6">
           <h1
             className="
               font-extrabold uppercase leading-tight text-gray-900
@@ -77,10 +75,14 @@ export default function Home() {
           className="
             relative
             w-full md:w-auto
-            max-w-[90vw]  sm:max-w-[70vw]
-            md:max-w-[48vw] lg:max-w-[40vw] xl:max-w-[35vw] 2xl:max-w-[450px]
-            md:-translate-y-10 lg:-translate-y-12
-            lg:-translate-x-4 xl:-translate-x-8 2xl:-translate-x-12
+            max-w-[90vw] sm:max-w-[70vw]
+            md:max-w-[50vw] lg:max-w-[44vw] xl:max-w-[38vw] 2xl:max-w-[450px]
+
+            /* vertical lift keeps capsule above the fold on 13″ */
+            md:-translate-y-16 lg:-translate-y-12 xl:-translate-y-10 2xl:-translate-y-10
+
+            /* stronger left shift on wider screens so it hugs the copy */
+            md:-translate-x-2 lg:-translate-x-4 xl:-translate-x-6 2xl:-translate-x-8
           "
         >
           <Image
@@ -89,7 +91,10 @@ export default function Home() {
             width={450}
             height={600}
             priority
-            className="w-full h-auto"
+            className="
+              w-full h-auto
+              max-h-[70vh] md:max-h-[70vh] lg:max-h-[80vh]
+            "
           />
 
           {/* vertical token rail */}
@@ -110,7 +115,7 @@ export default function Home() {
                   className={[
                     'rounded-full bg-white shadow transition-transform duration-200',
                     activeNow
-                      ? 'ring-2 ring-white/70 scale-110 w-12 h-12 lg:w-14 lg:h-14'
+                      ? 'ring-2 ring-white/70 scale-110 w-11 h-11 lg:w-14 lg:h-14'
                       : 'filter grayscale opacity-40 w-8 h-8 lg:w-10 lg:h-10',
                   ].join(' ')}
                 >
