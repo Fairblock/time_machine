@@ -9,11 +9,13 @@ import { getBlock } from '@/services/fairyring/block'
 
 import { getLastFridayStart, fetchPriceAt } from '@/lib/utils'
 import { useLastToken } from '@/hooks/useActiveToken'
-
+import { FAIRYRING_ENV } from '@/constant/env'
+const SUPABASE_URL  = FAIRYRING_ENV.supabase
+const SERVICE_KEY   = FAIRYRING_ENV.supabaseKey
 /* ── Supabase (service‑role key required) ─────────────────────────────── */
 const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
+  SUPABASE_URL!,
+  SERVICE_KEY!
 )
 
 type RevealedTx = {
@@ -29,7 +31,7 @@ type LeaderboardRow = {
 }
 
 /* ── Helpers ─────────────────────────────────────────────────────────── */
-async function fetchRevealedTxs(heights: number[]): Promise<RevealedTx[]> {
+export async function fetchRevealedTxs(heights: number[]): Promise<RevealedTx[]> {
   const out: RevealedTx[] = []
 
   for (const h of heights) {
