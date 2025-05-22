@@ -1,3 +1,4 @@
+/* app/prediction/page.tsx (or wherever you mount it) */
 'use client';
 
 import { useEffect, useState } from 'react';
@@ -17,15 +18,15 @@ import { MsgSubmitEncryptedTx } from '@/types/fairyring/codec/pep/tx';
 import { Buffer } from 'buffer';
 import { useActiveToken } from '@/hooks/useActiveToken';
 
-/* ---------- constants ------------------------------------------------ */
+/* ── constants ─────────────────────────────────────────────────────── */
 const MEMO      = 'price-predict';
 const PER_PAGE  = 100;
 const RPC       = FAIRYRING_ENV.rpcURL.replace(/^ws/, 'http');
 const SHARE_URL = 'https://twitter.com/intent/tweet';
 
-/* ---------- component ------------------------------------------------ */
+/* ── component ─────────────────────────────────────────────────────── */
 export default function PredictionForm() {
-  /* form & tx state */
+  /* form / tx state */
   const [prediction,   setPrediction]   = useState('');
   const [submitted,    setSubmitted]    = useState(false);
   const [showModal,    setShowModal]    = useState(false);
@@ -33,25 +34,25 @@ export default function PredictionForm() {
   const [isChecking,   setIsChecking]   = useState(true);
   const [targetHeight, setTargetHeight] = useState<number | null>(null);
 
-  const { data: token }    = useActiveToken();
-  const client             = useClient();
-  const { data: account }  = useAccount();
-  const address            = account?.bech32Address;
-  const { data: pubkey }   = useKeysharePubKey();
+  const { data: token }   = useActiveToken();
+  const client            = useClient();
+  const { data: account } = useAccount();
+  const address           = account?.bech32Address;
+  const { data: pubkey }  = useKeysharePubKey();
 
-  /* 1️⃣ fetch upcoming target block ----------------------------------- */
+  /* 1️⃣  upcoming deadline ------------------------------------------- */
   useEffect(() => {
     fetch('/api/deadline/next')
       .then(r => r.json())
-      .then(({ nextDeadline }) => {
-        if (nextDeadline?.target_block) setTargetHeight(+nextDeadline.target_block);
-      })
+      .then(({ nextDeadline }) =>
+        nextDeadline?.target_block && setTargetHeight(+nextDeadline.target_block)
+      )
       .catch(console.error);
   }, []);
 
-  /* 2️⃣ watch chain for already‑submitted txs -------------------------- */
+  /* 2️⃣  check if this wallet already submitted (no modal here) ------- */
   useEffect(() => {
-    setSubmitted(false);
+    setSubmitted(false);               // reset on address/height change
     if (!address || targetHeight == null) { setIsChecking(false); return; }
     setIsChecking(true);
 
@@ -59,8 +60,8 @@ export default function PredictionForm() {
     (async () => {
       const lastRes   = await fetch('/api/deadline/last').then(r => r.json());
       const cutoffBlk = Number(lastRes.lastDeadline?.target_block ?? 0);
-      const actionTag = "message.action='/fairyring.pep.MsgSubmitEncryptedTx'";
-      const query     = `%22${encodeURIComponent(actionTag)}%22`;
+      const tagQuery  = "message.action='/fairyring.pep.MsgSubmitEncryptedTx'";
+      const query     = `%22${encodeURIComponent(tagQuery)}%22`;
       let page        = 1;
 
       while (!cancelled) {
@@ -73,14 +74,15 @@ export default function PredictionForm() {
 
           const raw  = TxRaw.decode(Buffer.from(row.tx, 'base64'));
           const body = TxBody.decode(raw.bodyBytes);
-          if (body.memo !== MEMO)            continue;
+          if (body.memo !== MEMO) continue;
 
           const m = body.messages.find(m => m.typeUrl === '/fairyring.pep.MsgSubmitEncryptedTx');
-          if (!m)                             continue;
+          if (!m) continue;
 
           const msg = MsgSubmitEncryptedTx.decode(new Uint8Array(m.value));
           if (+msg.targetBlockHeight === targetHeight && msg.creator === address) {
-            setSubmitted(true); setShowModal(true); return;
+            setSubmitted(true);        // ✅ show “submitted” message
+            return;                    // 🚫 do NOT open modal here
           }
         }
         if ((res.result?.txs ?? []).length < PER_PAGE) break;
@@ -91,13 +93,13 @@ export default function PredictionForm() {
     return () => { cancelled = true; };
   }, [address, targetHeight]);
 
-  /* 3️⃣ submit on‑chain ------------------------------------------------ */
+  /* 3️⃣  submit a new encrypted tx (opens modal on success) ----------- */
   async function submitOnChain(pred: number) {
     if (!address || targetHeight == null) return;
     setIsSending(true);
 
     try {
-      /* fetch current nonce */
+      /* current nonce */
       const { data: { pepNonce } } = await client.FairyringPep.query.queryPepNonce(address);
       let sent = 0;
       const { data: { encryptedTxArray } } = await client.FairyringPep.query.queryEncryptedTxAll();
@@ -132,8 +134,8 @@ export default function PredictionForm() {
       });
       if (txResult.code) throw new Error(txResult.rawLog);
 
-      setSubmitted(true);
-      setShowModal(true);
+      setSubmitted(true);    // ✅ success banner
+      setShowModal(true);    // 🎉 open tweet modal only right now
     } catch (err) {
       console.error('Submission failed:', err);
       setSubmitted(false);
@@ -142,18 +144,18 @@ export default function PredictionForm() {
     }
   }
 
-  /* 4️⃣ form handler --------------------------------------------------- */
-  function handleSubmit(e: React.FormEvent) {
+  /* 4️⃣  form handler -------------------------------------------------- */
+  const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     submitOnChain(parseFloat(prediction));
-  }
+  };
 
-  /* 5️⃣ modal UI ------------------------------------------------------- */
+  /* 5️⃣  modal --------------------------------------------------------- */
   const tweetText = encodeURIComponent(
     `I just encrypted my ${token?.symbol ?? ''} price prediction on @FairblockHQ. ` +
     `Join the weekly game and earn stars!`
   );
-  const tweetUrl  = `${SHARE_URL}?text=${tweetText}&url=${encodeURIComponent('https://fairblock.network')}`;
+  const tweetUrl = `${SHARE_URL}?text=${tweetText}&url=${encodeURIComponent('https://fairblock.network')}`;
 
   const Modal = () => (
     <div className="fixed inset-0 z-50 grid place-items-center bg-black/40" onClick={() => setShowModal(false)}>
@@ -161,23 +163,16 @@ export default function PredictionForm() {
         onClick={(e) => e.stopPropagation()}
         className="relative bg-white rounded-lg px-10 py-12 w-[90%] max-w-md text-center space-y-8"
       >
-        {/* close button */}
-        <button
-          onClick={() => setShowModal(false)}
-          className="absolute top-4 right-4 text-gray-400 hover:text-gray-600"
-        >
+        <button onClick={() => setShowModal(false)} className="absolute top-4 right-4 text-gray-400 hover:text-gray-600">
           <CloseIcon size={18} />
         </button>
 
-        {/* shining stars (decor) */}
         <div className="absolute inset-0 pointer-events-none bg-[url('/stars.png')] bg-contain bg-center" />
 
-        {/* X logo */}
         <div className="relative z-10">
           <Image src="/x-logo.png" alt="X logo" width={160} height={160} className="mx-auto" />
         </div>
 
-        {/* text */}
         <div className="relative z-10 space-y-2">
           <p className="text-lg font-medium">Prediction encrypted</p>
           <p className="text-xl">
@@ -186,7 +181,6 @@ export default function PredictionForm() {
           </p>
         </div>
 
-        {/* CTA */}
         <Link
           href={tweetUrl}
           target="_blank"
@@ -198,7 +192,7 @@ export default function PredictionForm() {
     </div>
   );
 
-  /* 6️⃣ render main ---------------------------------------------------- */
+  /* 6️⃣  render -------------------------------------------------------- */
   return (
     <div className="relative">
       {submitted ? (
@@ -208,9 +202,7 @@ export default function PredictionForm() {
           onSubmit={handleSubmit}
           className="w-full max-w-md mx-auto flex flex-col items-center space-y-4"
         >
-          <label htmlFor="prediction" className="text-lg font-medium">
-            Your prediction in USD
-          </label>
+          <label htmlFor="prediction" className="text-lg font-medium">Your prediction in USD</label>
           <Input
             id="prediction"
             type="number"
@@ -230,14 +222,12 @@ export default function PredictionForm() {
         </form>
       )}
 
-      {/* loader */}
       {(isChecking || isSending) && (
         <div className="absolute inset-0 z-10 grid place-items-center bg-[#F2F4F3]">
           <Loader2 className="h-10 w-10 animate-spin text-gray-600" />
         </div>
       )}
 
-      {/* success modal */}
       {showModal && <Modal />}
     </div>
   );
