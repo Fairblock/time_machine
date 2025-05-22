@@ -8,6 +8,7 @@ type LeaderboardEntry = {
   totalPoints: number
   lastPrediction?: number
   lastPoints?: number
+  delta?: number | null
 }
 
 export default function LeaderboardDisplay() {
@@ -62,10 +63,8 @@ export default function LeaderboardDisplay() {
 
           <tbody>
             {entries.map((entry, idx) => {
-              const delta =
-                solPrice !== null && entry.lastPrediction !== undefined
-                  ? Math.abs(entry.lastPrediction - solPrice)
-                  : null
+              const delta = entry.delta
+                  
 
               return (
                 <tr key={entry.address} className={rowBg(idx)}>

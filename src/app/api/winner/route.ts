@@ -152,6 +152,7 @@ export async function GET() {
             total_score: r.totalPoints,
             last_week_guess: r.lastPrediction,
             last_week_score: r.lastPoints,
+            delta: Math.abs(r.lastPrediction - actualPrice)
           })),
           { onConflict: 'address' }
         )
@@ -161,7 +162,7 @@ export async function GET() {
     const { data, error } = await supabase
       .from('participants')
       .select(
-        'address,total_score,last_week_guess,last_week_score'
+        'address,total_score,last_week_guess,last_week_score,delta'
       )
       .order('total_score', { ascending: false })
 
@@ -176,6 +177,7 @@ export async function GET() {
       lastPoints: d.last_week_score
         ? Number(d.last_week_score)
         : undefined,
+      delta: d.delta ? Number(d.delta) : undefined,
     }))
 
     return NextResponse.json({
