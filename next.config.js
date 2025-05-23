@@ -2,7 +2,10 @@
 /** @type {import('next').NextConfig} */
 module.exports = {
   transpilePackages: ['fairyring-client-ts'],
-
+  images: {
+    // keep the defaults and add a 3840‑px breakpoint for 2×/3× monitors
+    deviceSizes: [640, 750, 828, 1080, 1200, 1920, 2560, 3840],
+  },
   typescript: {
     // ⚠️ allow builds even with type errors
     ignoreBuildErrors: true,
@@ -13,10 +16,3 @@ module.exports = {
     ignoreDuringBuilds: true,
   },
 }
-
-module.exports = {
-  images: {
-    // keep the defaults and add a 3840‑px breakpoint for 2×/3× monitors
-    deviceSizes: [640, 750, 828, 1080, 1200, 1920, 2560, 3840],
-  },
-};
