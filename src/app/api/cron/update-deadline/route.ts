@@ -44,12 +44,12 @@ async function pickNextToken() {
 
 /* ── 4. Date helpers ------------------------------------------------------------- */
 function getNextFridayDeadline(now = new Date()): Date {
-  const day            = now.getUTCDay()                      // 0‑6
-  const daysUntilFri   = ((5 + 7 - day) % 7) || 7            // next Friday
-  const next           = new Date(now)
-  next.setUTCDate(now.getUTCDate() + daysUntilFri)
-  next.setUTCHours(0, 0, 0, 0)                                // 00:00 UTC
-  return next
+  const day          = now.getUTCDay();
+  const daysUntilFri = ((5 + 7 - day) % 7) || 7;
+  const next         = new Date(now);
+  next.setUTCDate(   now.getUTCDate() + daysUntilFri );
+  next.setUTCHours(  23, 59, 0, 0 );   // ← 23:59 UTC on Friday
+  return next;  
 }
 
 /* ── 5. Handler ------------------------------------------------------------------ */
