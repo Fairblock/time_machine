@@ -14,7 +14,7 @@ const supabase = createClient(
 async function fetchLastDeadline() {
   const { data, error } = await supabase
     .from('deadlines')
-    .select('deadline_date, coingecko_id')
+    .select('deadline_date, coingecko_id, symbol')
     .lt('deadline_date', new Date().toISOString())
     .order('deadline_date', { ascending: false })
     .limit(1)
@@ -30,9 +30,9 @@ export async function GET() {
     /* 1️⃣  price for display (optional UI information) */
     const last      = await fetchLastDeadline()
     let lastPrice   = null
-
+   
     if (last) {
-      const friday  = new Date(last.deadline_date)
+      const friday  = new Date(last.deadline_date+"Z")
       lastPrice     = await fetchPriceAt(friday, last.coingecko_id)
     }
 
@@ -57,6 +57,8 @@ export async function GET() {
     return NextResponse.json({
       leaderboard,
       lastFridayPrice: lastPrice,
+      token          : last?.coingecko_id ?? null,
+      symbol         : last?.symbol ?? null,
     })
   } catch (err) {
     console.error(err)

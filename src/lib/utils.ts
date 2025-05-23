@@ -112,13 +112,13 @@ export async function getOHLC(
 
 export async function fetchPriceAt(date: Date, token: string): Promise<number> {
   try {
- 
+    console.log(`Fetching price for ${token} at ${date.toISOString()}`)
     const startMs = date.getTime()
     const endMs   = startMs + 24 * 60 * 60 * 1000
 
    
     const pricePoints = await getPrices(startMs, endMs, token)
-
+    console.log(`Price points for ${token}:`, pricePoints)
     return pricePoints[0]?.price ?? 0
   } catch (error) {
     console.error(`Error fetching token price at ${date.toISOString()}:`, error)

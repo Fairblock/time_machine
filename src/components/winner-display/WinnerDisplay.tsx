@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import axios from 'axios'
+import { useLastToken } from '../../hooks/useActiveToken';
 
 type LeaderboardEntry = {
   address: string
@@ -14,6 +15,8 @@ type LeaderboardEntry = {
 export default function LeaderboardDisplay() {
   const [entries, setEntries]   = useState<LeaderboardEntry[]>([])
   const [solPrice, setSolPrice] = useState<number | null>(null)
+  const [token, setToken] = useState<string | null>(null)
+  const [symbol, setSymbol] = useState<string | null>(null)
 
   /* ── fetch once on mount ─────────────────────────────────────────── */
   useEffect(() => {
@@ -21,6 +24,8 @@ export default function LeaderboardDisplay() {
       const { data } = await axios.get('/api/winner')
       setEntries(data.leaderboard)
       setSolPrice(data.lastFridayPrice)
+      setToken(data.token)
+      setSymbol(data.symbol)
     }
     fetchLeaderboard()
   }, [])
@@ -41,7 +46,7 @@ export default function LeaderboardDisplay() {
 
       {solPrice !== null && (
         <p className="text-sm text-center text-gray-600 mb-6">
-          Last Friday&nbsp;SOL&nbsp;Price:&nbsp;
+          Last Friday&nbsp;{symbol}&nbsp;Price:&nbsp;
           <span className="font-semibold">${solPrice}</span>
         </p>
       )}
