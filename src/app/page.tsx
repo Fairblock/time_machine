@@ -18,8 +18,15 @@ export default function Home() {
 
   return (
     <div className="relative min-h-screen font-sans">
-      <Image src="/bgHome.png" alt="" fill priority className="object-cover -z-20" />
-
+    <Image
+  src="/bgHome.png"
+  alt="Background"
+  fill                      /* keeps it responsive */
+  priority
+  quality={100}             /* <— no extra compression */
+  sizes="100vw"             /* always send full‑width */
+  className="object-cover -z-20"
+/>
       <Header />
 
       <section
@@ -42,14 +49,18 @@ export default function Home() {
             "
             style={{ textShadow: '0 4px 6px rgba(0,0,0,0.15)' }}
           >
-            <span className="block">Predict&nbsp;Price.</span>
-            <span className="block">Encrypt&nbsp;It.</span>
+            <span className="block">Predict&nbsp;Price</span>
+            <span className="block">Encrypt&nbsp;It</span>
           </h1>
 
           <p className="text-sm sm:text-base md:text-lg lg:text-xl text-gray-700">
-            Encrypt your price prediction.&nbsp;No one can see it, not even us.
-            We’ll decrypt it next week.&nbsp;The closer you are, the more stars
-            you earn.
+          Encrypt your price prediction. 
+          <br></br>
+No one can see it, not even us. 
+<br></br>
+We’ll decrypt it next week. 
+<br></br>
+The closer you are, the more points you earn.
           </p>
 
           <Link

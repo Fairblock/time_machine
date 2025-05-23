@@ -19,12 +19,14 @@ export default function Prediction() {
 
       {/* 🔥 Full‑screen background image (covers entire viewport) */}
       <Image
-        src="/bg.png"
-        alt=""                 // decorative
-        fill                   // object‑fit:cover; position:absolute; inset:0
-        className="object-cover -z-20"
-        priority               // load immediately
-      />
+  src="/bg.png"
+  alt="Background"
+  fill                      /* keeps it responsive */
+  priority
+  quality={100}             /* <— no extra compression */
+  sizes="100vw"             /* always send full‑width */
+  className="object-cover -z-20"
+/>
 
       {/* Foreground content starts here */}
       <Header />
