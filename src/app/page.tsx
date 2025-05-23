@@ -110,7 +110,7 @@ The closer you are, the more points you earn.
           <div
             className="
               absolute left-1/2 -translate-x-1/2
-              top-1/2 -translate-y-1/2
+              top-1/3 -translate-y-1/3
               flex flex-col items-center
               gap-3 lg:gap-4
             "
