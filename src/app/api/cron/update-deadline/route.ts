@@ -66,7 +66,7 @@ export async function GET() {
     const currentHt    = await getCurrentBlockHeight()
 
     const secondsUntil = Math.ceil((deadlineTime.getTime() - now.getTime()) / 1000)
-    const targetBlock  = currentHt + Math.ceil(secondsUntil / 1.5) // ≈1.5 s / block
+    const targetBlock  = currentHt + Math.ceil(secondsUntil / 1.6) // ≈1.6 s / block
 
     /* c. upsert row ----------------------------------------------------- */
     await supabase
