@@ -55,9 +55,11 @@ function getNextFridayDeadline(now = new Date()) {
 }
 
 /* ── Scoring helpers ────────────────────────────────────────────────── */
+const K = 10
 function calcScore(predicted: number, actual: number) {
-  const diff = Math.abs(predicted - actual)
-  return Math.floor(1000 * Math.exp(-diff / 5))
+  if (!actual) return 0
+  const pctDiff = Math.abs(predicted - actual) / actual          // ← normalized
+  return Math.floor(1000 * Math.exp(-pctDiff * K))
 }
 
 /* Read reveal events for one block height */
