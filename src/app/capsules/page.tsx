@@ -30,44 +30,69 @@ const PER_PAGE = 100
 const RPC      = FAIRYRING_ENV.rpcURL.replace(/^ws/, 'http')
 
 /* ───── UI card ──────────────────────────────────────────────────── */
+/* ───── helpers (unchanged) ─────────────────────────────────────── */
+const TOKEN_LOGOS: Record<string, string> = {
+  SOL : '/sol.png',
+  BTC : '/btc.png',
+  ETH : '/eth.png',
+  LINK: '/link.png',
+};
+const avatar = (addr: string) =>
+  `https://api.dicebear.com/9.x/identicon/svg?seed=${encodeURIComponent(addr)}`
+
+/* ───── stylish card ────────────────────────────────────────────── */
 function CapsuleCard({ creator, target, token, type, data, price }: Capsule) {
   const shortAddr = `${creator.slice(0, 6)}…${creator.slice(-4)}`
   const preview   =
     data && data.length > 64 ? `${data.slice(0, 64)}…` : data ?? ''
+  const logo = TOKEN_LOGOS[token.toUpperCase()] ?? null
+  const value = type === 'encrypted' ? preview : `$${price?.toLocaleString()}`
 
   return (
-    <div className="bg-white border border-gray-200 rounded-xl p-5 shadow-sm space-y-3">
+    <div className="rounded-3xl border border-gray-200 shadow-md overflow-hidden bg-gradient-to-b from-white to-gray-50">
       {/* header */}
-      <div className="flex items-center justify-between text-gray-600">
-        <div className="flex items-center gap-2">
-          <span className="text-lg">{type === 'encrypted' ? '🔒' : '🔓'}</span>
-          <span className="font-mono">{shortAddr}</span>
-        </div>
-        <div className="flex items-center gap-2">
-          <span className="text-xs bg-gray-100 rounded px-2 py-0.5">{token}</span>
-          <span className="text-xs bg-gray-100 rounded px-2 py-0.5">#{target}</span>
-        </div>
+      <div className="flex items-center gap-3 bg-[#F3F8FE] px-5 py-4">
+        <img src={avatar(creator)} alt="" className="h-11 w-11 rounded" />
+        <span className="font-mono text-sm text-gray-700">{shortAddr}</span>
       </div>
 
       {/* body */}
-      {type === 'encrypted' ? (
-        <>
-          <p className="font-mono text-xs break-all leading-relaxed">{preview}</p>
-          <p className="text-xs text-gray-400">Encrypted prediction</p>
-        </>
-      ) : (
-        <>
-          <div className="text-3xl font-bold">
-            <span className="bg-gradient-to-r from-gray-800 via-gray-700 to-gray-800 bg-clip-text text-transparent">
-              ${price?.toLocaleString()}
-            </span>
-          </div>
-          <p className="text-xs text-gray-500">Revealed price in USD for {token}</p>
-        </>
-      )}
+      <div className="p-5 space-y-3">
+        <p className="text-sm font-medium text-gray-600">Predicted price</p>
+
+        {/* value row */}
+        <div className="flex items-center justify-between bg-white/60 border border-gray-300 rounded-lg px-4 py-3">
+          {/* text */}
+          <span
+            className={
+              type === 'encrypted'
+                ? 'font-mono text-xs break-all leading-snug text-gray-700 max-w-[70%] mr-3'
+                : 'text-2xl font-semibold text-gray-900'
+            }
+          >
+            {value}
+          </span>
+
+          {/* icon */}
+          {logo && (
+            <Image
+              src={logo}
+              alt={token}
+              width={36}
+              height={36}
+              className="flex-shrink-0 rounded-full ring-2 ring-gray-200"
+            />
+          )}
+        </div>
+
+        {/* tiny footer */}
+        <div className="text-xs text-gray-400 text-right">#{target}</div>
+      </div>
     </div>
   )
 }
+
+
 
 /* ───── helper: fetch revealed txs ───────────────────────────────── */
 async function fetchRevealedTxs(heights: number[]) {
@@ -217,7 +242,7 @@ export default function CapsulesPage() {
     <div className="font-sans bg-gradient-to-b from-white to-gray-100 min-h-screen">
       <Header />
       <main className="max-w-6xl mx-auto px-4 py-10 space-y-6">
-        <h1 className="text-3xl font-bold text-center uppercase tracking-wide">Predictions</h1>
+        <h1 className="text-3xl font-bold text-center uppercase tracking-wide">Encrypted Capsules</h1>
 
         {/* tabs */}
         <div className="flex justify-center space-x-6 border-b pb-2 text-sm font-medium">

@@ -60,7 +60,7 @@ function Header() {
           {/* nav (desktop only) */}
           <nav className="hidden md:flex flex-grow justify-center space-x-45">
             <Link href="/prediction"  className="text-gray-600 hover:text-gray-900 whitespace-nowrap">Encrypt Prediction</Link>
-            <Link href="/capsules"    className="text-gray-600 hover:text-gray-900 whitespace-nowrap">Predictions</Link>
+            <Link href="/capsules"    className="text-gray-600 hover:text-gray-900 whitespace-nowrap">Encrypted Capsules</Link>
             <Link href="/leaderboard" className="text-gray-600 hover:text-gray-900 whitespace-nowrap">Leaderboard</Link>
             <a   href="https://testnet-faucet.fairblock.network/" target="_blank" rel="noreferrer"
                  className="text-gray-600 hover:text-gray-900 whitespace-nowrap">
