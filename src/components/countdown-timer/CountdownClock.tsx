@@ -29,14 +29,14 @@ export default function CountdownCard() {
           Remaining time for Prediction
         </p>
         <p className="text-sm text-gray-500 mt-2">
-          Unlocks weekly on Fridays at 23:59 UTC.
+          Unlocks weekly on Fridays around 23:59 UTC.
         </p>
       </div>
 
       {/* Clock image with number overlay */}
-      <div className="relative w-32 h-32 md:w-54 md:h-54">
+      <div className="relative w-32 h-32 md:w-40 md:h-40">
         <Image
-          src="/clock.png"
+          src="/Timer.png"
           alt="Clock"
           fill
           className="object-contain"
