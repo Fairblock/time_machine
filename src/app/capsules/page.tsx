@@ -45,11 +45,12 @@ const TOKEN_LOGOS: Record<string, string> = {
 const avatar = (addr: string) =>
   `https://api.dicebear.com/9.x/identicon/svg?seed=${encodeURIComponent(addr)}`
 
+/* ───── capsule card ─────────────────────────────────────────────── */
+
 function CapsuleCard({ creator, target, token, type, data, price }: Capsule) {
   const shortAddr = `${creator.slice(0, 6)}…${creator.slice(-4)}`
-  const preview   = data && data.length > 64 ? `${data.slice(0, 64)}…` : data ?? ''
-  const logo  = TOKEN_LOGOS[token.toUpperCase()] ?? null
-  const value = type === 'encrypted' ? preview : `$${price?.toLocaleString()}`
+  const tail      = data ? `…${data.slice(-6)}` : '—'
+  const logo      = TOKEN_LOGOS[token.toUpperCase()] ?? null
 
   return (
     <div className="rounded-3xl border border-gray-200 shadow-md overflow-hidden bg-gradient-to-b from-white to-gray-50">
@@ -62,31 +63,44 @@ function CapsuleCard({ creator, target, token, type, data, price }: Capsule) {
       {/* body */}
       <div className="p-5 space-y-3">
         <p className="text-sm font-medium text-gray-600">Predicted price</p>
-        <div className="flex items-center justify-between bg-white/60 border border-gray-300 rounded-lg px-4 py-3">
-          <span
-            className={
-              type === 'encrypted'
-                ? 'font-mono text-xs break-all leading-snug text-gray-700 max-w-[70%] mr-3'
-                : 'text-2xl font-semibold text-gray-900'
-            }
-          >
-            {value}
-          </span>
+
+        {/* value box */}
+        <div className="relative flex items-center bg-white/60 border border-gray-300 rounded-lg px-4 py-3">
+          {type === 'encrypted' ? (
+            <>
+              <span className="font-mono text-xs text-gray-500 max-w-[70%]">
+                {tail}
+              </span>
+              <span className="ml-auto inline-block rounded-full bg-gray-200 px-2 py-0.5 text-[10px] font-semibold text-gray-600">
+                Encrypted
+              </span>
+            </>
+          ) : (
+            <span className="mr-auto text-2xl font-semibold text-gray-900">
+              ${price?.toLocaleString()}
+            </span>
+          )}
+
+          {/* token logo (always sharp) */}
           {logo && (
             <Image
               src={logo}
               alt={token}
               width={36}
               height={36}
-              className="flex-shrink-0 rounded-full ring-2 ring-gray-200"
+              className="flex-shrink-0 rounded-full ring-2 ring-gray-200 ml-3"
             />
           )}
         </div>
+
         <div className="text-xs text-gray-400 text-right">#{target}</div>
       </div>
     </div>
   )
 }
+
+
+
 
 /* ───── revealed-tx helper (parallel & correct events) ─────────── */
 async function fetchRevealedTxs(heights: number[]) {
