@@ -12,28 +12,34 @@ const supabase = createClient(
 /* ───────────────────────────────────────────  helpers  */
 type TokenKey = 'SOL' | 'BTC' | 'ETH' | 'LINK'
 const TOKENS: TokenKey[] = ['SOL','BTC','ETH','LINK']
-const COL_PREFIX: Record<TokenKey,string> = { SOL:'sol', BTC:'btc', ETH:'eth', LINK:'link' }
+const COL_PREFIX: Record<TokenKey,string> = {
+  SOL:'sol', BTC:'btc', ETH:'eth', LINK:'link'
+}
 
 function ddmmyyyy(d: Date) {
   const pad = (n: number) => n.toString().padStart(2,'0')
   return `${pad(d.getUTCDate())}-${pad(d.getUTCMonth()+1)}-${d.getUTCFullYear()}`
 }
 
+/** Gather price / date / link / block for the most‑recent finished deadline of every token */
 async function collectTokenInfo() {
   const nowISO = new Date().toISOString()
 
-  /** meta per token we return to the FE */
-  const info: Record<TokenKey, { price:number|null, date:string|null, url:string|null }> = {
-    SOL:{price:null,date:null,url:null},
-    BTC:{price:null,date:null,url:null},
-    ETH:{price:null,date:null,url:null},
-    LINK:{price:null,date:null,url:null}
+  const info: Record<TokenKey, {
+    price : number|null
+    date  : string|null
+    url   : string|null
+    block : number|null
+  }> = {
+    SOL:{price:null,date:null,url:null,block:null},
+    BTC:{price:null,date:null,url:null,block:null},
+    ETH:{price:null,date:null,url:null,block:null},
+    LINK:{price:null,date:null,url:null,block:null}
   }
 
-  /* most recent finished deadline rows (max one per token) */
   const { data, error } = await supabase
     .from('deadlines')
-    .select('deadline_date, coingecko_id, symbol')
+    .select('deadline_date, coingecko_id, symbol, target_block')
     .lt('deadline_date', nowISO)
     .order('deadline_date', { ascending: false })
 
@@ -44,13 +50,19 @@ async function collectTokenInfo() {
     const sym = row.symbol as TokenKey
     if (seen.has(sym)) continue
 
-    const dateObj  = new Date(row.deadline_date + 'Z')
+    const dateObj  = new Date(row.deadline_date + 'Z')        // already 23:59 UTC
     const price    = await fetchPriceAt(dateObj, row.coingecko_id)
     const dateStr  = dateObj.toISOString()
-    const cgDate   = ddmmyyyy(dateObj)                  // dd‑mm‑yyyy for CG
+    const cgDate   = ddmmyyyy(dateObj)                        // dd‑mm‑yyyy
     const url      = `https://api.coingecko.com/api/v3/coins/${row.coingecko_id}/history?date=${cgDate}`
 
-    info[sym] = { price, date: dateStr, url }
+    info[sym] = {
+      price,
+      date : dateStr,
+      url,
+      block: row.target_block ? Number(row.target_block) : null
+    }
+
     seen.add(sym)
     if (seen.size === TOKENS.length) break
   }
@@ -58,10 +70,10 @@ async function collectTokenInfo() {
   return info
 }
 
-/* ───────────────────────────────────────────  API      */
+/* ───────────────────────────────────────────  API       */
 export async function GET() {
   try {
-    /* participants */
+    /* participants table */
     const { data, error } = await supabase
       .from('participants')
       .select(`
@@ -74,11 +86,12 @@ export async function GET() {
 
     if (error) throw error
 
-    /* boards */
+    /* global leaderboard */
     const overall = [...data]
       .sort((a,b) => Number(b.total_score) - Number(a.total_score))
       .map(r => ({ address:r.address, totalScore:Number(r.total_score) }))
 
+    /* per‑token boards */
     const board = (tok: TokenKey) => {
       const p = COL_PREFIX[tok]
       return data
@@ -99,12 +112,15 @@ export async function GET() {
       LINK: board('LINK')
     }
 
-    /* real prices + date + link */
+    /* price + date + link + block */
     const tokenInfo = await collectTokenInfo()
 
     return NextResponse.json({ overall, tokens, tokenInfo })
   } catch (err) {
     console.error(err)
-    return NextResponse.json({ error:'failed to fetch leaderboard' }, { status:500 })
+    return NextResponse.json(
+      { error:'failed to fetch leaderboard' },
+      { status:500 }
+    )
   }
 }
