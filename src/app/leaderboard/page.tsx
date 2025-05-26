@@ -1,118 +1,163 @@
 'use client'
 
 import { useAccount } from 'graz'
-import { useEffect, useState, useMemo } from 'react'
-import Header from '@/components/header/Header'
-import CountdownClock from '@/components/countdown-timer/CountdownClock'
-import LeaderboardDisplay from '@/components/winner-display/WinnerDisplay'
+import { useEffect, useMemo, useState } from 'react'
+import Header          from '@/components/header/Header'
+import CountdownClock  from '@/components/countdown-timer/CountdownClock'
 
-type LBRow = { address: string; totalPoints: number }
+type OverallRow = { address: string; totalScore: number }
+type TokenRow   = { address: string; guess: number; delta: number; score: number }
 
+type ApiResp = {
+  overall : OverallRow[]
+  tokens  : Record<'SOL'|'BTC'|'ETH'|'LINK', TokenRow[]>
+}
+
+const TOKENS    = ['SOL', 'BTC', 'ETH', 'LINK'] as const
+const SLIDES    = ['Overall', ...TOKENS] as const
+type SlideKey   = typeof SLIDES[number]
+
+/* ───────────────────────────────────  util */
+const shorten = (addr: string) => addr.slice(0, 6) + '…' + addr.slice(-4)
+
+/* ───────────────────────────────────  Page */
 export default function LeaderboardPage() {
   const { data: account } = useAccount()
 
-  /* ── local state for this wallet’s stats ─────────────────────────── */
-  const [rank, setRank] = useState<number | null>(null)
-  const [points, setPoints] = useState<number | null>(null)
-  const [loading, setLoading] = useState<boolean>(true)
+  const [active,   setActive]   = useState<SlideKey>('Overall')
+  const [loading,  setLoading]  = useState(true)
+  const [overall,  setOverall]  = useState<OverallRow[]>([])
+  const [tokens,   setTokens]   = useState<ApiResp['tokens']>({
+    SOL:[],BTC:[],ETH:[],LINK:[]
+  })
 
-  /* ── fetch leaderboard & find this user ─────────────────────────── */
+  /* fetch once */
   useEffect(() => {
-    if (!account?.bech32Address) {
-      setRank(null)
-      setPoints(null)
-      setLoading(false)
-      return
-    }
-
-    const fetchStats = async () => {
+    (async () => {
       setLoading(true)
       try {
-        const res  = await fetch('/api/winner', { cache: 'no-store' })
-        const json = await res.json()
-        if (!res.ok) throw new Error(json?.error || 'failed to fetch leaderboard')
+        const res = await fetch('/api/winner', { cache:'no-store' })
+        const js  = await res.json()
+        if (!res.ok) throw new Error(js?.error || 'fail')
 
-        const lb: LBRow[] = json.leaderboard
-        const idx = lb.findIndex(r => r.address === account.bech32Address)
-        if (idx !== -1) {
-          setRank(idx + 1)
-          setPoints(lb[idx].totalPoints)
-        } else {
-          setRank(null)
-          setPoints(null)
-        }
-      } catch (err) {
-        console.error(err)
-        setRank(null)
-        setPoints(null)
-      } finally {
-        setLoading(false)
-      }
-    }
+        setOverall(js.overall)
+        setTokens(js.tokens)
+      } catch (e) { console.error(e) }
+      finally     { setLoading(false) }
+    })()
+  }, [])
 
-    fetchStats()
-  }, [account?.bech32Address])
+  /* user’s rank & score from overall board */
+  const me = useMemo(() => {
+    if (!account?.bech32Address) return { rank:'—', points:'—' }
+    const idx = overall.findIndex(r => r.address === account.bech32Address)
+    return idx === -1
+      ? { rank:'—', points:'—' }
+      : { rank: idx+1, points: overall[idx].totalScore }
+  }, [overall, account?.bech32Address])
 
-  /* ── UI helpers ──────────────────────────────────────────────────── */
-  const truncated = account?.bech32Address
-    ? `${account.bech32Address.slice(0, 6)}…${account.bech32Address.slice(-4)}`
-    : 'Not connected'
-
-  const rankDisplay   = loading ? '—' : rank   ?? '—'
-  const pointsDisplay = loading ? '—' : points ?? '—'
-
-  /* ── fixed non-human style for all users ─────────────────────────── */
   const avatarUrl = useMemo(() => {
     if (!account?.bech32Address) return null
-    const version = '9.x'
-    const style   = 'identicon'            // <— same style for everyone
-    const seed    = encodeURIComponent(account.bech32Address)
-    return `https://api.dicebear.com/${version}/${style}/svg?seed=${seed}`
+    const seed = encodeURIComponent(account.bech32Address)
+    return `https://api.dicebear.com/9.x/identicon/svg?seed=${seed}`
   }, [account?.bech32Address])
 
+  /* pick rows for current slide */
+  const rows = active === 'Overall'
+    ? overall.map(r => ({
+        cols: [r.totalScore.toLocaleString()],
+        address: r.address
+      }))
+    : tokens[active as keyof typeof tokens].map(r => ({
+        cols: [
+          r.score.toLocaleString(),
+          r.guess.toLocaleString(),
+          r.delta.toLocaleString()
+        ],
+        address: r.address
+      }))
+
+  /* column headers per slide */
+  const headers: Record<SlideKey,string[]> = {
+    Overall: ['Total Pts'],
+    SOL:['Score','Guess','Δ'],
+    BTC:['Score','Guess','Δ'],
+    ETH:['Score','Guess','Δ'],
+    LINK:['Score','Guess','Δ']
+  }
+
   return (
-    <div className="font-sans bg-gradient-to-b from-white to-gray-100 min-h-screen">
+    <div className="font-sans bg-gray-50 min-h-screen">
       <Header />
-      <main className="flex flex-col items-center px-4 max-w-6xl mx-auto pt-12 space-y-12 w-full">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-8 w-full">
+
+      <main className="max-w-6xl mx-auto px-4 pt-12 space-y-12">
+        {/* top grid */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
           <CountdownClock />
 
-          <div className="bg-white rounded-xl shadow p-6 flex flex-col items-center justify-center border border-gray-200">
-            {avatarUrl ? (
-              <img
-                src={avatarUrl}
-                alt="User avatar"
-                className="rounded-full bg-gray-200 h-20 w-20 mb-4"
-              />
-            ) : (
-              <div className="rounded-full bg-gray-200 h-20 w-20 mb-4 flex items-center justify-center">
-                <span className="text-gray-500 text-xl font-mono">⚡</span>
-              </div>
-            )}
+          <div className="bg-white rounded-2xl shadow flex flex-col items-center p-8">
+            {avatarUrl
+              ? <img src={avatarUrl} alt="avatar" className="h-24 w-24 rounded-full mb-4" />
+              : <div className="h-24 w-24 rounded-full bg-gray-200 mb-4 flex items-center justify-center text-3xl">⚡</div>
+            }
+            <div className="text-lg font-medium break-all">
+              {account?.bech32Address ? shorten(account.bech32Address) : 'Not connected'}
+            </div>
 
-            <div className="text-lg font-semibold break-all">{truncated}</div>
-
-            <div className="flex justify-around w-full mt-4 border-t border-gray-200 pt-4 text-center">
-              <div>
-                <p className="text-sm text-gray-500">Your rank</p>
-                <p className="text-xl font-semibold">{rankDisplay}</p>
+            <div className="flex w-full mt-6 text-center border-t border-gray-200 pt-6">
+              <div className="flex-1">
+                <p className="text-gray-500 text-sm">Rank</p>
+                <p className="text-xl font-semibold">{loading ? '—' : me.rank}</p>
               </div>
-              <div>
-                <p className="text-sm text-gray-500">Points</p>
-                <p className="text-xl font-semibold">{pointsDisplay}</p>
+              <div className="flex-1">
+                <p className="text-gray-500 text-sm">Points</p>
+                <p className="text-xl font-semibold">{loading ? '—' : me.points}</p>
               </div>
             </div>
           </div>
         </div>
 
-        <section className="w-full bg-white rounded-xl shadow border border-gray-200 p-6">
-          <h2 className="text-2xl font-semibold mb-4">Leaderboard</h2>
-          <LeaderboardDisplay />
-          <div className="flex justify-center mt-6">
-            <button className="text-sm px-4 py-2 border rounded hover:bg-gray-100 transition">
-              Load more
+        {/* slide selector */}
+        <div className="flex justify-center gap-2">
+          {SLIDES.map(key => (
+            <button
+              key={key}
+              onClick={() => setActive(key)}
+              className={`px-4 py-1 rounded-full text-sm transition
+                ${active===key
+                  ? 'bg-gray-900 text-white'
+                  : 'bg-white text-gray-600 hover:bg-gray-100 shadow'
+                }`}
+            >
+              {key}
             </button>
-          </div>
+          ))}
+        </div>
+
+        {/* table */}
+        <section className="overflow-x-auto shadow ring-1 ring-gray-200 rounded-2xl bg-white">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="bg-gray-50 text-gray-600">
+                <th className="px-4 py-3 text-left">#</th>
+                <th className="px-4 py-3 text-left">Address</th>
+                {headers[active].map(h => (
+                  <th key={h} className="px-4 py-3 text-right">{h}</th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {rows.slice(0,50).map((r, i) => (
+                <tr key={r.address} className="odd:bg-white even:bg-gray-50">
+                  <td className="px-4 py-2">{i+1}</td>
+                  <td className="px-4 py-2 font-mono">{shorten(r.address)}</td>
+                  {r.cols.map((c, idx) => (
+                    <td key={idx} className="px-4 py-2 text-right tabular-nums">{c}</td>
+                  ))}
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </section>
       </main>
     </div>

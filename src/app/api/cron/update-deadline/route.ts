@@ -1,68 +1,73 @@
-// app/api/cron/update-deadline/route.ts
-import { NextResponse } from 'next/server'
-import { createClient } from '@supabase/supabase-js'
-import axios from 'axios'
-import {
-  REVEAL_EVENT_TYPES,
-  REVEAL_EVENT_ATTRS,
-} from '@/constant/events'
-import { getBlock } from '@/services/fairyring/block'
-import { getLastFridayStart, fetchPriceAt } from '@/lib/utils'
+import { NextResponse }  from 'next/server'
+import { createClient }  from '@supabase/supabase-js'
+import axios             from 'axios'
+
+import { REVEAL_EVENT_TYPES, REVEAL_EVENT_ATTRS } from '@/constant/events'
+import { getBlock }      from '@/services/fairyring/block'
+import { fetchPriceAt }  from '@/lib/utils'
 import { FAIRYRING_ENV } from '@/constant/env'
 
-/* ── Supabase ───────────────────────────────────────────────────────── */
+/* ────────────────────────────────────────────  Supabase  */
 const supabase = createClient(
   FAIRYRING_ENV.supabase!,
   FAIRYRING_ENV.supabaseKey!
 )
 
-/* ── RPC ────────────────────────────────────────────────────────────── */
+/* ────────────────────────────────────────────  RPC helper */
 const RPC_URL = FAIRYRING_ENV.rpcURL ?? 'https://testnet-rpc.fairblock.network'
 async function getCurrentBlockHeight() {
   const { data } = await axios.get(`${RPC_URL}/status`)
   return Number.parseInt(data.result.sync_info.latest_block_height, 10)
 }
 
-/* ── Token rotation list ────────────────────────────────────────────── */
+/* ────────────────────────────────────────────  Tokens     */
 const TOKENS = [
-  { coingecko_id: 'solana',   symbol: 'SOL' },
-  { coingecko_id: 'bitcoin',  symbol: 'BTC' },
-  { coingecko_id: 'ethereum', symbol: 'ETH' },
-  { coingecko_id: 'chainlink',symbol: 'LINK' },
-]
+  { coingecko_id: 'solana',    symbol: 'SOL'  },
+  { coingecko_id: 'bitcoin',   symbol: 'BTC'  },
+  { coingecko_id: 'ethereum',  symbol: 'ETH'  },
+  { coingecko_id: 'chainlink', symbol: 'LINK' }
+] as const
 
-async function pickNextToken() {
+type Token = (typeof TOKENS)[number]
+const COL_PREFIX: Record<Token['symbol'], string> = {
+  SOL: 'sol',
+  BTC: 'btc',
+  ETH: 'eth',
+  LINK:'link'
+}
+
+async function pickNextToken(): Promise<Token> {
   const { data } = await supabase
     .from('deadlines')
-    .select('coingecko_id')
+    .select('symbol')
     .order('deadline_date', { ascending: false })
     .limit(1)
     .single()
 
-  if (!data?.coingecko_id) return TOKENS[0]
-  const lastIdx = TOKENS.findIndex(t => t.coingecko_id === data.coingecko_id)
+  if (!data?.symbol) return TOKENS[0]
+  const lastIdx = TOKENS.findIndex(t => t.symbol === data.symbol)
   return TOKENS[(lastIdx + 1) % TOKENS.length]
 }
 
-/* ── Date helpers ───────────────────────────────────────────────────── */
+/* ────────────────────────────────────────────  Dates      */
 function getNextFridayDeadline(now = new Date()) {
-  const day          = now.getUTCDay()
+  const day          = now.getUTCDay()           // 0‑Sun … 6‑Sat
   const daysUntilFri = ((5 + 7 - day) % 7) || 7
   const next         = new Date(now)
   next.setUTCDate(now.getUTCDate() + daysUntilFri)
-  next.setUTCHours(23, 59, 0, 0)   // 23:59 UTC
+  next.setUTCHours(23, 59, 0, 0)                 // 23:59 UTC
   return next
 }
 
-/* ── Scoring helpers ────────────────────────────────────────────────── */
+/* ────────────────────────────────────────────  Scoring    */
 const K = 10
-function calcScore(predicted: number, actual: number) {
-  if (!actual) return 0
-  const pctDiff = Math.abs(predicted - actual) / actual          // ← normalized
+function calcScore(pred: number, act: number) {
+  if (!act) return 0
+  const pctDiff = Math.abs(pred - act) / act
   return Math.floor(1000 * Math.exp(-pctDiff * K))
 }
 
-/* Read reveal events for one block height */
+/* ────────────────────────────────────────────  Reveal read */
 async function fetchRevealedTxs(height: number) {
   const out: { creator: string; price: number }[] = []
   const block  = await getBlock(height + 1)
@@ -82,45 +87,36 @@ async function fetchRevealedTxs(height: number) {
 
       out.push({
         creator: attrs[REVEAL_EVENT_ATTRS.creator],
-        price  : Number(parsed.memo.prediction),
+        price  : Number(parsed.memo.prediction)
       })
     })
 
   return out
 }
 
-/* ── Score + leaderboard update for last finished deadline ─────────── */
+/* ────────────────────────────────────────────  Scoring pass */
 async function updateScoresForLastDeadline() {
   const { data: last } = await supabase
     .from('deadlines')
-    .select('deadline_date,target_block,coingecko_id')
+    .select('deadline_date,target_block,coingecko_id,symbol')
     .lt('deadline_date', new Date().toISOString())
     .order('deadline_date', { ascending: false })
     .limit(1)
     .single()
 
-  if (!last) return                     // nothing to score yet
+  if (!last) return
 
   const targetHeight = Number(last.target_block)
   if (!targetHeight) return
 
-  const fridayStart = new Date(last.deadline_date+"Z")
+  const fridayStart = new Date(last.deadline_date + 'Z')
   const actualPrice = await fetchPriceAt(fridayStart, last.coingecko_id)
 
   const revealed = await fetchRevealedTxs(targetHeight)
-
-  /* 1️⃣  Blank out last‑week columns for everyone, always */
-  await supabase.from('participants').update({
-    last_week_guess : null,
-    last_week_score : null,
-    delta           : null,
-  })
-
-  /* If no reveals, nothing more to do this week */
   if (!revealed.length) return
 
-  /* 2️⃣  Existing totals for addresses that did submit */
-  const submitters  = [...new Set(revealed.map(r => r.creator))]
+  /* previous totals */
+  const submitters = [...new Set(revealed.map(r => r.creator))]
   const { data: existing } = await supabase
     .from('participants')
     .select('address,total_score')
@@ -130,57 +126,74 @@ async function updateScoresForLastDeadline() {
     (existing ?? []).map(r => [r.address, Number(r.total_score) || 0])
   )
 
-  /* 3️⃣  Build rows for submitters */
-  const rows = revealed.map(tx => {
+  /* build participant rows */
+  const prefix = COL_PREFIX[last.symbol as Token['symbol']]    // 'sol' | …
+
+  const participantRows = revealed.map(tx => {
     const weekScore = calcScore(tx.price, actualPrice)
     const newTotal  = (prevTotals[tx.creator] ?? 0) + weekScore
+
     return {
-      address         : tx.creator,
-      total_score     : newTotal,
-      last_week_guess : tx.price,
-      last_week_score : weekScore,
-      delta           : Math.abs(tx.price - actualPrice),
+      address     : tx.creator,
+      total_score : newTotal,
+      [`${prefix}_guess`] : tx.price,
+      [`${prefix}_delta`] : Math.abs(tx.price - actualPrice),
+      [`${prefix}_score`] : weekScore
     }
   })
 
-  /* 4️⃣  Upsert just those rows */
-  await supabase.from('participants').upsert(rows, { onConflict: 'address' })
+  await supabase.from('participants').upsert(participantRows, { onConflict: 'address' })
 }
 
-/* ── Cron handler ───────────────────────────────────────────────────── */
+/* ────────────────────────────────────────────  Season reset */
+async function resetSeason() {
+  console.log('🔄  wiping participants for new cycle')
+  await supabase.from('participants').update({
+    total_score : 0,
+    sol_guess: null, sol_delta: null, sol_score: null,
+    btc_guess: null, btc_delta: null, btc_score: null,
+    eth_guess: null, eth_delta: null, eth_score: null,
+    link_guess:null, link_delta:null, link_score:null
+  }).neq('address', '')
+}
+
+/* ────────────────────────────────────────────  Cron handler */
 export async function GET() {
   try {
     console.log('▶ cron/update‑deadline start')
 
-    /* a.  Score the week that just ended */
+    /* 1 – score the week that just ended */
     await updateScoresForLastDeadline()
 
-    /* b.  Schedule the next deadline */
-    const token        = await pickNextToken()
+    /* 2 – decide next token */
+    const tokenNext = await pickNextToken()
+
+    /* if we’re about to start SOL again ⇒ previous token was LINK ⇒ reset */
+    if (tokenNext.symbol === TOKENS[0].symbol) await resetSeason()
+
+    /* 3 – create the next deadline row */
     const now          = new Date()
     const deadlineTime = getNextFridayDeadline(now)
 
     const currentHt    = await getCurrentBlockHeight()
     const secondsUntil = Math.ceil((deadlineTime.getTime() - now.getTime()) / 1000)
-    const targetBlock  = currentHt + Math.ceil(secondsUntil / 1.6) // ≈1.6 s/block
+    const targetBlock  = currentHt + Math.ceil(secondsUntil / 1.6)   // ≈1.6 s/block
 
-    await supabase.from('deadlines').upsert(
-      {
-        deadline_date: deadlineTime.toISOString(),
-        target_block : targetBlock,
-        coingecko_id : token.coingecko_id,
-        symbol       : token.symbol,
-      },
-      { onConflict: 'deadline_date' }
-    )
+    await supabase.from('deadlines').upsert({
+      deadline_date: deadlineTime.toISOString(),
+      target_block : targetBlock,
+      coingecko_id : tokenNext.coingecko_id,
+      symbol       : tokenNext.symbol
+    }, { onConflict: 'deadline_date' })
 
-    console.log(`✅ ${deadlineTime.toISOString()} → ${token.symbol} → block ${targetBlock}`)
+    console.log(`✅ ${deadlineTime.toISOString()} → ${tokenNext.symbol} @ block ${targetBlock}`)
+
     return NextResponse.json({
       success  : true,
       deadline : deadlineTime.toISOString(),
       targetBlock,
-      token: token.coingecko_id,
-      symbol: token.symbol,
+      token    : tokenNext.coingecko_id,
+      symbol   : tokenNext.symbol
     })
   } catch (err: any) {
     console.error('❌ cron/update‑deadline failed', err)
