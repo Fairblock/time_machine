@@ -1,22 +1,25 @@
-/* app/prediction/page.tsx (or wherever you mount it) */
+/* app/prediction/page.tsx */
 'use client';
 
 import { useEffect, useState } from 'react';
-import Image from 'next/image';
-import Link  from 'next/link';
+import Image  from 'next/image';
+import Link   from 'next/link';
+import { Lock, Loader2, X as CloseIcon } from 'lucide-react';
+import { Buffer }  from 'buffer';
+import { TxRaw, TxBody } from 'cosmjs-types/cosmos/tx/v1beta1/tx';
+import { MsgSubmitEncryptedTx } from '@/types/fairyring/codec/pep/tx';
+
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
+import { Input  } from '@/components/ui/input';
+
 import { FAIRYRING_ENV, PUBLIC_ENVIRONMENT } from '@/constant/env';
 import { useClient } from '@/hooks/fairyring/useClient';
 import { useKeysharePubKey } from '@/hooks/fairyring/useKeysharePubKey';
-import { encryptSignedTx, signOfflineWithCustomNonce } from '@/services/fairyring/sign';
-import { Amount } from '@/types/fairyring';
 import { useAccount } from 'graz';
-import { Lock, Loader2, X as CloseIcon } from 'lucide-react';
-import { TxRaw, TxBody } from 'cosmjs-types/cosmos/tx/v1beta1/tx';
-import { MsgSubmitEncryptedTx } from '@/types/fairyring/codec/pep/tx';
-import { Buffer } from 'buffer';
 import { useActiveToken } from '@/hooks/useActiveToken';
+
+import { encryptSignedTx, signOfflineWithCustomNonce } from '@/services/fairyring/sign';
+import type { Amount } from '@/types/fairyring';
 
 /* ── constants ─────────────────────────────────────────────────────── */
 const MEMO      = 'price-predict';
@@ -34,13 +37,38 @@ export default function PredictionForm() {
   const [isChecking,   setIsChecking]   = useState(true);
   const [targetHeight, setTargetHeight] = useState<number | null>(null);
 
+  /* hooks ------------------------------------------------------------ */
+  const { client, error: clientError } = useClient();
   const { data: token }   = useActiveToken();
-  const client            = useClient();
   const { data: account } = useAccount();
   const address           = account?.bech32Address;
   const { data: pubkey }  = useKeysharePubKey();
 
-  /* 1️⃣  upcoming deadline ------------------------------------------- */
+  /* 0️⃣  early return: wallet / client unavailable ------------------- */
+  if (clientError) {
+    return (
+      <div className="p-6 text-center text-red-600">
+        {clientError}<br />
+        <a
+          href="https://www.keplr.app/"
+          target="_blank"
+          className="underline"
+        >
+          Install Keplr →
+        </a>
+      </div>
+    );
+  }
+
+  if (!client) {
+    return (
+      <div className="py-24 grid place-items-center">
+        <Loader2 className="h-10 w-10 animate-spin text-gray-600" />
+      </div>
+    );
+  }
+
+  /* 1️⃣  upcoming deadline ------------------------------------------- */
   useEffect(() => {
     fetch('/api/deadline/next')
       .then(r => r.json())
@@ -50,7 +78,7 @@ export default function PredictionForm() {
       .catch(console.error);
   }, []);
 
-  /* 2️⃣  check if this wallet already submitted (no modal here) ------- */
+  /* 2️⃣  check if this wallet already submitted (no modal here) ------- */
   useEffect(() => {
     setSubmitted(false);               // reset on address/height change
     if (!address || targetHeight == null) { setIsChecking(false); return; }
@@ -81,8 +109,8 @@ export default function PredictionForm() {
 
           const msg = MsgSubmitEncryptedTx.decode(new Uint8Array(m.value));
           if (+msg.targetBlockHeight === targetHeight && msg.creator === address) {
-            setSubmitted(true);        // ✅ show “submitted” message
-            return;                    // 🚫 do NOT open modal here
+            setSubmitted(true);        // ✅ already submitted
+            return;
           }
         }
         if ((res.result?.txs ?? []).length < PER_PAGE) break;
@@ -93,7 +121,7 @@ export default function PredictionForm() {
     return () => { cancelled = true; };
   }, [address, targetHeight]);
 
-  /* 3️⃣  submit a new encrypted tx (opens modal on success) ----------- */
+  /* 3️⃣  submit a new encrypted tx (opens modal on success) ----------- */
   async function submitOnChain(pred: number) {
     if (!address || targetHeight == null) return;
     setIsSending(true);
@@ -135,7 +163,7 @@ export default function PredictionForm() {
       if (txResult.code) throw new Error(txResult.rawLog);
 
       setSubmitted(true);    // ✅ success banner
-      setShowModal(true);    // 🎉 open tweet modal only right now
+      setShowModal(true);    // 🎉 open tweet modal
     } catch (err) {
       console.error('Submission failed:', err);
       setSubmitted(false);
@@ -144,13 +172,13 @@ export default function PredictionForm() {
     }
   }
 
-  /* 4️⃣  form handler -------------------------------------------------- */
+  /* 4️⃣  form handler -------------------------------------------------- */
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     submitOnChain(parseFloat(prediction));
   };
 
-  /* 5️⃣  modal --------------------------------------------------------- */
+  /* 5️⃣  modal -------------------------------------------------------- */
   const tweetText = encodeURIComponent(
     `I just encrypted my ${token?.symbol ?? ''} price prediction on @FairblockHQ. ` +
     `Join the weekly game and earn stars!`
@@ -192,7 +220,7 @@ export default function PredictionForm() {
     </div>
   );
 
-  /* 6️⃣  render -------------------------------------------------------- */
+  /* 6️⃣  render -------------------------------------------------------- */
   return (
     <div className="relative">
       {submitted ? (
