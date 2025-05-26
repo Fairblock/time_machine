@@ -17,6 +17,7 @@ import { TxRaw, TxBody } from 'cosmjs-types/cosmos/tx/v1beta1/tx';
 import { MsgSubmitEncryptedTx } from '@/types/fairyring/codec/pep/tx';
 import { Buffer } from 'buffer';
 import { useActiveToken } from '@/hooks/useActiveToken';
+import { getCurrentBlockHeight } from '@/services/fairyring/block';
 
 /* ── constants ─────────────────────────────────────────────────────── */
 const MEMO      = 'price-predict';
@@ -50,48 +51,51 @@ export default function PredictionForm() {
       .catch(console.error);
   }, []);
 
-  /* 2️⃣  check if this wallet already submitted (no modal here) ------- */
-  useEffect(() => {
-    setSubmitted(false);               // reset on address/height change
-    if (!address || targetHeight == null) { setIsChecking(false); return; }
-    setIsChecking(true);
+ 
+useEffect(() => {
+  setSubmitted(false);
+  if (!address || targetHeight == null) { setIsChecking(false); return; }
+  setIsChecking(true);
 
-    let cancelled = false;
-    (async () => {
-      const lastRes   = await fetch('/api/deadline/last').then(r => r.json());
-      const cutoffBlk = Number(lastRes.lastDeadline?.target_block ?? 0);
-      const tagQuery  = "message.action='/fairyring.pep.MsgSubmitEncryptedTx'";
-      const query     = `%22${encodeURIComponent(tagQuery)}%22`;
-      let page        = 1;
+  let cancelled = false;
+  (async () => {
+    /* last deadline height = lower bound */
+    const last = await fetch('/api/deadline/last').then(r => r.json());
+    const lastH = Number(last?.lastDeadline?.target_block);
+    if (!lastH) return;
 
-      while (!cancelled) {
-        const res = await fetch(
-          `${RPC}/tx_search?query=${query}&order_by=%22desc%22&per_page=${PER_PAGE}&page=${page}`
-        ).then(r => r.json());
+    const q = encodeURIComponent(
+      `tx.height>${lastH} AND message.action='/fairyring.pep.MsgSubmitEncryptedTx'`
+    );
 
-        for (const row of res.result?.txs ?? []) {
-          if (+row.height <= cutoffBlk) return;
+    let page = 1;
+    while (!cancelled) {
+      const res = await fetch(
+        `${RPC}/tx_search?query=%22${q}%22&order_by=%22desc%22&per_page=${PER_PAGE}&page=${page}`
+      ).then(r => r.json());
 
-          const raw  = TxRaw.decode(Buffer.from(row.tx, 'base64'));
-          const body = TxBody.decode(raw.bodyBytes);
-          if (body.memo !== MEMO) continue;
+      for (const row of res.result?.txs ?? []) {
+        const raw  = TxRaw.decode(Buffer.from(row.tx, 'base64'));
+        const body = TxBody.decode(raw.bodyBytes);
 
-          const m = body.messages.find(m => m.typeUrl === '/fairyring.pep.MsgSubmitEncryptedTx');
-          if (!m) continue;
+        const anyMsg = body.messages.find(
+          m => m.typeUrl === '/fairyring.pep.MsgSubmitEncryptedTx'
+        );
+        if (!anyMsg) continue;
 
-          const msg = MsgSubmitEncryptedTx.decode(new Uint8Array(m.value));
-          if (+msg.targetBlockHeight === targetHeight && msg.creator === address) {
-            setSubmitted(true);        // ✅ show “submitted” message
-            return;                    // 🚫 do NOT open modal here
-          }
+        const msg = MsgSubmitEncryptedTx.decode(new Uint8Array(anyMsg.value));
+        if (msg.targetBlockHeight === targetHeight && msg.creator === address) {
+          setSubmitted(true);
+          return;
         }
-        if ((res.result?.txs ?? []).length < PER_PAGE) break;
-        page++;
       }
-    })().finally(() => !cancelled && setIsChecking(false));
+      if ((res.result?.txs ?? []).length < PER_PAGE) break;
+      page += 1;
+    }
+  })().finally(() => !cancelled && setIsChecking(false));
 
-    return () => { cancelled = true; };
-  }, [address, targetHeight]);
+  return () => { cancelled = true };
+}, [address, targetHeight]);
 
   /* 3️⃣  submit a new encrypted tx (opens modal on success) ----------- */
   async function submitOnChain(pred: number) {
