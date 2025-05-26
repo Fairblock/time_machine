@@ -38,35 +38,11 @@ export default function PredictionForm() {
   const [targetHeight, setTargetHeight] = useState<number | null>(null);
 
   /* hooks ------------------------------------------------------------ */
-  const { client, error: clientError } = useClient();
-  const { data: token }   = useActiveToken();
-  const { data: account } = useAccount();
+  const { client, error: clientError } = useClient();               // 🪝 1
+  const { data: token }   = useActiveToken();                       // 🪝 2
+  const { data: account } = useAccount();                           // 🪝 3
   const address           = account?.bech32Address;
-  const { data: pubkey }  = useKeysharePubKey();
-
-  /* 0️⃣  early return: wallet / client unavailable ------------------- */
-  if (clientError) {
-    return (
-      <div className="p-6 text-center text-red-600">
-        {clientError}<br />
-        <a
-          href="https://www.keplr.app/"
-          target="_blank"
-          className="underline"
-        >
-          Install Keplr →
-        </a>
-      </div>
-    );
-  }
-
-  if (!client) {
-    return (
-      <div className="py-24 grid place-items-center">
-        <Loader2 className="h-10 w-10 animate-spin text-gray-600" />
-      </div>
-    );
-  }
+  const { data: pubkey }  = useKeysharePubKey();                    // 🪝 4
 
   /* 1️⃣  upcoming deadline ------------------------------------------- */
   useEffect(() => {
@@ -123,7 +99,7 @@ export default function PredictionForm() {
 
   /* 3️⃣  submit a new encrypted tx (opens modal on success) ----------- */
   async function submitOnChain(pred: number) {
-    if (!address || targetHeight == null) return;
+    if (!client || !address || targetHeight == null) return;
     setIsSending(true);
 
     try {
@@ -221,34 +197,58 @@ export default function PredictionForm() {
   );
 
   /* 6️⃣  render -------------------------------------------------------- */
+
+  let body: JSX.Element;
+  if (clientError) {
+    body = (
+      <div className="p-6 text-center text-red-600">
+        {clientError}
+        <br />
+        <a href="https://www.keplr.app/" target="_blank" className="underline">
+          Install Keplr →
+        </a>
+      </div>
+    );
+  } else if (!client) {
+    body = (
+      <div className="py-24 grid place-items-center">
+        <Loader2 className="h-10 w-10 animate-spin text-gray-600" />
+      </div>
+    );
+  } else {
+    body = submitted ? (
+      <div className="text-green-600 text-center">✅ Prediction submitted!</div>
+    ) : (
+      <form
+        onSubmit={handleSubmit}
+        className="w-full max-w-md mx-auto flex flex-col items-center space-y-4"
+      >
+        <label htmlFor="prediction" className="text-lg font-medium">
+          Your prediction in USD
+        </label>
+        <Input
+          id="prediction"
+          type="number"
+          value={prediction}
+          onChange={(e) => setPrediction(e.target.value)}
+          placeholder="Eg: $168"
+          className="w-full"
+        />
+        <Button
+          type="submit"
+          disabled={!prediction || isSending}
+          className="w-full flex items-center justify-center space-x-2"
+        >
+          <Lock size={16} />
+          <span>{isSending ? 'Encrypting…' : 'Encrypt Now'}</span>
+        </Button>
+      </form>
+    );
+  }
+
   return (
     <div className="relative">
-      {submitted ? (
-        <div className="text-green-600 text-center">✅ Prediction submitted!</div>
-      ) : (
-        <form
-          onSubmit={handleSubmit}
-          className="w-full max-w-md mx-auto flex flex-col items-center space-y-4"
-        >
-          <label htmlFor="prediction" className="text-lg font-medium">Your prediction in USD</label>
-          <Input
-            id="prediction"
-            type="number"
-            value={prediction}
-            onChange={(e) => setPrediction(e.target.value)}
-            placeholder="Eg: $168"
-            className="w-full"
-          />
-          <Button
-            type="submit"
-            disabled={!prediction || isSending}
-            className="w-full flex items-center justify-center space-x-2"
-          >
-            <Lock size={16} />
-            <span>{isSending ? 'Encrypting…' : 'Encrypt Now'}</span>
-          </Button>
-        </form>
-      )}
+      {body}
 
       {(isChecking || isSending) && (
         <div className="absolute inset-0 z-10 grid place-items-center bg-[#F2F4F3]">
