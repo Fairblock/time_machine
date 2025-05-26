@@ -1,25 +1,22 @@
-/* app/prediction/page.tsx */
+/* app/prediction/page.tsx (or wherever you mount it) */
 'use client';
 
 import { useEffect, useState } from 'react';
-import Image  from 'next/image';
-import Link   from 'next/link';
-import { Lock, Loader2, X as CloseIcon } from 'lucide-react';
-import { Buffer }  from 'buffer';
-import { TxRaw, TxBody } from 'cosmjs-types/cosmos/tx/v1beta1/tx';
-import { MsgSubmitEncryptedTx } from '@/types/fairyring/codec/pep/tx';
-
+import Image from 'next/image';
+import Link  from 'next/link';
 import { Button } from '@/components/ui/button';
-import { Input  } from '@/components/ui/input';
-
+import { Input } from '@/components/ui/input';
 import { FAIRYRING_ENV, PUBLIC_ENVIRONMENT } from '@/constant/env';
 import { useClient } from '@/hooks/fairyring/useClient';
 import { useKeysharePubKey } from '@/hooks/fairyring/useKeysharePubKey';
-import { useAccount } from 'graz';
-import { useActiveToken } from '@/hooks/useActiveToken';
-
 import { encryptSignedTx, signOfflineWithCustomNonce } from '@/services/fairyring/sign';
-import type { Amount } from '@/types/fairyring';
+import { Amount } from '@/types/fairyring';
+import { useAccount } from 'graz';
+import { Lock, Loader2, X as CloseIcon } from 'lucide-react';
+import { TxRaw, TxBody } from 'cosmjs-types/cosmos/tx/v1beta1/tx';
+import { MsgSubmitEncryptedTx } from '@/types/fairyring/codec/pep/tx';
+import { Buffer } from 'buffer';
+import { useActiveToken } from '@/hooks/useActiveToken';
 
 /* ── constants ─────────────────────────────────────────────────────── */
 const MEMO      = 'price-predict';
@@ -37,14 +34,13 @@ export default function PredictionForm() {
   const [isChecking,   setIsChecking]   = useState(true);
   const [targetHeight, setTargetHeight] = useState<number | null>(null);
 
-  /* hooks ------------------------------------------------------------ */
-  const { client, error: clientError } = useClient();               // 🪝 1
-  const { data: token }   = useActiveToken();                       // 🪝 2
-  const { data: account } = useAccount();                           // 🪝 3
+  const { data: token }   = useActiveToken();
+  const client            = useClient();
+  const { data: account } = useAccount();
   const address           = account?.bech32Address;
-  const { data: pubkey }  = useKeysharePubKey();                    // 🪝 4
+  const { data: pubkey }  = useKeysharePubKey();
 
-  /* 1️⃣  upcoming deadline ------------------------------------------- */
+  /* 1️⃣  upcoming deadline ------------------------------------------- */
   useEffect(() => {
     fetch('/api/deadline/next')
       .then(r => r.json())
@@ -54,7 +50,7 @@ export default function PredictionForm() {
       .catch(console.error);
   }, []);
 
-  /* 2️⃣  check if this wallet already submitted (no modal here) ------- */
+  /* 2️⃣  check if this wallet already submitted (no modal here) ------- */
   useEffect(() => {
     setSubmitted(false);               // reset on address/height change
     if (!address || targetHeight == null) { setIsChecking(false); return; }
@@ -85,8 +81,8 @@ export default function PredictionForm() {
 
           const msg = MsgSubmitEncryptedTx.decode(new Uint8Array(m.value));
           if (+msg.targetBlockHeight === targetHeight && msg.creator === address) {
-            setSubmitted(true);        // ✅ already submitted
-            return;
+            setSubmitted(true);        // ✅ show “submitted” message
+            return;                    // 🚫 do NOT open modal here
           }
         }
         if ((res.result?.txs ?? []).length < PER_PAGE) break;
@@ -97,9 +93,9 @@ export default function PredictionForm() {
     return () => { cancelled = true; };
   }, [address, targetHeight]);
 
-  /* 3️⃣  submit a new encrypted tx (opens modal on success) ----------- */
+  /* 3️⃣  submit a new encrypted tx (opens modal on success) ----------- */
   async function submitOnChain(pred: number) {
-    if (!client || !address || targetHeight == null) return;
+    if (!address || targetHeight == null) return;
     setIsSending(true);
 
     try {
@@ -139,7 +135,7 @@ export default function PredictionForm() {
       if (txResult.code) throw new Error(txResult.rawLog);
 
       setSubmitted(true);    // ✅ success banner
-      setShowModal(true);    // 🎉 open tweet modal
+      setShowModal(true);    // 🎉 open tweet modal only right now
     } catch (err) {
       console.error('Submission failed:', err);
       setSubmitted(false);
@@ -148,13 +144,13 @@ export default function PredictionForm() {
     }
   }
 
-  /* 4️⃣  form handler -------------------------------------------------- */
+  /* 4️⃣  form handler -------------------------------------------------- */
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     submitOnChain(parseFloat(prediction));
   };
 
-  /* 5️⃣  modal -------------------------------------------------------- */
+  /* 5️⃣  modal --------------------------------------------------------- */
   const tweetText = encodeURIComponent(
     `I just encrypted my ${token?.symbol ?? ''} price prediction on @FairblockHQ. ` +
     `Join the weekly game and earn stars!`
@@ -196,59 +192,35 @@ export default function PredictionForm() {
     </div>
   );
 
-  /* 6️⃣  render -------------------------------------------------------- */
-
-  let body: JSX.Element;
-  if (clientError) {
-    body = (
-      <div className="p-6 text-center text-red-600">
-        {clientError}
-        <br />
-        <a href="https://www.keplr.app/" target="_blank" className="underline">
-          Install Keplr →
-        </a>
-      </div>
-    );
-  } else if (!client) {
-    body = (
-      <div className="py-24 grid place-items-center">
-        <Loader2 className="h-10 w-10 animate-spin text-gray-600" />
-      </div>
-    );
-  } else {
-    body = submitted ? (
-      <div className="text-green-600 text-center">✅ Prediction submitted!</div>
-    ) : (
-      <form
-        onSubmit={handleSubmit}
-        className="w-full max-w-md mx-auto flex flex-col items-center space-y-4"
-      >
-        <label htmlFor="prediction" className="text-lg font-medium">
-          Your prediction in USD
-        </label>
-        <Input
-          id="prediction"
-          type="number"
-          value={prediction}
-          onChange={(e) => setPrediction(e.target.value)}
-          placeholder="Eg: $168"
-          className="w-full"
-        />
-        <Button
-          type="submit"
-          disabled={!prediction || isSending}
-          className="w-full flex items-center justify-center space-x-2"
-        >
-          <Lock size={16} />
-          <span>{isSending ? 'Encrypting…' : 'Encrypt Now'}</span>
-        </Button>
-      </form>
-    );
-  }
-
+  /* 6️⃣  render -------------------------------------------------------- */
   return (
     <div className="relative">
-      {body}
+      {submitted ? (
+        <div className="text-green-600 text-center">✅ Prediction submitted!</div>
+      ) : (
+        <form
+          onSubmit={handleSubmit}
+          className="w-full max-w-md mx-auto flex flex-col items-center space-y-4"
+        >
+          <label htmlFor="prediction" className="text-lg font-medium">Your prediction in USD</label>
+          <Input
+            id="prediction"
+            type="number"
+            value={prediction}
+            onChange={(e) => setPrediction(e.target.value)}
+            placeholder="Eg: $168"
+            className="w-full"
+          />
+          <Button
+            type="submit"
+            disabled={!prediction || isSending}
+            className="w-full flex items-center justify-center space-x-2"
+          >
+            <Lock size={16} />
+            <span>{isSending ? 'Encrypting…' : 'Encrypt Now'}</span>
+          </Button>
+        </form>
+      )}
 
       {(isChecking || isSending) && (
         <div className="absolute inset-0 z-10 grid place-items-center bg-[#F2F4F3]">
