@@ -1,11 +1,14 @@
 'use client';
 
-import Header from '@/components/header/Header';
-import Image   from 'next/image';
-import TokenChart from '@/components/charts/TokenChart';
-import CountdownTimer from '@/components/countdown-timer/CountdownTimer';
-import PredictionForm from '@/components/forms/PredictionForm';
+import Header          from '@/components/header/Header';
+import Image           from 'next/image';
+import TokenChart      from '@/components/charts/TokenChart';
+import CountdownTimer  from '@/components/countdown-timer/CountdownTimer';
+import PredictionForm  from '@/components/forms/PredictionForm';
 import { useActiveToken } from '@/hooks/useActiveToken';
+
+/** ⬇️  tweak this to whatever height you want */
+const EDGE_HEIGHT = '70vh';        // '600px', '100%', etc.
 
 export default function Prediction() {
   const { data: token, isLoading } = useActiveToken();
@@ -13,30 +16,42 @@ export default function Prediction() {
 
   const iconSrc = `/${token!.symbol.toLowerCase()}.png`;
 
+  /*───────────────────────────────────────────────────────────────*/
   return (
-    /* ── Top‑level container drives the full‑page background ─────────── */
-    <div className="relative min-h-screen font-sans">
+    <div className="relative min-h-screen font-sans bg-[#E8ECEF] overflow-hidden">
+      {/* left‑edge art */}
+      <div
+        className="absolute left-0 pointer-events-none select-none"
+        style={{
+          height: EDGE_HEIGHT,
+          top: `calc(50% - ${EDGE_HEIGHT} / 2)`, // vertical‑center
+          width: '35vw',                         // stays responsive
+          maxWidth: '520px',
+        }}
+      >
+        <Image src="/Left.png" alt="" fill priority className="object-cover" />
+      </div>
 
-      {/* 🔥 Full‑screen background image (covers entire viewport) */}
-      <Image
-  src="/bg.png"
-  alt="Background"
-  fill                      /* keeps it responsive */
-  priority
-  quality={100}             /* <— no extra compression */
-  sizes="100vw"             /* always send full‑width */
-  className="object-cover -z-20"
-/>
+      {/* right‑edge art */}
+      <div
+        className="absolute right-0 pointer-events-none select-none"
+        style={{
+          height: EDGE_HEIGHT,
+          top: `calc(50% - ${EDGE_HEIGHT} / 2)`,
+          width: '35vw',
+          maxWidth: '520px',
+        }}
+      >
+        <Image src="/Right.png" alt="" fill priority className="object-cover" />
+      </div>
 
-      {/* Foreground content starts here */}
       <Header />
 
-      <main className="flex flex-col items-center p-8 max-w-4xl mx-auto space-y-10">
+      <main className="relative z-10 flex flex-col items-center p-8 max-w-4xl mx-auto space-y-10">
         <h1 className="text-5xl font-bold uppercase gradient-text">
           Predict {token!.coingecko_id} Price
         </h1>
 
-        {/* Chart card */}
         <div className="bg-white/80 backdrop-blur rounded-2xl shadow p-6 w-full">
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center space-x-2">
@@ -48,7 +63,6 @@ export default function Prediction() {
           <TokenChart />
         </div>
 
-        {/* Prediction form */}
         <PredictionForm
           label={`Your ${token!.symbol} prediction in USD`}
           placeholder="Eg: $168"
