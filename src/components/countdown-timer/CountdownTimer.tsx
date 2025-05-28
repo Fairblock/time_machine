@@ -34,7 +34,7 @@ export default function CountdownTimer() {
 
   return (
     <div className="text-sm text-muted-foreground">
-       Your prediction decrypts round {deadlineText} 
+       Your prediction decrypts around {deadlineText} 
     </div>
   );
 }
