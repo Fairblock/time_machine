@@ -133,7 +133,7 @@ useEffect(() => {
       const encryptedHex = await encryptSignedTx(key, targetHeight, signed);
       const txResult     = await client.FairyringPep.tx.sendMsgSubmitEncryptedTx({
         value: { creator: address, data: encryptedHex, targetBlockHeight: targetHeight },
-        fee  : { amount: [{ denom: 'ufairy', amount: '0' }], gas: '543210' },
+        fee  : { amount: [{ denom: 'ufairy', amount: '0' }], gas: '743210' },
         memo : MEMO,
       });
       if (txResult.code) throw new Error(txResult.rawLog);
@@ -156,10 +156,10 @@ useEffect(() => {
 
   /* 5️⃣  modal --------------------------------------------------------- */
   const tweetText = encodeURIComponent(
-    `I just encrypted my ${token?.symbol ?? ''} price prediction on @FairblockHQ. ` +
+    `I just encrypted my ${token?.symbol ?? ''} price prediction on @0xfairblock. ` +
     `Join the weekly game and earn points!`
   );
-  const tweetUrl = `${SHARE_URL}?text=${tweetText}&url=${encodeURIComponent('https://fairblock.network')}`;
+  const tweetUrl = `${SHARE_URL}?text=${tweetText}&url=${encodeURIComponent('https://timemachine.fairblock.network')}`;
 
   const Modal = () => (
     <div className="fixed inset-0 z-50 grid place-items-center bg-black/40" onClick={() => setShowModal(false)}>
