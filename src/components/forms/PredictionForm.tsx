@@ -157,7 +157,7 @@ useEffect(() => {
   /* 5️⃣  modal --------------------------------------------------------- */
   const tweetText = encodeURIComponent(
     `I just encrypted my ${token?.symbol ?? ''} price prediction on @FairblockHQ. ` +
-    `Join the weekly game and earn stars!`
+    `Join the weekly game and earn points!`
   );
   const tweetUrl = `${SHARE_URL}?text=${tweetText}&url=${encodeURIComponent('https://fairblock.network')}`;
 

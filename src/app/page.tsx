@@ -71,7 +71,7 @@ The closer you are, the more points you earn.
               hover:bg-gray-800 transition-colors
             "
           >
-            Predict it now
+            Predict now
           </Link>
         </div>
 

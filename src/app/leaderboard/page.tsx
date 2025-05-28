@@ -137,7 +137,7 @@ export default function LeaderboardPage() {
               : <div className="h-24 w-24 rounded-full bg-gray-200 mb-4 flex items-center justify-center text-3xl">⚡</div>
             }
             <div className="text-lg font-medium break-all text-center">
-              {account?.bech32Address ? longShort(account.bech32Address) : 'Not connected'}
+              {account?.bech32Address ? longShort(account.bech32Address) : 'Connect your wallet'}
             </div>
 
             <div className="flex w-full mt-6 text-center border-t border-gray-200 pt-6">
