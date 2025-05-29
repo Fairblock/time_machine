@@ -1,9 +1,9 @@
 /* app/page.tsx */
 'use client';
 
-import Image from 'next/image';
-import Link   from 'next/link';
-import Header from '@/components/header/Header';
+import Image  from 'next/image';
+import Link    from 'next/link';
+import Header  from '@/components/header/Header';
 import { useActiveToken } from '@/hooks/useActiveToken';
 
 const TOKENS = [
@@ -17,27 +17,29 @@ export default function Home() {
   const { data: active } = useActiveToken();
 
   return (
-    <div className="relative min-h-screen font-sans">
-    <Image
-  src="/bgHome.png"
-  alt="Background"
-  fill                      /* keeps it responsive */
-  priority
-  quality={100}             /* <— no extra compression */
-  sizes="100vw"             /* always send full‑width */
-  className="object-cover -z-20"
-/>
+    /* ───── full‑height flex wrapper keeps hero in‑view ───── */
+    <div className="relative flex flex-col min-h-screen font-sans overflow-hidden">
+      {/* background */}
+      <Image
+        src="/bgHome.png"
+        alt="Background"
+        fill
+        priority
+        quality={100}
+        sizes="100vw"
+        className="object-cover -z-20"
+      />
+
       <Header />
 
+      {/* hero fills leftover space and centres itself vertically */}
       <section
         className="
-          relative z-10
-          flex flex-col-reverse md:flex-row items-start justify-between
+          relative flex-1
+          flex flex-col-reverse md:flex-row items-center md:items-start justify-between
           gap-12 lg:gap-20
           px-6 sm:px-10 lg:px-20 xl:px-28
-          pt-12 sm:pt-18 lg:pt-24 xl:pt-28
-          pb-16 sm:pb-20 lg:pb-24
-          overflow-hidden
+          py-10 lg:py-16 xl:py-20
         "
       >
         {/* copy */}
@@ -54,13 +56,10 @@ export default function Home() {
           </h1>
 
           <p className="text-sm sm:text-base md:text-lg lg:text-xl text-gray-700">
-          Encrypt your price prediction. 
-          <br></br>
-No one can see it, not even us. 
-<br></br>
-We’ll decrypt it next week. 
-<br></br>
-The closer you are, the more points you earn.
+            Encrypt your price prediction. <br />
+            No one can see it, not even us. <br />
+            We’ll decrypt it next week. <br />
+            The closer you are, the more points you earn.
           </p>
 
           <Link
@@ -82,16 +81,8 @@ The closer you are, the more points you earn.
             w-full md:w-auto
             max-w-[90vw] sm:max-w-[70vw]
             md:max-w-[50vw] lg:max-w-[44vw] xl:max-w-[38vw] 2xl:max-w-[450px]
-
-            /* vertical lift keeps capsule above the fold on 13″ */
-            md:-translate-y-16 lg:-translate-y-12 xl:-translate-y-10 2xl:-translate-y-10
-
-            /* NEW: stronger *left* shift on ≥lg, ≥xl, ≥2xl */
-            md:-translate-x-2      /* 13″ (≤1023 px) – unchanged    */
-            lg:-translate-x-6      /* 1024‑1279 px                 */
-            xl:-translate-x-8      /* 1280‑1535 px  ← 14″ MBP      */
-            2xl:-translate-x-32    /* 1536‑1919 px  ← 14″ FHD      */
-            [2000px]:-translate-x-12 /* ultra‑wide                  */
+            md:-translate-y-10                   /* gentler vertical lift */
+            md:-translate-x-2 lg:-translate-x-6 xl:-translate-x-8 2xl:-translate-x-32
           "
         >
           <Image
@@ -100,13 +91,10 @@ The closer you are, the more points you earn.
             width={450}
             height={600}
             priority
-            className="
-              w-full h-auto
-              max-h-[70vh] md:max-h-[70vh] lg:max-h-[80vh]
-            "
+            className="w-full h-auto max-h-[65vh] md:max-h-[60vh] lg:max-h-[70vh]"
           />
 
-          {/* vertical token rail */}
+          {/* token rail */}
           <div
             className="
               absolute left-1/2 -translate-x-1/2
@@ -115,7 +103,7 @@ The closer you are, the more points you earn.
               gap-3 lg:gap-4
             "
           >
-            {TOKENS.map((t) => {
+            {TOKENS.map(t => {
               const activeNow = t.id === active?.coingecko_id;
               return (
                 <div
