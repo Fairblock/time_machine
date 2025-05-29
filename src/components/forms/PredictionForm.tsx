@@ -145,7 +145,7 @@ export default function PredictionForm() {
             },
           });
           if (res?.gasInfo?.gasUsed) {
-            estimatedGas = Math.round(Number(res.gasInfo.gasUsed) * 1.3); // 30 % buffer
+            estimatedGas = Math.round(Number(res.gasInfo.gasUsed) * 2); // 30 % buffer
           }
         }
       } catch (e) {
