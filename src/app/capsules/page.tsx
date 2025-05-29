@@ -47,9 +47,8 @@ const avatar = (addr: string) =>
 
 /* ───── capsule card ─────────────────────────────────────────────── */
 
-function CapsuleCard({ creator, target, token, type, data, price }: Capsule) {
+function CapsuleCard({ creator, target, token, type, price }: Capsule) {
   const shortAddr = `${creator.slice(0, 6)}…${creator.slice(-4)}`
-  const tail      = data ? `…${data.slice(-6)}` : '—'
   const logo      = TOKEN_LOGOS[token.toUpperCase()] ?? null
 
   return (
@@ -64,22 +63,17 @@ function CapsuleCard({ creator, target, token, type, data, price }: Capsule) {
       <div className="p-5 space-y-3">
         <p className="text-sm font-medium text-gray-600">Predicted price</p>
 
-        {/* value box */}
         <div className="relative flex items-center bg-white/60 border border-gray-300 rounded-lg px-4 py-3">
           {type === 'encrypted' ? (
-            <>
-          
-              <span className="ml-auto inline-block rounded-full bg-gray-200 px-8 py-0.5 text-[15px] font-semibold text-gray-600">
-                Encrypted
-              </span>
-            </>
+            <span className="ml-auto inline-block rounded-full bg-gray-200 px-8 py-0.5 text-[15px] font-semibold text-gray-600">
+              Encrypted
+            </span>
           ) : (
             <span className="mr-auto text-2xl font-semibold text-gray-900">
               ${price?.toLocaleString()}
             </span>
           )}
 
-          {/* token logo (always sharp) */}
           {logo && (
             <Image
               src={logo}
@@ -97,10 +91,23 @@ function CapsuleCard({ creator, target, token, type, data, price }: Capsule) {
   )
 }
 
+/* ───── cute loader ─────────────────────────────────────────────── */
 
+function LoadingCapsules({ progress, message }: { progress: number; message: string }) {
+  return (
+    <div className="col-span-full flex flex-col items-center mt-12 space-y-4">
+      <div className="w-full max-w-sm h-2 bg-gray-200 rounded overflow-hidden">
+        <div
+          className="h-full bg-gradient-to-r from-indigo-500 to-purple-500 transition-all duration-500"
+          style={{ width: `${progress}%` }}
+        />
+      </div>
+      <p className="text-sm font-medium text-gray-500 tracking-wide">{message}</p>
+    </div>
+  )
+}
 
-
-/* ───── revealed-tx helper (parallel & correct events) ─────────── */
+/* ───── revealed‑tx helper ─────────────────────────────────────── */
 async function fetchRevealedTxs(heights: number[]) {
   const out: { creator: string; price: number }[] = []
 
@@ -150,7 +157,33 @@ export default function CapsulesPage() {
   const [loading,  setLoading ] = useState(true)
   const [tab,      setTab]     = useState<'all' | 'yours'>('all')
 
-  /* auto-connect */
+  /* progress + rotating messages */
+  const [progress, setProgress] = useState(10)
+  const [msgIndex, setMsgIndex] = useState(0)
+  const loadingMessages = [
+    'Fetching capsules…',
+    'Sorting capsules…',
+    'Almost there…',
+  ]
+
+  /* animate loader */
+  useEffect(() => {
+    if (!loading) return
+    const grow = setInterval(() => {
+      setProgress((p) => Math.min(p + 5 + Math.random() * 6, 95))
+    }, 600)
+    const rotate = setInterval(
+      () => setMsgIndex((i) => (i + 1) % loadingMessages.length),
+      2000,
+    )
+    return () => {
+      clearInterval(grow)
+      clearInterval(rotate)
+      setProgress(10)
+    }
+  }, [loading])
+
+  /* auto‑connect */
   useEffect(() => {
     if (walletError) {
       suggestAndConnect({ chainInfo: fairyring, walletType: WalletType.KEPLR })
@@ -173,7 +206,7 @@ export default function CapsulesPage() {
 
         if (!nextH || !lastH) throw new Error('deadline heights missing')
 
-        /* 1️⃣ encrypted capsules (height-bounded message query) */
+        /* 1️⃣ encrypted capsules */
         const encryptedCaps: Capsule[] = []
         const now       = await getCurrentBlockHeight()
         const minHeight = now - ONE_WEEK
@@ -198,13 +231,13 @@ export default function CapsulesPage() {
             if (!anyMsg) continue
 
             const msg = MsgSubmitEncryptedTx.decode(new Uint8Array(anyMsg.value))
-            if (msg.targetBlockHeight !== nextH) continue   // filter to this deadline
+            if (msg.targetBlockHeight !== nextH) continue
 
             encryptedCaps.push({
               creator: msg.creator,
               target : nextH,
               token  : nextToken,
-              type   : 'encrypted' as const,
+              type   : 'encrypted',
               data   : msg.data,
             })
           }
@@ -218,25 +251,26 @@ export default function CapsulesPage() {
           creator: tx.creator,
           target : lastH,
           token  : String(lastToken),
-          type   : 'revealed' as const,
+          type   : 'revealed',
           price  : tx.price,
         }))
 
         if (!cancelled) {
-            const merged = [...encryptedCaps, ...revealedCaps]
-            const uniqueMap = new Map<string, Capsule>()
-          
-            for (const c of merged) {
-              uniqueMap.set(`${c.type}-${c.creator}-${c.target}`, c)
-            }
-          
-            setCapsules(Array.from(uniqueMap.values()))
+          const merged = [...encryptedCaps, ...revealedCaps]
+          const uniqueMap = new Map<string, Capsule>()
+          for (const c of merged) {
+            uniqueMap.set(`${c.type}-${c.creator}-${c.target}`, c)
           }
+          setCapsules(Array.from(uniqueMap.values()))
+        }
       } catch (err) {
         console.error(err)
         if (!cancelled) setCapsules([])
       } finally {
-        if (!cancelled) setLoading(false)
+        if (!cancelled) {
+          setProgress(100)
+          setTimeout(() => !cancelled && setLoading(false), 400)
+        }
       }
     })()
     return () => { cancelled = true }
@@ -273,14 +307,15 @@ export default function CapsulesPage() {
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          {list.length ? (
+          {loading ? (
+            <LoadingCapsules
+              progress={progress}
+              message={loadingMessages[msgIndex]}
+            />
+          ) : list.length ? (
             list.map((c, i) => (
               <CapsuleCard key={`${c.target}-${c.creator}-${i}`} {...c} />
             ))
-          ) : loading ? (
-            <p className="text-center text-gray-400 col-span-full mt-12">
-              Loading capsules…
-            </p>
           ) : (
             <p className="text-center text-gray-400 col-span-full mt-12">
               No capsules found.
