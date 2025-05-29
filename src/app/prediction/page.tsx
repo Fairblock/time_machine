@@ -121,9 +121,9 @@ export default function Prediction() {
           </div>
 
           {/* chart ‑‑ cap at 30 vh on small, grow on large */}
-          <div className="max-h-[30vh] md:max-h-[35vh] lg:max-h-[40vh] overflow-hidden">
-            <TokenChart />
-          </div>
+          <div className="w-full h-[34vh] md:h-[38vh] lg:h-[42vh]">
+  <TokenChart />
+</div>
         </div>
 
         {/* form – stays compact */}
