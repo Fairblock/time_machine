@@ -3,32 +3,34 @@
 
 import React, { useEffect, useMemo, useState } from 'react'
 import { useAccount } from 'graz'
-import { Copy, Menu, X as CloseIcon, Wallet }  from 'lucide-react'; 
+import { Copy, Menu, X as CloseIcon, Wallet } from 'lucide-react'
+
 import Header         from '@/components/header/Header'
 import CountdownClock from '@/components/countdown-timer/CountdownClock'
 import { Input }      from '@/components/ui/input'
 import { Button }     from '@/components/ui/button'
 
-/* ─── types from /api/winner ─────────────────────────────────────── */
+/* ── API types ────────────────────────────────────────────── */
 type OverallRow = { address: string; totalScore: number }
 type TokenRow   = { address: string; guess: number; delta: number; score: number }
 type TokenMeta  = { price:number|null; date:string|null; url:string|null; block:number|null }
 
 type ApiResp = {
-  overall   : OverallRow[]
-  tokens    : Record<'SOL'|'BTC'|'ETH'|'LINK', TokenRow[]>
-  tokenInfo : Record<'SOL'|'BTC'|'ETH'|'LINK', TokenMeta>
+  overall     : OverallRow[]
+  tokens      : Record<'SOL'|'BTC'|'ETH'|'LINK', TokenRow[]>
+  tweetScores : { address:string; score:number }[]
+  tokenInfo   : Record<'SOL'|'BTC'|'ETH'|'LINK', TokenMeta>
 }
 
-/* ─── extra type for claiming ────────────────────────────────────── */
+/* ── extra type for tweet claim flow ─────────────────────── */
 type PendingProof = { token: string; createdAt: string }
 
-/* ─── constants ─────────────────────────────────────────────────── */
+/* ── constants ───────────────────────────────────────────── */
 const TOKENS  = ['SOL','BTC','ETH','LINK'] as const
-const SLIDES  = ['Overall', ...TOKENS] as const
+const SLIDES  = ['Overall','Tweets', ...TOKENS] as const
 type SlideKey = typeof SLIDES[number]
 
-/* ─── helpers ───────────────────────────────────────────────────── */
+/* ── helpers ─────────────────────────────────────────────── */
 const longShort = (addr:string) => addr.slice(0,10)+'…'+addr.slice(-6)
 const medals    = ['🥇','🥈','🥉'] as const
 
@@ -44,30 +46,33 @@ const fmtDateUTC = (iso:string|null) => {
 const fmtBlock = (b:number|null) => b===null ? '—' : 'Block #'+b.toLocaleString()
 const Bullet   = () => <span className="text-gray-400">•</span>
 
-/* ─── component ─────────────────────────────────────────────────── */
+/* ── component ───────────────────────────────────────────── */
 export default function LeaderboardPage() {
   const { data: account } = useAccount()
 
+  /* ui state */
   const [active,setActive]   = useState<SlideKey>('Overall')
   const [loading,setLoading] = useState(true)
 
-  const [overall,setOverall] = useState<OverallRow[]>([])
-  const [tokens,setTokens]   = useState<ApiResp['tokens']>({SOL:[],BTC:[],ETH:[],LINK:[]})
-  const [meta,setMeta]       = useState<ApiResp['tokenInfo']>({
+  /* api data */
+  const [overall,setOverall]   = useState<OverallRow[]>([])
+  const [tokens,setTokens]     = useState<ApiResp['tokens']>({SOL:[],BTC:[],ETH:[],LINK:[]})
+  const [tweets,setTweets]     = useState<ApiResp['tweetScores']>([])
+  const [meta,setMeta]         = useState<ApiResp['tokenInfo']>({
     SOL:{price:null,date:null,url:null,block:null},
     BTC:{price:null,date:null,url:null,block:null},
     ETH:{price:null,date:null,url:null,block:null},
     LINK:{price:null,date:null,url:null,block:null}
   })
 
-  /* tweet‑claim state */
+  /* tweet‑claim flow */
   const [pending,setPending]   = useState<PendingProof|null>(null)
   const [tweetUrl,setTweetUrl] = useState('')
   const [claiming,setClaiming] = useState(false)
   const [claimed,setClaimed]   = useState(false)
   const [claimErr,setClaimErr] = useState<string|null>(null)
 
-  /* fetch leaderboard once */
+  /* ── fetch leaderboard once ─ */
   useEffect(()=>{
     (async()=>{
       setLoading(true)
@@ -75,12 +80,15 @@ export default function LeaderboardPage() {
         const res = await fetch('/api/winner',{cache:'no-store'})
         const js  = await res.json()
         if(!res.ok) throw new Error(js.error||'failed')
-        setOverall(js.overall); setTokens(js.tokens); setMeta(js.tokenInfo)
+        setOverall(js.overall)
+        setTokens(js.tokens)
+        setTweets(js.tweetScores)     // ← NEW
+        setMeta(js.tokenInfo)
       }catch(e){console.error(e)}finally{setLoading(false)}
     })()
   },[])
 
-  /* fetch pending token */
+  /* ── fetch pending proof token ─ */
   useEffect(()=>{
     setPending(null)
     if(!account?.bech32Address) return
@@ -90,7 +98,7 @@ export default function LeaderboardPage() {
       .catch(console.error)
   },[account?.bech32Address])
 
-  /* claim handler */
+  /* ── claim handler ─ */
   const handleClaim = async ()=>{
     if(!pending||!tweetUrl||!account?.bech32Address) return
     setClaimErr(null); setClaiming(true)
@@ -102,46 +110,55 @@ export default function LeaderboardPage() {
       })
       if(!res.ok){ const {error}=await res.json(); throw new Error(error||'failed')}
       setClaimed(true); setPending(null)
-      /* refresh points */
-      fetch('/api/winner',{cache:'no-store'}).then(r=>r.json()).then(j=>setOverall(j.overall))
+
+      /* refresh leaderboard */
+      fetch('/api/winner',{cache:'no-store'})
+        .then(r=>r.json())
+        .then(j=>{ setOverall(j.overall); setTweets(j.tweetScores) })
     }catch(e:any){setClaimErr(e.message)}finally{setClaiming(false)}
   }
 
-  /* my rank/score */
+  /* ── my rank/score ─ */
   const me = useMemo(()=>{
     if(!account?.bech32Address) return {rank:'—',points:'—'}
     const idx = overall.findIndex(r=>r.address===account.bech32Address)
     return idx===-1?{rank:'—',points:'—'}:{rank:idx+1,points:overall[idx].totalScore}
   },[overall,account?.bech32Address])
 
-  /* table rows */
+  /* ── table rows & headers ─ */
   const rows = active==='Overall'
-    ? overall.map(r=>({address:r.address,cols:[r.totalScore.toLocaleString()]}))
-    : tokens[active as keyof typeof tokens].map(r=>({
-        address:r.address,
-        cols:[r.score.toLocaleString(),r.guess.toLocaleString(),r.delta.toLocaleString()]
-      }))
+      ? overall.map(r=>({address:r.address,cols:[r.totalScore.toLocaleString()]}))
+      : active==='Tweets'
+        ? tweets.map (r=>({address:r.address,cols:[r.score.toLocaleString()]}))
+        : tokens[active as keyof typeof tokens].map(r=>({
+            address:r.address,
+            cols:[r.score.toLocaleString(),r.guess.toLocaleString(),r.delta.toLocaleString()]
+          }))
 
   const headers:Record<SlideKey,string[]> = {
     Overall:['Total Pts'],
+    Tweets :['Points'],                 // ← NEW
     SOL:['Score','Guess','Δ'],
     BTC:['Score','Guess','Δ'],
     ETH:['Score','Guess','Δ'],
     LINK:['Score','Guess','Δ']
   }
 
-  const current  = active!=='Overall' ? meta[active as keyof typeof meta] : null
-  const avatar   = account?.bech32Address
+  /* other derived data */
+  const current  = active!=='Overall' && active!=='Tweets'
+      ? meta[active as keyof typeof meta] : null
+
+  const avatar = account?.bech32Address
     ? `https://api.dicebear.com/9.x/identicon/svg?seed=${encodeURIComponent(account.bech32Address)}`
     : null
 
-  /* responsive grid logic */
+  /* responsive grid logic (unchanged) */
   const showClaim  = pending && !claimed
   const showBanner = claimed
   const gridCols   = showClaim || showBanner ? 'md:grid-cols-3' : 'md:grid-cols-2'
 
-  /* ────────────────── JSX ───────────────────────────────────────── */
-  return(
+  /* ── JSX ─────────────────────────────────────────────────────── */
+  return (
     <div className="font-sans bg-gray-50 min-h-screen">
       <Header/>
 
@@ -155,18 +172,10 @@ export default function LeaderboardPage() {
           {/* wallet card */}
           <div className="bg-white rounded-2xl shadow p-8 flex flex-col items-center">
             {avatar
-                      ? (
-                            <img
-                              src={avatar}
-                              alt="avatar"
-                              className="h-20 w-20 rounded-full mb-4"
-                            />
-                          )
-                        : (
-                            <div className="h-20 w-20 rounded-full bg-gray-100 shadow-inner mb-4 flex items-center justify-center">
-                              <Wallet size={34} className="text-gray-400" />
-                            </div>
-                          )
+              ? <img src={avatar} alt="avatar" className="h-20 w-20 rounded-full mb-4"/>
+              : <div className="h-20 w-20 rounded-full bg-gray-100 shadow-inner mb-4 flex items-center justify-center">
+                  <Wallet size={34} className="text-gray-400" />
+                </div>
             }
             <div className="text-md font-medium break-all text-center">
               {account?.bech32Address ? longShort(account.bech32Address) : 'Connect wallet'}
@@ -208,10 +217,9 @@ export default function LeaderboardPage() {
             </div>
           )}
 
-          {/* success banner */}
           {showBanner && (
             <div className="bg-green-50 text-green-800 rounded-2xl shadow flex items-center justify-center p-6 text-sm">
-               Verified! 200 points added.
+              Verified! 200 points added.
             </div>
           )}
         </div>
@@ -227,7 +235,7 @@ export default function LeaderboardPage() {
           ))}
         </div>
 
-        {/* price badge */}
+        {/* price badge (skip for Overall / Tweets) */}
         {current && (
           <div className="flex justify-center mb-2">
             <a href={current.url ?? '#'} target="_blank" rel="noopener noreferrer"

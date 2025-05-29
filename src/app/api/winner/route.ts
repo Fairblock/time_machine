@@ -1,16 +1,16 @@
-/* app/api/winner/route.ts -------------------------------------------------- */
+/* app/api/winner/route.ts -------------------------------------------- */
 import { NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { fetchPriceAt } from '@/lib/utils'
 import { FAIRYRING_ENV } from '@/constant/env'
 
-/* ───────────────────────── Supabase admin client ────────────────────────── */
+/* ── Supabase admin client ─────────────────────────────────────────── */
 const supabase = createClient(
-  FAIRYRING_ENV.supabase!,        // project URL
-  FAIRYRING_ENV.supabaseKey!      // service‑role key (server‑only)
+  FAIRYRING_ENV.supabase!,
+  FAIRYRING_ENV.supabaseKey!
 )
 
-/* ───────────────────────── helper constants ────────────────────────────── */
+/* ── constants ─────────────────────────────────────────────────────── */
 type TokenKey = 'SOL' | 'BTC' | 'ETH' | 'LINK'
 const TOKENS: TokenKey[] = ['SOL', 'BTC', 'ETH', 'LINK']
 const COL_PREFIX = { SOL:'sol', BTC:'btc', ETH:'eth', LINK:'link' } as const
@@ -18,7 +18,7 @@ const COL_PREFIX = { SOL:'sol', BTC:'btc', ETH:'eth', LINK:'link' } as const
 const ddmmyyyy = (d: Date) =>
   `${String(d.getUTCDate()).padStart(2,'0')}-${String(d.getUTCMonth()+1).padStart(2,'0')}-${d.getUTCFullYear()}`
 
-/* ───────────────── price / date / block meta for each token ────────────── */
+/* ── price / date / block meta ─────────────────────────────────────── */
 async function collectTokenInfo() {
   const nowISO = new Date().toISOString()
 
@@ -59,61 +59,28 @@ async function collectTokenInfo() {
   return info
 }
 
-/* ───────────────────────── main handler ────────────────────────────────── */
+/* ── main handler ─────────────────────────────────────────────────── */
 export async function GET() {
   try {
-    /* 1️⃣  pull current participants ----------------------------------- */
-    const { data: participants, error: partErr } = await supabase
+    /* 1️⃣ pull participants ------------------------------------------ */
+    const { data: participants, error } = await supabase
       .from('participants')
       .select(`
-        address,total_score,
+        address,total_score,tweet_points,
         sol_guess,sol_delta,sol_score,
         btc_guess,btc_delta,btc_score,
         eth_guess,eth_delta,eth_score,
         link_guess,link_delta,link_score
       `)
 
-    if (partErr) throw partErr
+    if (error) throw error
 
-    /* 2️⃣  proofs awaiting payout -------------------------------------- */
-    const { data: proofs, error: proofErr } = await supabase
-      .from('proofs')
-      .select('id,wallet')
-      .eq('used', true)
-
-    if (proofErr) throw proofErr
-
-    if (proofs && proofs.length) {
-      /* 2‑a aggregate bonus per wallet */
-      const bonusMap = new Map<string, number>()
-      proofs.forEach(p =>
-        bonusMap.set(p.wallet, (bonusMap.get(p.wallet) || 0) + 200)
-      )
-
-      /* 2‑b write new totals back */
-      for (const [wallet, bonus] of bonusMap) {
-        const row = participants.find(r => r.address === wallet)
-        if (!row) continue           // unlikely, but extra safety
-        const newTotal = Number(row.total_score) + bonus
-        await supabase
-          .from('participants')
-          .update({ total_score: newTotal })
-          .eq('address', wallet)
-        row.total_score = newTotal   // keep in‑memory copy in sync
-      }
-
-      /* 2‑c delete credited proofs so they can't be double‑counted */
-      await supabase.from('proofs')
-        .delete()
-        .in('id', proofs.map(p => p.id))
-    }
-
-    /* 3️⃣  overall board ---------------------------------------------- */
+    /* 2️⃣ overall leaderboard --------------------------------------- */
     const overall = participants
       .map(r => ({ address: r.address, totalScore: Number(r.total_score) }))
       .sort((a,b) => b.totalScore - a.totalScore)
 
-    /* 4️⃣  per‑token boards ------------------------------------------- */
+    /* 3️⃣ per‑token boards ----------------------------------------- */
     const board = (tok: TokenKey) => {
       const p = COL_PREFIX[tok]
       return participants
@@ -134,12 +101,21 @@ export async function GET() {
       LINK: board('LINK'),
     }
 
-    /* 5️⃣  token meta -------------------------------------------------- */
+    /* 4️⃣ tweet leaderboard ---------------------------------------- */
+    const tweetScores = participants
+      .filter(r => (r.tweet_points ?? 0) > 0)
+      .map(r => ({ address: r.address, score: Number(r.tweet_points) }))
+      .sort((a,b) => b.score - a.score)
+
+    /* 5️⃣ token meta ----------------------------------------------- */
     const tokenInfo = await collectTokenInfo()
 
-    return NextResponse.json({ overall, tokens, tokenInfo })
+    return NextResponse.json({ overall, tokens, tweetScores, tokenInfo })
   } catch (err) {
     console.error(err)
-    return NextResponse.json({ error:'failed to fetch leaderboard' }, { status:500 })
+    return NextResponse.json(
+      { error:'failed to fetch leaderboard' },
+      { status:500 }
+    )
   }
 }

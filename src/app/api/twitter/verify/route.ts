@@ -7,77 +7,82 @@ const getTweetId = (urlStr: string) => {
     const u = new URL(urlStr);
     const id = u.pathname.split('/').filter(Boolean).pop();
     return id && /^\d+$/.test(id) ? id : null;
-  } catch {
-    return null;
-  }
+  } catch { return null; }
 };
 
 export async function POST(req: Request) {
-  const body = await req.json().catch(() => null);
+  /* ---------- validate body ---------- */
+  const body   = await req.json().catch(() => null);
   const Schema = z.object({
     wallet: z.string(),
-    token: z.string(),
-    url: z.string().url(),
+    token : z.string(),
+    url   : z.string().url(),
   });
   const parse = Schema.safeParse(body);
   if (!parse.success)
-    return NextResponse.json({ error: 'bad request' }, { status: 400 });
+    return NextResponse.json({ error:'bad request' }, { status:400 });
 
   const { wallet, token, url } = parse.data;
 
-  /* 1️⃣ pending row */
-  const { data: proof, error } = await supabase
+  /* ---------- 1) pending proof ---------- */
+  const { data: proof, error: pfErr } = await supabase
     .from('proofs')
     .select('*')
     .eq('wallet', wallet)
-    .eq('token', token)
-    .eq('used', false)
+    .eq('token',  token)
+    .eq('used',   false)
     .maybeSingle();
 
-  if (error)
-    return NextResponse.json({ error: error.message }, { status: 500 });
-  if (!proof)
-    return NextResponse.json({ error: 'not found' }, { status: 404 });
+  if (pfErr)  return NextResponse.json({ error:pfErr.message }, { status:500 });
+  if (!proof) return NextResponse.json({ error:'not found'    }, { status:404 });
 
-  /* 2️⃣ unauthenticated tweet scrape */
+  /* ---------- 2) scrape tweet ---------- */
   const tweetId = getTweetId(url);
-  if (!tweetId)
-    return NextResponse.json({ error: 'bad URL' }, { status: 400 });
+  if (!tweetId) return NextResponse.json({ error:'bad URL' }, { status:400 });
 
   const endpoints = [
     `https://cdn.syndication.twimg.com/tweet-result?id=${tweetId}&lang=en`,
     `https://publish.twitter.com/oembed?url=${encodeURIComponent(url)}`,
   ];
-
   let text = '';
   for (const ep of endpoints) {
     try {
-      const r = await fetch(ep);
-      if (!r.ok) continue;
-      const js = await r.json().catch(() => null);
-      if (js?.text) {
-        text = js.text;
-        break;
-      }
+      const r = await fetch(ep); if (!r.ok) continue;
+      const js = await r.json().catch(()=>null);
+      if (js?.text) { text = js.text; break; }
       if (typeof js?.html === 'string') {
-        text = js.html.replace(/<[^>]+>/g, ' ');
-        break;
+        text = js.html.replace(/<[^>]+>/g,' '); break;
       }
-    } catch {
-      /* ignore and try next */
-    }
+    } catch {/* try next */}
   }
   if (!text.includes(token))
-    return NextResponse.json({ error: 'token not in tweet' }, { status: 422 });
+    return NextResponse.json({ error:'token not in tweet' }, { status:422 });
 
-  /* 3️⃣ mark used */
-  const { error: upErr } = await supabase
+  /* ---------- 3) credit 200 pts & upsert participant ---------- */
+  const { data: participant } = await supabase
+    .from('participants')
+    .select('total_score,tweet_points')
+    .eq('address', wallet)
+    .maybeSingle();
+
+  if (participant) {
+    await supabase.from('participants').update({
+      total_score : (participant.total_score  ?? 0) + 200,
+      tweet_points: (participant.tweet_points ?? 0) + 200,
+    }).eq('address', wallet);
+  } else {
+    await supabase.from('participants').insert({
+      address      : wallet,
+      total_score  : 200,
+      tweet_points : 200,
+    });
+  }
+
+  /* ---------- 4) mark proof used & delete ---------------------- */
+  await supabase
     .from('proofs')
-    .update({ used: true, tweet_id: tweetId })
+    .delete()
     .eq('id', proof.id);
 
-  if (upErr)
-    return NextResponse.json({ error: upErr.message }, { status: 500 });
-
-  return NextResponse.json({ ok: true });
+  return NextResponse.json({ ok:true });
 }
