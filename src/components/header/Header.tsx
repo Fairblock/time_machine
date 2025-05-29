@@ -6,13 +6,14 @@
    import { useState, useEffect }         from 'react';
    import Image                           from 'next/image';
    import Link                            from 'next/link';
-   import { Copy, Menu, X as CloseIcon }  from 'lucide-react';
+   import { Copy, Menu, X as CloseIcon, LogOut }  from 'lucide-react';
    
    import { Button } from '@/components/ui/button';
    import { fairyring } from '@/constant/chains';
    import {
      useAccount,
      useConnect,
+     useDisconnect,        // ← NEW
      useSuggestChainAndConnect,
      WalletType,
    } from 'graz';
@@ -22,10 +23,12 @@
      /* ───────── wallet helpers ─────────────────────────────────────── */
      const [showWallet, setShowWallet] = useState(false);
      const [mobileOpen, setMobileOpen] = useState(false);
-     const [attempted, setAttempted]   = useState<WalletType | null>(null); // NEW
+     const [attempted, setAttempted]   = useState<WalletType | null>(null);
+     const [walletMenu, setWalletMenu] = useState(false);      // ← NEW (desktop dropdown)
    
      const { data: account, isConnected } = useAccount();
      const { connect, error: walletErr }  = useConnect();
+     const { disconnect }                 = useDisconnect();    // ← NEW
      const { suggestAndConnect }          = useSuggestChainAndConnect();
    
      const truncated = account?.bech32Address
@@ -63,7 +66,7 @@
        <>
          {/* ===== TOP BAR ===== */}
          <header className="w-full bg-gray-100 font-sans">
-           <div className="flex items-center justify-between w-full px-4 py-2">
+           <div className="flex items-center justify-between w-full px-4 py-2 relative">
              {/* logo */}
              <Link href="/" className="flex-shrink-0">
                <Image
@@ -97,18 +100,46 @@
              </nav>
    
              {/* wallet button (desktop) */}
-             <div className="hidden md:block flex-shrink-0">
+             <div className="hidden md:block flex-shrink-0 relative">
                {isConnected ? (
-                 <div
-                   onClick={() => account && navigator.clipboard.writeText(account.bech32Address)}
-                   title={account?.bech32Address}
-                   className="cursor-pointer p-0.5 rounded-full bg-gradient-to-r from-indigo-500 to-pink-500 hover:opacity-80 transition"
-                 >
-                   <div className="flex items-center space-x-2 bg-white rounded-full px-3 py-[3px]">
-                     <span className="font-mono text-xs text-gray-700">{truncated}</span>
-                     <Copy size={14} className="text-gray-500 hover:text-gray-700" />
-                   </div>
-                 </div>
+                 <>
+                   <button
+                     onClick={() => setWalletMenu(v => !v)}
+                     title={account?.bech32Address}
+                     className="cursor-pointer p-0.5 rounded-full bg-gradient-to-r from-indigo-500 to-pink-500 hover:opacity-80 transition"
+                   >
+                     <div className="flex items-center space-x-2 bg-white rounded-full px-3 py-[3px]">
+                       <span className="font-mono text-xs text-gray-700">{truncated}</span>
+                     </div>
+                   </button>
+   
+                   {/* dropdown menu */}
+                   {walletMenu && (
+                     <div
+                       className="absolute right-0 mt-2 w-48 bg-white shadow-lg ring-1 ring-gray-200 rounded-md z-30"
+                       onMouseLeave={() => setWalletMenu(false)}
+                     >
+                       <button
+                         className="flex items-center w-full px-4 py-2 text-sm hover:bg-gray-50"
+                         onClick={() => {
+                           if (account) navigator.clipboard.writeText(account.bech32Address);
+                           setWalletMenu(false);
+                         }}
+                       >
+                         <Copy size={14} className="mr-2" /> Copy address
+                       </button>
+                       <button
+                         className="flex items-center w-full px-4 py-2 text-sm text-red-600 hover:bg-gray-50"
+                         onClick={() => {
+                           disconnect();           // ← NEW
+                           setWalletMenu(false);
+                         }}
+                       >
+                         <LogOut size={14} className="mr-2" /> Disconnect
+                       </button>
+                     </div>
+                   )}
+                 </>
                ) : (
                  <Button size="sm" onClick={() => setShowWallet(true)}>
                    Connect
@@ -144,25 +175,13 @@
                  <CloseIcon size={24} />
                </button>
    
-               <Link
-                 href="/prediction"
-                 onClick={() => setMobileOpen(false)}
-                 className="block text-gray-900"
-               >
+               <Link href="/prediction"  onClick={() => setMobileOpen(false)} className="block text-gray-900">
                  Encrypt Prediction
                </Link>
-               <Link
-                 href="/capsules"
-                 onClick={() => setMobileOpen(false)}
-                 className="block text-gray-900"
-               >
+               <Link href="/capsules"    onClick={() => setMobileOpen(false)} className="block text-gray-900">
                  Predictions
                </Link>
-               <Link
-                 href="/leaderboard"
-                 onClick={() => setMobileOpen(false)}
-                 className="block text-gray-900"
-               >
+               <Link href="/leaderboard" onClick={() => setMobileOpen(false)} className="block text-gray-900">
                  Leaderboard
                </Link>
                <a
@@ -176,13 +195,25 @@
    
                <div className="pt-6 border-t">
                  {isConnected ? (
-                   <div
-                     onClick={() => account && navigator.clipboard.writeText(account.bech32Address)}
-                     className="cursor-pointer flex items-center space-x-2"
-                   >
-                     <span className="font-mono text-sm">{truncated}</span>
-                     <Copy size={16} />
-                   </div>
+                   <>
+                     <div
+                       onClick={() => account && navigator.clipboard.writeText(account.bech32Address)}
+                       className="cursor-pointer flex items-center space-x-2 mb-4"
+                     >
+                       <span className="font-mono text-sm">{truncated}</span>
+                       <Copy size={16} />
+                     </div>
+                     <Button
+                       variant="outline"
+                       className="w-full"
+                       onClick={() => {
+                         disconnect();               // ← NEW
+                         setMobileOpen(false);
+                       }}
+                     >
+                       Disconnect
+                     </Button>
+                   </>
                  ) : (
                    <Button
                      className="w-full"
@@ -217,32 +248,24 @@
                  <span className="font-semibold underline">Privacy Policy</span>.
                </p>
    
-               {/* ───── Keplr ───── */}
+               {/* Keplr */}
                <div className="flex items-center justify-between">
                  <div className="flex items-center space-x-3">
                    <Image src="/keplr.png" alt="Keplr icon" width={32} height={32} />
                    <span className="text-lg font-medium">Keplr</span>
                  </div>
-                 <Button
-                   variant="outline"
-                   className="px-6 py-1"
-                   onClick={connectKeplr}
-                 >
+                 <Button variant="outline" className="px-6 py-1" onClick={connectKeplr}>
                    Connect
                  </Button>
                </div>
    
-               {/* ───── Leap ───── */}
+               {/* Leap */}
                <div className="flex items-center justify-between">
                  <div className="flex items-center space-x-3">
                    <Image src="/leap.png" alt="Leap icon" width={32} height={32} />
                    <span className="text-lg font-medium">Leap</span>
                  </div>
-                 <Button
-                   variant="outline"
-                   className="px-6 py-1"
-                   onClick={connectLeap}
-                 >
+                 <Button variant="outline" className="px-6 py-1" onClick={connectLeap}>
                    Connect
                  </Button>
                </div>
