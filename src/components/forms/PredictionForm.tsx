@@ -25,18 +25,8 @@ const MEMO      = 'price-predict';
 const PER_PAGE  = 100;
 const RPC       = FAIRYRING_ENV.rpcURL.replace(/^ws/, 'http');
 const SHARE_URL = 'https://twitter.com/intent/tweet';
-
-/**
- * Rough upper‑bound for KV‑store write gas in the Fairblock chain.
- * Cosmos SDK charges 20 gas / byte by default; we over‑approximate a bit.
- */
 const WRITE_PER_BYTE_GAS = 25;
-
-/**
- * Conservative gas limit if simulation fails. 1 M is usually plenty even for
- * large encrypted payloads, while still low enough to be accepted by most RPCs.
- */
-const FALLBACK_GAS = 1_000_000;
+const FALLBACK_GAS       = 1_000_000;
 
 /* ───────── component ────────────────────────────────────────────── */
 export default function PredictionForm() {
@@ -116,7 +106,13 @@ export default function PredictionForm() {
 
   /* ─ submit encrypted tx ─ */
   async function submitOnChain(pred: number) {
-    if (!address || targetHeight == null) return;
+    /* ——— wallet not connected → open connect banner and exit ——— */
+    if (!address) {
+      window.dispatchEvent(new Event('open-wallet-modal'));
+      return;
+    }
+    if (targetHeight == null) return;
+
     setIsSending(true);
     setFormError(null);
 
@@ -308,11 +304,18 @@ export default function PredictionForm() {
           />
           <Button
             type="submit"
-            disabled={!prediction || isSending}
+            disabled={
+              isSending ||                     // same as before
+              (address ? !prediction : false)  // ⬅ require input only if wallet connected
+            }
             className="w-full flex items-center justify-center space-x-2"
           >
             <Lock size={16} />
-            <span>{isSending ? 'Encrypting…' : 'Encrypt Now'}</span>
+            <span>
+              {address
+                ? (isSending ? 'Encrypting…' : 'Encrypt Now')
+                : 'Connect Wallet'}
+            </span>
           </Button>
         </form>
       )}

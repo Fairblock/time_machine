@@ -1,280 +1,283 @@
-/* -----------------------------------------------
-   components/header/Header.tsx
-   ----------------------------------------------- */
-   'use client';
+'use client';
 
-   import { useState, useEffect }         from 'react';
-   import Image                           from 'next/image';
-   import Link                            from 'next/link';
-   import { Copy, Menu, X as CloseIcon, LogOut }  from 'lucide-react';
-   
-   import { Button } from '@/components/ui/button';
-   import { fairyring } from '@/constant/chains';
-   import {
-     useAccount,
-     useConnect,
-     useDisconnect,        // ← NEW
-     useSuggestChainAndConnect,
-     WalletType,
-   } from 'graz';
-   import { PUBLIC_ENVIRONMENT } from '@/constant/env';
-   
-   function Header() {
-     /* ───────── wallet helpers ─────────────────────────────────────── */
-     const [showWallet, setShowWallet] = useState(false);
-     const [mobileOpen, setMobileOpen] = useState(false);
-     const [attempted, setAttempted]   = useState<WalletType | null>(null);
-     const [walletMenu, setWalletMenu] = useState(false);      // ← NEW (desktop dropdown)
-   
-     const { data: account, isConnected } = useAccount();
-     const { connect, error: walletErr }  = useConnect();
-     const { disconnect }                 = useDisconnect();    // ← NEW
-     const { suggestAndConnect }          = useSuggestChainAndConnect();
-   
-     const truncated = account?.bech32Address
-       ? `${account.bech32Address.slice(0, 6)}…${account.bech32Address.slice(-4)}`
-       : '';
-   
-     /* ───────── connect helpers ────────────────────────────────────── */
-     async function connectKeplr() {
-       setAttempted(WalletType.KEPLR);
-       await connect({
-         walletType : WalletType.KEPLR,
-         chainId    : PUBLIC_ENVIRONMENT.NEXT_PUBLIC_CHAIN_ID!,
-       });
-       setShowWallet(false);
-     }
-   
-     async function connectLeap() {
-       setAttempted(WalletType.LEAP);
-       await connect({
-         walletType : WalletType.LEAP,
-         chainId    : PUBLIC_ENVIRONMENT.NEXT_PUBLIC_CHAIN_ID!,
-       });
-       setShowWallet(false);
-     }
-   
-     /* retry with suggestChain if wallet needs the chain registered */
-     useEffect(() => {
-       if (walletErr && attempted) {
-         suggestAndConnect({ chainInfo: fairyring, walletType: attempted });
-       }
-     }, [walletErr, attempted, suggestAndConnect]);
-   
-     /* ───────── JSX ────────────────────────────────────────────────── */
-     return (
-       <>
-         {/* ===== TOP BAR ===== */}
-         <header className="w-full bg-gray-100 font-sans">
-           <div className="flex items-center justify-between w-full px-4 py-2 relative">
-             {/* logo */}
-             <Link href="/" className="flex-shrink-0">
-               <Image
-                 src="/logo.png"
-                 alt="Fairblock"
-                 width={140}
-                 height={140}
-                 className="w-28 sm:w-32 lg:w-36 h-auto"
-               />
-             </Link>
-   
-             {/* nav (desktop) */}
-             <nav className="hidden md:flex flex-grow justify-center space-x-10 text-sm">
-               <Link href="/prediction"  className="text-gray-600 hover:text-gray-900 whitespace-nowrap">
-                 Encrypt&nbsp;Prediction
-               </Link>
-               <Link href="/capsules"    className="text-gray-600 hover:text-gray-900 whitespace-nowrap">
-                 Encrypted&nbsp;Capsules
-               </Link>
-               <Link href="/leaderboard" className="text-gray-600 hover:text-gray-900 whitespace-nowrap">
-                 Leaderboard
-               </Link>
-               <a
-                 href="https://testnet-faucet.fairblock.network/"
-                 target="_blank"
-                 rel="noreferrer"
-                 className="text-gray-600 hover:text-gray-900 whitespace-nowrap"
-               >
-                 Faucet
-               </a>
-             </nav>
-   
-             {/* wallet button (desktop) */}
-             <div className="hidden md:block flex-shrink-0 relative">
-               {isConnected ? (
-                 <>
-                   <button
-                     onClick={() => setWalletMenu(v => !v)}
-                     title={account?.bech32Address}
-                     className="cursor-pointer p-0.5 rounded-full bg-gradient-to-r from-indigo-500 to-pink-500 hover:opacity-80 transition"
-                   >
-                     <div className="flex items-center space-x-2 bg-white rounded-full px-3 py-[3px]">
-                       <span className="font-mono text-xs text-gray-700">{truncated}</span>
-                     </div>
-                   </button>
-   
-                   {/* dropdown menu */}
-                   {walletMenu && (
-                     <div
-                       className="absolute right-0 mt-2 w-48 bg-white shadow-lg ring-1 ring-gray-200 rounded-md z-30"
-                       onMouseLeave={() => setWalletMenu(false)}
-                     >
-                       <button
-                         className="flex items-center w-full px-4 py-2 text-sm hover:bg-gray-50"
-                         onClick={() => {
-                           if (account) navigator.clipboard.writeText(account.bech32Address);
-                           setWalletMenu(false);
-                         }}
-                       >
-                         <Copy size={14} className="mr-2" /> Copy address
-                       </button>
-                       <button
-                         className="flex items-center w-full px-4 py-2 text-sm text-red-600 hover:bg-gray-50"
-                         onClick={() => {
-                           disconnect();           // ← NEW
-                           setWalletMenu(false);
-                         }}
-                       >
-                         <LogOut size={14} className="mr-2" /> Disconnect
-                       </button>
-                     </div>
-                   )}
-                 </>
-               ) : (
-                 <Button size="sm" onClick={() => setShowWallet(true)}>
-                   Connect
-                 </Button>
-               )}
-             </div>
-   
-             {/* hamburger (mobile) */}
-             <button
-               onClick={() => setMobileOpen(true)}
-               className="md:hidden text-gray-700 hover:text-gray-900 flex-shrink-0"
-             >
-               <Menu size={24} />
-             </button>
-           </div>
-         </header>
-   
-         {/* ===== MOBILE SHEET ===== */}
-         {mobileOpen && (
-           <div
-             className="fixed inset-0 z-40 md:hidden"
-             onClick={() => setMobileOpen(false)}
-           >
-             <div
-               onClick={(e) => e.stopPropagation()}
-               className="absolute top-0 left-0 w-full bg-white shadow px-6 pt-6 pb-10 space-y-6"
-             >
-               {/* close button */}
-               <button
-                 className="absolute top-4 right-4 text-gray-500"
-                 onClick={() => setMobileOpen(false)}
-               >
-                 <CloseIcon size={24} />
-               </button>
-   
-               <Link href="/prediction"  onClick={() => setMobileOpen(false)} className="block text-gray-900">
-                 Encrypt Prediction
-               </Link>
-               <Link href="/capsules"    onClick={() => setMobileOpen(false)} className="block text-gray-900">
-                 Predictions
-               </Link>
-               <Link href="/leaderboard" onClick={() => setMobileOpen(false)} className="block text-gray-900">
-                 Leaderboard
-               </Link>
-               <a
-                 href="https://testnet-faucet.fairblock.network/"
-                 target="_blank"
-                 rel="noreferrer"
-                 className="block text-gray-900"
-               >
-                 Faucet
-               </a>
-   
-               <div className="pt-6 border-t">
-                 {isConnected ? (
-                   <>
-                     <div
-                       onClick={() => account && navigator.clipboard.writeText(account.bech32Address)}
-                       className="cursor-pointer flex items-center space-x-2 mb-4"
-                     >
-                       <span className="font-mono text-sm">{truncated}</span>
-                       <Copy size={16} />
-                     </div>
-                     <Button
-                       variant="outline"
-                       className="w-full"
-                       onClick={() => {
-                         disconnect();               // ← NEW
-                         setMobileOpen(false);
-                       }}
-                     >
-                       Disconnect
-                     </Button>
-                   </>
-                 ) : (
-                   <Button
-                     className="w-full"
-                     onClick={() => {
-                       setShowWallet(true);
-                       setMobileOpen(false);
-                     }}
-                   >
-                     Connect Wallet
-                   </Button>
-                 )}
-               </div>
-             </div>
-           </div>
-         )}
-   
-         {/* ===== WALLET MODAL ===== */}
-         {showWallet && (
-           <div
-             className="fixed inset-0 z-50 flex items-center justify-center bg-black/40"
-             onClick={() => setShowWallet(false)}
-           >
-             <div
-               onClick={(e) => e.stopPropagation()}
-               className="w-[90%] sm:w-[420px] bg-white rounded-lg px-8 py-10 text-center space-y-8"
-             >
-               <h2 className="text-3xl font-extrabold uppercase">Connect Wallet</h2>
-               <p className="text-gray-700 text-sm">
-                 By connecting your wallet, you agree to our&nbsp;
-                 <span className="font-semibold underline">Terms of Service</span>
-                 &nbsp;and&nbsp;
-                 <span className="font-semibold underline">Privacy Policy</span>.
-               </p>
-   
-               {/* Keplr */}
-               <div className="flex items-center justify-between">
-                 <div className="flex items-center space-x-3">
-                   <Image src="/keplr.png" alt="Keplr icon" width={32} height={32} />
-                   <span className="text-lg font-medium">Keplr</span>
-                 </div>
-                 <Button variant="outline" className="px-6 py-1" onClick={connectKeplr}>
-                   Connect
-                 </Button>
-               </div>
-   
-               {/* Leap */}
-               <div className="flex items-center justify-between">
-                 <div className="flex items-center space-x-3">
-                   <Image src="/leap.png" alt="Leap icon" width={32} height={32} />
-                   <span className="text-lg font-medium">Leap</span>
-                 </div>
-                 <Button variant="outline" className="px-6 py-1" onClick={connectLeap}>
-                   Connect
-                 </Button>
-               </div>
-             </div>
-           </div>
-         )}
-       </>
-     );
-   }
-   
-   export default Header;
-   
+import { useState, useEffect }         from 'react';
+import Image                           from 'next/image';
+import Link                            from 'next/link';
+import { Copy, Menu, X as CloseIcon, LogOut } from 'lucide-react';
+
+import { Button } from '@/components/ui/button';
+import { fairyring } from '@/constant/chains';
+import {
+  useAccount,
+  useConnect,
+  useDisconnect,
+  useSuggestChainAndConnect,
+  WalletType,
+} from 'graz';
+import { PUBLIC_ENVIRONMENT } from '@/constant/env';
+
+function Header() {
+  /* ───────── wallet helpers ─────────────────────────────────────── */
+  const [showWallet, setShowWallet] = useState(false);
+  const [mobileOpen, setMobileOpen] = useState(false);
+  const [attempted, setAttempted]   = useState<WalletType | null>(null);
+  const [walletMenu, setWalletMenu] = useState(false);
+
+  const { data: account, isConnected } = useAccount();
+  const { connect, error: walletErr }  = useConnect();
+  const { disconnect }                 = useDisconnect();
+  const { suggestAndConnect }          = useSuggestChainAndConnect();
+
+  const truncated = account?.bech32Address
+    ? `${account.bech32Address.slice(0, 6)}…${account.bech32Address.slice(-4)}`
+    : '';
+
+  /* === listen for global open‑wallet events === */
+  useEffect(() => {
+    function handleOpen() { setShowWallet(true); }
+    window.addEventListener('open-wallet-modal', handleOpen);
+    return () => window.removeEventListener('open-wallet-modal', handleOpen);
+  }, []);
+
+  /* ───────── connect helpers ────────────────────────────────────── */
+  async function connectKeplr() {
+    setAttempted(WalletType.KEPLR);
+    await connect({
+      walletType : WalletType.KEPLR,
+      chainId    : PUBLIC_ENVIRONMENT.NEXT_PUBLIC_CHAIN_ID!,
+    });
+    setShowWallet(false);
+  }
+
+  async function connectLeap() {
+    setAttempted(WalletType.LEAP);
+    await connect({
+      walletType : WalletType.LEAP,
+      chainId    : PUBLIC_ENVIRONMENT.NEXT_PUBLIC_CHAIN_ID!,
+    });
+    setShowWallet(false);
+  }
+
+  /* retry with suggestChain if wallet needs the chain registered */
+  useEffect(() => {
+    if (walletErr && attempted) {
+      suggestAndConnect({ chainInfo: fairyring, walletType: attempted });
+    }
+  }, [walletErr, attempted, suggestAndConnect]);
+
+  /* ───────── JSX ────────────────────────────────────────────────── */
+  return (
+    <>
+      {/* ===== TOP BAR ===== */}
+      <header className="w-full bg-gray-100 font-sans">
+        <div className="flex items-center justify-between w-full px-4 py-2 relative">
+          {/* logo */}
+          <Link href="/" className="flex-shrink-0">
+            <Image
+              src="/logo.png"
+              alt="Fairblock"
+              width={140}
+              height={140}
+              className="w-28 sm:w-32 lg:w-36 h-auto"
+            />
+          </Link>
+
+          {/* nav (desktop) */}
+          <nav className="hidden md:flex flex-grow justify-center space-x-10 text-sm">
+            <Link href="/prediction"  className="text-gray-600 hover:text-gray-900 whitespace-nowrap">
+              Encrypt&nbsp;Prediction
+            </Link>
+            <Link href="/capsules"    className="text-gray-600 hover:text-gray-900 whitespace-nowrap">
+              Encrypted&nbsp;Capsules
+            </Link>
+            <Link href="/leaderboard" className="text-gray-600 hover:text-gray-900 whitespace-nowrap">
+              Leaderboard
+            </Link>
+            <a
+              href="https://testnet-faucet.fairblock.network/"
+              target="_blank"
+              rel="noreferrer"
+              className="text-gray-600 hover:text-gray-900 whitespace-nowrap"
+            >
+              Faucet
+            </a>
+          </nav>
+
+          {/* wallet button (desktop) */}
+          <div className="hidden md:block flex-shrink-0 relative">
+            {isConnected ? (
+              <>
+                <button
+                  onClick={() => setWalletMenu(v => !v)}
+                  title={account?.bech32Address}
+                  className="cursor-pointer p-0.5 rounded-full bg-gradient-to-r from-indigo-500 to-pink-500 hover:opacity-80 transition"
+                >
+                  <div className="flex items-center space-x-2 bg-white rounded-full px-3 py-[3px]">
+                    <span className="font-mono text-xs text-gray-700">{truncated}</span>
+                  </div>
+                </button>
+
+                {/* dropdown menu */}
+                {walletMenu && (
+                  <div
+                    className="absolute right-0 mt-2 w-48 bg-white shadow-lg ring-1 ring-gray-200 rounded-md z-30"
+                    onMouseLeave={() => setWalletMenu(false)}
+                  >
+                    <button
+                      className="flex items-center w-full px-4 py-2 text-sm hover:bg-gray-50"
+                      onClick={() => {
+                        if (account) navigator.clipboard.writeText(account.bech32Address);
+                        setWalletMenu(false);
+                      }}
+                    >
+                      <Copy size={14} className="mr-2" /> Copy address
+                    </button>
+                    <button
+                      className="flex items-center w-full px-4 py-2 text-sm text-red-600 hover:bg-gray-50"
+                      onClick={() => {
+                        disconnect();
+                        setWalletMenu(false);
+                      }}
+                    >
+                      <LogOut size={14} className="mr-2" /> Disconnect
+                    </button>
+                  </div>
+                )}
+              </>
+            ) : (
+              <Button size="sm" onClick={() => setShowWallet(true)}>
+                Connect
+              </Button>
+            )}
+          </div>
+
+          {/* hamburger (mobile) */}
+          <button
+            onClick={() => setMobileOpen(true)}
+            className="md:hidden text-gray-700 hover:text-gray-900 flex-shrink-0"
+          >
+            <Menu size={24} />
+          </button>
+        </div>
+      </header>
+
+      {/* ===== MOBILE SHEET ===== */}
+      {mobileOpen && (
+        <div
+          className="fixed inset-0 z-40 md:hidden"
+          onClick={() => setMobileOpen(false)}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            className="absolute top-0 left-0 w-full bg-white shadow px-6 pt-6 pb-10 space-y-6"
+          >
+            {/* close button */}
+            <button
+              className="absolute top-4 right-4 text-gray-500"
+              onClick={() => setMobileOpen(false)}
+            >
+              <CloseIcon size={24} />
+            </button>
+
+            <Link href="/prediction"  onClick={() => setMobileOpen(false)} className="block text-gray-900">
+              Encrypt Prediction
+            </Link>
+            <Link href="/capsules"    onClick={() => setMobileOpen(false)} className="block text-gray-900">
+              Predictions
+            </Link>
+            <Link href="/leaderboard" onClick={() => setMobileOpen(false)} className="block text-gray-900">
+              Leaderboard
+            </Link>
+            <a
+              href="https://testnet-faucet.fairblock.network/"
+              target="_blank"
+              rel="noreferrer"
+              className="block text-gray-900"
+            >
+              Faucet
+            </a>
+
+            <div className="pt-6 border-t">
+              {isConnected ? (
+                <>
+                  <div
+                    onClick={() => account && navigator.clipboard.writeText(account.bech32Address)}
+                    className="cursor-pointer flex items-center space-x-2 mb-4"
+                  >
+                    <span className="font-mono text-sm">{truncated}</span>
+                    <Copy size={16} />
+                  </div>
+                  <Button
+                    variant="outline"
+                    className="w-full"
+                    onClick={() => {
+                      disconnect();
+                      setMobileOpen(false);
+                    }}
+                  >
+                    Disconnect
+                  </Button>
+                </>
+              ) : (
+                <Button
+                  className="w-full"
+                  onClick={() => {
+                    setShowWallet(true);
+                    setMobileOpen(false);
+                  }}
+                >
+                  Connect Wallet
+                </Button>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ===== WALLET MODAL ===== */}
+      {showWallet && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/40"
+          onClick={() => setShowWallet(false)}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            className="w-[90%] sm:w-[420px] bg-white rounded-lg px-8 py-10 text-center space-y-8"
+          >
+            <h2 className="text-3xl font-extrabold uppercase">Connect Wallet</h2>
+            <p className="text-gray-700 text-sm">
+              By connecting your wallet, you agree to our&nbsp;
+              <span className="font-semibold underline">Terms of Service</span>
+              &nbsp;and&nbsp;
+              <span className="font-semibold underline">Privacy Policy</span>.
+            </p>
+
+            {/* Keplr */}
+            <div className="flex items-center justify-between">
+              <div className="flex items-center space-x-3">
+                <Image src="/keplr.png" alt="Keplr icon" width={32} height={32} />
+                <span className="text-lg font-medium">Keplr</span>
+              </div>
+              <Button variant="outline" className="px-6 py-1" onClick={connectKeplr}>
+                Connect
+              </Button>
+            </div>
+
+            {/* Leap */}
+            <div className="flex items-center justify-between">
+              <div className="flex items-center space-x-3">
+                <Image src="/leap.png" alt="Leap icon" width={32} height={32} />
+                <span className="text-lg font-medium">Leap</span>
+              </div>
+              <Button variant="outline" className="px-6 py-1" onClick={connectLeap}>
+                Connect
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+    </>
+  );
+}
+
+export default Header;
