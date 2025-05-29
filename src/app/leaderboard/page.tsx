@@ -3,7 +3,7 @@
 
 import React, { useEffect, useMemo, useState } from 'react'
 import { useAccount } from 'graz'
-
+import { Copy, Menu, X as CloseIcon, Wallet }  from 'lucide-react'; 
 import Header         from '@/components/header/Header'
 import CountdownClock from '@/components/countdown-timer/CountdownClock'
 import { Input }      from '@/components/ui/input'
@@ -155,8 +155,18 @@ export default function LeaderboardPage() {
           {/* wallet card */}
           <div className="bg-white rounded-2xl shadow p-8 flex flex-col items-center">
             {avatar
-              ? <img src={avatar} alt="avatar" className="h-20 w-20 rounded-full mb-4"/>
-              : <div className="h-20 w-20 rounded-full bg-gray-200 mb-4 flex items-center justify-center text-2xl">⚡</div>
+                      ? (
+                            <img
+                              src={avatar}
+                              alt="avatar"
+                              className="h-20 w-20 rounded-full mb-4"
+                            />
+                          )
+                        : (
+                            <div className="h-20 w-20 rounded-full bg-gray-100 shadow-inner mb-4 flex items-center justify-center">
+                              <Wallet size={34} className="text-gray-400" />
+                            </div>
+                          )
             }
             <div className="text-md font-medium break-all text-center">
               {account?.bech32Address ? longShort(account.bech32Address) : 'Connect wallet'}
@@ -201,7 +211,7 @@ export default function LeaderboardPage() {
           {/* success banner */}
           {showBanner && (
             <div className="bg-green-50 text-green-800 rounded-2xl shadow flex items-center justify-center p-6 text-sm">
-              ✅ Verified! 200 points added.
+               Verified! 200 points added.
             </div>
           )}
         </div>
