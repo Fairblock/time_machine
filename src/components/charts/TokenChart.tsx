@@ -1,6 +1,8 @@
+/* components/charts/TokenChart.tsx */
 'use client';
 
 import { useQuery } from '@tanstack/react-query';
+
 import {
   Chart as ChartJS,
   CategoryScale,
@@ -9,14 +11,19 @@ import {
   Tooltip,
   Legend,
 } from 'chart.js';
-import { CandlestickController, CandlestickElement } from 'chartjs-chart-financial';
+import {
+  CandlestickController,
+  CandlestickElement,
+} from 'chartjs-chart-financial';
+
 import 'chartjs-adapter-date-fns';
 import { Chart } from 'react-chartjs-2';
 
 import { getLastFridayStart, getOHLC } from '@/lib/utils';
 import { useActiveToken } from '@/hooks/useActiveToken';
-import { IPriceCandle } from '@/types/global';
+import type { IPriceCandle } from '@/types/global';
 
+/* ─── register everything once ─────────────────────────────────── */
 ChartJS.register(
   CategoryScale,
   LinearScale,
@@ -27,54 +34,82 @@ ChartJS.register(
   CandlestickElement
 );
 
-export default function TokenChart() {
-  /* Which token are we working with? */
-  const { data: token, isLoading: tokenLoading, isError: tokenErr } = useActiveToken();
+/* make every chart responsive by default */
+ChartJS.defaults.responsive = true;
+ChartJS.defaults.maintainAspectRatio = false;
 
-  /* Price candles for that token */
+/* ─── component ────────────────────────────────────────────────── */
+export default function TokenChart() {
+  /* which token are we charting? */
+  const { data: token, isLoading: tokenLoading, isError: tokenErr } =
+    useActiveToken();
+
+  /* fetch OHLC candles */
   const {
-    data: raw,
+    data: candles,
     isLoading: priceLoading,
-    isError : priceErr,
+    isError: priceErr,
   } = useQuery<IPriceCandle[]>({
-    enabled  : !!token,                           // wait for token first
-    queryKey : ['candles', token?.coingecko_id],
-    queryFn  : async () => {
-      const from  = getLastFridayStart().getTime();
-      const to    = Date.now();
-      const ohlc  = await getOHLC(from, to, token!.coingecko_id);
+    enabled: !!token,
+    queryKey: ['candles', token?.coingecko_id],
+    queryFn: async () => {
+      const from = getLastFridayStart().getTime();
+      const to = Date.now();
+      const ohlc = await getOHLC(from, to, token!.coingecko_id);
       return ohlc.map(([ts, o, h, l, c]) => ({ x: ts, o, h, l, c }));
     },
   });
 
-  /* Loading / error states */
+  /* edge cases */
   if (tokenLoading || priceLoading) {
     return <p className="text-sm text-gray-500">Loading price chart…</p>;
   }
-  if (tokenErr || priceErr || !raw?.length) {
+  if (tokenErr || priceErr || !candles?.length) {
     return <p className="text-sm text-red-500">Failed to load chart data</p>;
   }
 
-  /* Normal render */
+  /* chart.js config */
   const data = {
     datasets: [
       {
-        label : `${token!.symbol} Price (USD)`,
-        data  : raw,
-        color : { up: '#16a34a', down: '#dc2626', unchanged: '#6b7280' },
+        label: `${token!.symbol} Price (USD)`,
+        data: candles,
+        color: {
+          up: '#16a34a',
+          down: '#dc2626',
+          unchanged: '#6b7280',
+        },
       },
     ],
   };
+
   const options = {
-    plugins: { legend: { position: 'top' as const } },
-    scales : {
+    responsive: true,
+    maintainAspectRatio: false, // ← crucial for full‑width canvas
+    plugins: {
+      legend: { position: 'top' as const },
+    },
+    scales: {
       x: { type: 'time' as const, time: { unit: 'hour' } },
       y: {
-        ticks: { callback: (v: number) => `$${v.toFixed(2)}` },
+        ticks: {
+          callback: (v: number) => `$${v.toFixed(2)}`,
+        },
         beginAtZero: false,
       },
     },
   };
 
-  return <Chart type="candlestick" data={data} options={options} />;
+  return (
+    /* parent div gives explicit width & height */
+    <div className="w-full h-full">
+      <Chart
+        type="candlestick"
+        data={data}
+        options={options}
+        /* ensure react‑chartjs‑2 stretches */
+        style={{ width: '100%', height: '100%' }}
+      />
+    </div>
+  );
 }

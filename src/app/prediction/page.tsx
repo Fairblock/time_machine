@@ -1,40 +1,56 @@
 /* app/prediction/page.tsx */
 'use client';
 
-import { useState }      from 'react'
-import Image             from 'next/image'
-import Header            from '@/components/header/Header'
-import TokenChart        from '@/components/charts/TokenChart'
-import CountdownTimer    from '@/components/countdown-timer/CountdownTimer'
-import PredictionForm    from '@/components/forms/PredictionForm'
-import { useActiveToken } from '@/hooks/useActiveToken'
+import { useState } from 'react';
+import Image from 'next/image';
+import Header from '@/components/header/Header';
+import TokenChart from '@/components/charts/TokenChart';
+import CountdownTimer from '@/components/countdown-timer/CountdownTimer';
+import PredictionForm from '@/components/forms/PredictionForm';
+import { useActiveToken } from '@/hooks/useActiveToken';
 
-const EDGE_HEIGHT = '70vh'
+/* Height for edge images when visible (≥ lg) */
+const EDGE_HEIGHT = '70vh';
 
 export default function Prediction() {
-  /* banner visibility — must be first */
-  const [showBanner, setShowBanner] = useState(true)
+  const [showBanner, setShowBanner] = useState(true);
 
-  const { data: token, isLoading } = useActiveToken()
-  if (isLoading) return <p className="text-center mt-20">Loading…</p>
+  const { data: token, isLoading } = useActiveToken();
+  if (isLoading) return <p className="text-center mt-20">Loading…</p>;
 
-  const iconSrc = `/${token!.symbol.toLowerCase()}.png`
+  const iconSrc = `/${token!.symbol.toLowerCase()}.png`;
 
   return (
-    <div className="relative min-h-screen font-sans bg-[#E8ECEF] overflow-hidden">
-      {/* decorative edges */}
-      <div className="absolute left-0 pointer-events-none select-none"
-           style={{ height: EDGE_HEIGHT, top:`calc(50% - ${EDGE_HEIGHT}/2)`, width:'35vw', maxWidth:'520px' }}>
+    /* === viewport‑locked wrapper ================================= */
+    <div className="relative h-dvh flex flex-col font-sans bg-[#E8ECEF] overflow-hidden">
+      {/* decorative edge images – show only ≥ lg */}
+      <div
+        className="absolute left-0 hidden lg:block pointer-events-none select-none"
+        style={{
+          height: EDGE_HEIGHT,
+          top: `calc(50% - ${EDGE_HEIGHT}/2)`,
+          width: '35vw',
+          maxWidth: '520px',
+        }}
+      >
         <Image src="/Left.png" alt="" fill priority className="object-cover" />
       </div>
-      <div className="absolute right-0 pointer-events-none select-none"
-           style={{ height: EDGE_HEIGHT, top:`calc(50% - ${EDGE_HEIGHT}/2)`, width:'35vw', maxWidth:'520px' }}>
+      <div
+        className="absolute right-0 hidden lg:block pointer-events-none select-none"
+        style={{
+          height: EDGE_HEIGHT,
+          top: `calc(50% - ${EDGE_HEIGHT}/2)`,
+          width: '35vw',
+          maxWidth: '520px',
+        }}
+      >
         <Image src="/Right.png" alt="" fill priority className="object-cover" />
       </div>
 
+      {/* top nav */}
       <Header />
 
-      {/* floating campaign banner */}
+      {/* floating banner */}
       {showBanner && (
         <div
           className="
@@ -55,36 +71,71 @@ export default function Prediction() {
             aria-label="Close"
           >
             <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-              <path d="M4 4L12 12M12 4L4 12" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/>
+              <path
+                d="M4 4L12 12M12 4L4 12"
+                stroke="currentColor"
+                strokeWidth="1.8"
+                strokeLinecap="round"
+              />
             </svg>
           </button>
         </div>
       )}
 
-      <main className="relative z-10 flex flex-col items-center p-8 max-w-4xl mx-auto space-y-10">
-        <h1 className="text-5xl font-bold uppercase gradient-text">
-          Predict {token!.coingecko_id} Price
+      {/* === MAIN =================================================== */}
+      <main
+        className="
+          flex-1                          /* fill remaining viewport height */
+          flex flex-col items-center
+          justify-center                  /* centre on taller screens */
+          gap-4 sm:gap-5 lg:gap-6
+          px-6 sm:px-8 md:px-10 lg:px-12 py-6
+          overflow-hidden                 /* no body scroll */
+        "
+      >
+        {/* heading */}
+        <h1
+          className="
+            text-2xl sm:text-3xl md:text-4xl font-extrabold
+            uppercase gradient-text text-center
+          "
+        >
+          Predict&nbsp;{token!.coingecko_id}&nbsp;Price
         </h1>
 
-        <div className="bg-white/80 backdrop-blur rounded-2xl shadow p-6 w-full">
-          <div className="flex items-center justify-between mb-4">
+        {/* price card */}
+        <div
+          className="
+            w-full max-w-4xl
+            bg-white/90 backdrop-blur rounded-2xl shadow
+            p-3 sm:p-4 md:p-5 lg:p-6
+            space-y-4
+          "
+        >
+          <div className="flex items-center justify-between">
             <div className="flex items-center space-x-2">
-              <Image src={iconSrc} alt={token!.symbol} width={58} height={58} />
-              <span className="text-xl font-semibold">{token!.symbol}</span>
+              <Image src={iconSrc} alt={token!.symbol} width={40} height={40} />
+              <span className="text-base sm:text-lg font-semibold">{token!.symbol}</span>
             </div>
-            <span className="text-gray-600">Current Price Chart</span>
+            <span className="text-gray-600 text-xs sm:text-sm">Current Price Chart</span>
           </div>
-          <TokenChart />
+
+          {/* chart ‑‑ cap at 30 vh on small, grow on large */}
+          <div className="max-h-[30vh] md:max-h-[35vh] lg:max-h-[40vh] overflow-hidden">
+            <TokenChart />
+          </div>
         </div>
 
+        {/* form – stays compact */}
         <PredictionForm
           label={`Your ${token!.symbol} prediction in USD`}
-          placeholder="Eg: $168"
+          placeholder="Eg: $168"
           buttonText="Encrypt Now"
         />
 
+        {/* countdown */}
         <CountdownTimer />
       </main>
     </div>
-  )
+  );
 }
