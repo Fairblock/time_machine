@@ -1,4 +1,3 @@
-/* app/prediction/page.tsx */
 'use client';
 
 import { useEffect, useState } from 'react';
@@ -27,6 +26,18 @@ const PER_PAGE  = 100;
 const RPC       = FAIRYRING_ENV.rpcURL.replace(/^ws/, 'http');
 const SHARE_URL = 'https://twitter.com/intent/tweet';
 
+/**
+ * Rough upper‑bound for KV‑store write gas in the Fairblock chain.
+ * Cosmos SDK charges 20 gas / byte by default; we over‑approximate a bit.
+ */
+const WRITE_PER_BYTE_GAS = 25;
+
+/**
+ * Conservative gas limit if simulation fails. 1 M is usually plenty even for
+ * large encrypted payloads, while still low enough to be accepted by most RPCs.
+ */
+const FALLBACK_GAS = 1_000_000;
+
 /* ───────── component ────────────────────────────────────────────── */
 export default function PredictionForm() {
   /* form / tx state */
@@ -39,7 +50,7 @@ export default function PredictionForm() {
 
   /* UX states */
   const [proofToken, setProofToken] = useState('');
-  const [formError,  setFormError]  = useState<string|null>(null);      // ← NEW
+  const [formError,  setFormError]  = useState<string|null>(null);
 
   /* hooks */
   const { data: activeToken } = useActiveToken();
@@ -108,7 +119,7 @@ export default function PredictionForm() {
     if (!address || targetHeight == null) return;
     setIsSending(true);
     setFormError(null);
-  
+
     try {
       /* nonce helper (unchanged) */
       const { data: { pepNonce } } = await client.FairyringPep.query.queryPepNonce(address);
@@ -118,41 +129,29 @@ export default function PredictionForm() {
         txs.encryptedTx?.forEach(tx => tx.creator === address && sent++)
       );
       const nonce = pepNonce?.nonce ? +pepNonce.nonce + sent : sent;
-  
+
       /* build send‑msg */
       const amount: Amount[] = [{ denom: 'ufairy', amount: '1' }];
       const payload = { amount, fromAddress: address,
                         toAddress: PUBLIC_ENVIRONMENT.NEXT_PUBLIC_FAUCET_ADDRESS! };
       const memo    = JSON.stringify({ tag: MEMO, memo: { prediction: pred }, payload });
       const sendMsg = client.CosmosBankV1Beta1.tx.msgSend({ value: payload });
-  
-      /* ──────────────────────────────────────────────────────
-         1️⃣  GAS ESTIMATION
-         The Ignite SDK sometimes exposes CosmosTxV1Beta1.query.simulate,
-         but to stay type‑safe we access it dynamically and fall back to
-         a default if it’s missing or the RPC errors out.
-      ────────────────────────────────────────────────────── */
-      let estimatedGas = 500_000;      // sane default
+
+      /* 1️⃣  GAS ESTIMATION (simulate MsgSend) */
+      let estimatedGas = FALLBACK_GAS;
       try {
         const sim = (client as any).CosmosTxV1Beta1?.query?.simulate;
         if (typeof sim === 'function') {
-          const res = await sim({
-            // the exact field names depend on the proto; this works for
-            // most generated clients
-            tx: {
-              body: { messages: [sendMsg], memo },
-              signatures: [],
-            },
-          });
+          const res = await sim({ tx: { body: { messages: [sendMsg], memo }, signatures: [] } });
           if (res?.gasInfo?.gasUsed) {
-            estimatedGas = Math.round(Number(res.gasInfo.gasUsed) * 2); // 30 % buffer
+            estimatedGas = Math.ceil(Number(res.gasInfo.gasUsed) * 1.3); // +30 % buffer
           }
         }
       } catch (e) {
-        console.warn('gas simulation failed, using default', e);
+        console.warn('gas simulation failed, using fallback', e);
       }
-  
-      /* 2️⃣  sign with estimated gas */
+
+      /* 2️⃣  sign MsgSend with estimated gas */
       const signed = await signOfflineWithCustomNonce(
         address,
         FAIRYRING_ENV.rpcURL,
@@ -162,18 +161,42 @@ export default function PredictionForm() {
         memo,
         nonce
       );
-  
-      /* encrypt & broadcast */
+
+      /* encrypt & size‑aware gas for MsgSubmitEncryptedTx */
       const key = (pubkey as any).activePubKey?.publicKey ??
                   (pubkey as any).queuedPubKey.publicKey;
       const encryptedHex = await encryptSignedTx(key, targetHeight, signed);
+
+      // Add gas for KV‑store write (WritePerByte)
+      const bytesToWrite = encryptedHex.length / 2; // 2 hex chars per byte
+      const submitGas = Math.max(
+        estimatedGas,
+        Math.ceil(bytesToWrite * WRITE_PER_BYTE_GAS + 200_000) // base + per‑byte
+      );
+
+      /* 3️⃣  broadcast */
       const txResult = await client.FairyringPep.tx.sendMsgSubmitEncryptedTx({
         value: { creator: address, data: encryptedHex, targetBlockHeight: targetHeight },
-        fee  : { amount: [{ denom: 'ufairy', amount: '0' }], gas: String(estimatedGas) },
+        fee  : { amount: [{ denom: 'ufairy', amount: '0' }], gas: String(submitGas) },
         memo : MEMO,
       });
-      if (txResult.code) throw new Error(txResult.rawLog);
-  
+
+      if (txResult.code) {
+        // Retry once with double gas if we still hit out‑of‑gas
+        if (/out of gas/i.test(txResult.rawLog ?? '')) {
+          const retryGas = submitGas * 2;
+          console.warn(`retrying with higher gas (${retryGas})…`);
+          const retry = await client.FairyringPep.tx.sendMsgSubmitEncryptedTx({
+            value: { creator: address, data: encryptedHex, targetBlockHeight: targetHeight },
+            fee  : { amount: [{ denom: 'ufairy', amount: '0' }], gas: String(retryGas) },
+            memo : MEMO,
+          });
+          if (retry.code) throw new Error(retry.rawLog);
+        } else {
+          throw new Error(txResult.rawLog);
+        }
+      }
+
       /* proof‑token (unchanged) */
       const newToken = nanoid(8);
       const res = await fetch('/api/twitter/proof', {
@@ -182,7 +205,7 @@ export default function PredictionForm() {
         body   : JSON.stringify({ wallet: address, token: newToken })
       });
       if (!res.ok) throw new Error('failed to create proof‑token');
-  
+
       setProofToken(newToken);
       setSubmitted(true);
       setShowModal(true);
