@@ -295,7 +295,7 @@ export default function PredictionForm() {
       )}
 
       {(isChecking || isSending) && (
-        <div className="absolute inset-0 z-10 grid place-items-center bg-[#F2F4F3]">
+        <div className="absolute inset-0 z-10 grid place-items-center bg-[#E8ECEF]">
           <Loader2 className="h-10 w-10 animate-spin text-gray-600" />
         </div>
       )}
