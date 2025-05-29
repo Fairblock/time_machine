@@ -21,27 +21,28 @@ import { MsgSubmitEncryptedTx } from '@/types/fairyring/codec/pep/tx';
 import { Buffer } from 'buffer';
 import { useActiveToken } from '@/hooks/useActiveToken';
 
-/* ───────── constants ─────────────────────────────────────────────── */
+/* ───────── constants ────────────────────────────────────────────── */
 const MEMO      = 'price-predict';
 const PER_PAGE  = 100;
 const RPC       = FAIRYRING_ENV.rpcURL.replace(/^ws/, 'http');
 const SHARE_URL = 'https://twitter.com/intent/tweet';
 
-/* ───────── component ─────────────────────────────────────────────── */
+/* ───────── component ────────────────────────────────────────────── */
 export default function PredictionForm() {
   /* form / tx state */
-  const [prediction, setPrediction] = useState('');
-  const [submitted,  setSubmitted]  = useState(false);
-  const [showModal,  setShowModal]  = useState(false);
-  const [isSending,  setIsSending]  = useState(false);
-  const [isChecking, setIsChecking] = useState(true);
+  const [prediction,   setPrediction]   = useState('');
+  const [submitted,    setSubmitted]    = useState(false);
+  const [showModal,    setShowModal]    = useState(false);
+  const [isSending,    setIsSending]    = useState(false);
+  const [isChecking,   setIsChecking]   = useState(true);
   const [targetHeight, setTargetHeight] = useState<number | null>(null);
 
-  /* proof‑token for tweet */
-  const [proofToken, setProofToken] = useState<string>('');
+  /* UX states */
+  const [proofToken, setProofToken] = useState('');
+  const [formError,  setFormError]  = useState<string|null>(null);      // ← NEW
 
   /* hooks */
-  const { data: activeToken } = useActiveToken();          // ✅ fixed destructuring
+  const { data: activeToken } = useActiveToken();
   const client                = useClient();
   const { data: account }     = useAccount();
   const address               = account?.bech32Address;
@@ -106,9 +107,10 @@ export default function PredictionForm() {
   async function submitOnChain(pred: number) {
     if (!address || targetHeight == null) return;
     setIsSending(true);
-
+    setFormError(null);
+  
     try {
-      /* nonce helper */
+      /* nonce helper (unchanged) */
       const { data: { pepNonce } } = await client.FairyringPep.query.queryPepNonce(address);
       let sent = 0;
       const { data: { encryptedTxArray } } = await client.FairyringPep.query.queryEncryptedTxAll();
@@ -116,36 +118,63 @@ export default function PredictionForm() {
         txs.encryptedTx?.forEach(tx => tx.creator === address && sent++)
       );
       const nonce = pepNonce?.nonce ? +pepNonce.nonce + sent : sent;
-
-      /* build & sign send‑msg */
+  
+      /* build send‑msg */
       const amount: Amount[] = [{ denom: 'ufairy', amount: '1' }];
       const payload = { amount, fromAddress: address,
                         toAddress: PUBLIC_ENVIRONMENT.NEXT_PUBLIC_FAUCET_ADDRESS! };
-      const memo = JSON.stringify({ tag: MEMO, memo: { prediction: pred }, payload });
+      const memo    = JSON.stringify({ tag: MEMO, memo: { prediction: pred }, payload });
       const sendMsg = client.CosmosBankV1Beta1.tx.msgSend({ value: payload });
-
+  
+      /* ──────────────────────────────────────────────────────
+         1️⃣  GAS ESTIMATION
+         The Ignite SDK sometimes exposes CosmosTxV1Beta1.query.simulate,
+         but to stay type‑safe we access it dynamically and fall back to
+         a default if it’s missing or the RPC errors out.
+      ────────────────────────────────────────────────────── */
+      let estimatedGas = 500_000;      // sane default
+      try {
+        const sim = (client as any).CosmosTxV1Beta1?.query?.simulate;
+        if (typeof sim === 'function') {
+          const res = await sim({
+            // the exact field names depend on the proto; this works for
+            // most generated clients
+            tx: {
+              body: { messages: [sendMsg], memo },
+              signatures: [],
+            },
+          });
+          if (res?.gasInfo?.gasUsed) {
+            estimatedGas = Math.round(Number(res.gasInfo.gasUsed) * 1.3); // 30 % buffer
+          }
+        }
+      } catch (e) {
+        console.warn('gas simulation failed, using default', e);
+      }
+  
+      /* 2️⃣  sign with estimated gas */
       const signed = await signOfflineWithCustomNonce(
         address,
         FAIRYRING_ENV.rpcURL,
         FAIRYRING_ENV.chainID,
         [sendMsg],
-        { amount: [{ denom: 'ufairy', amount: '0' }], gas: '500000' },
+        { amount: [{ denom: 'ufairy', amount: '0' }], gas: String(estimatedGas) },
         memo,
         nonce
       );
-
+  
       /* encrypt & broadcast */
       const key = (pubkey as any).activePubKey?.publicKey ??
                   (pubkey as any).queuedPubKey.publicKey;
       const encryptedHex = await encryptSignedTx(key, targetHeight, signed);
-      const txResult     = await client.FairyringPep.tx.sendMsgSubmitEncryptedTx({
+      const txResult = await client.FairyringPep.tx.sendMsgSubmitEncryptedTx({
         value: { creator: address, data: encryptedHex, targetBlockHeight: targetHeight },
-        fee  : { amount: [{ denom: 'ufairy', amount: '0' }], gas: '743210' },
+        fee  : { amount: [{ denom: 'ufairy', amount: '0' }], gas: String(estimatedGas) },
         memo : MEMO,
       });
       if (txResult.code) throw new Error(txResult.rawLog);
-
-      /* create proof‑token in DB */
+  
+      /* proof‑token (unchanged) */
       const newToken = nanoid(8);
       const res = await fetch('/api/twitter/proof', {
         method : 'POST',
@@ -153,12 +182,17 @@ export default function PredictionForm() {
         body   : JSON.stringify({ wallet: address, token: newToken })
       });
       if (!res.ok) throw new Error('failed to create proof‑token');
-
+  
       setProofToken(newToken);
-
-      setSubmitted(true);    // ✅ success
-      setShowModal(true);    // 🎉 open share modal
-    } catch (err) {
+      setSubmitted(true);
+      setShowModal(true);
+    } catch (err: any) {
+      const msg = String(err?.message || err);
+      if (/insufficien/i.test(msg) || /does not exist on chain/i.test(msg)) {
+        setFormError('Insufficient testnet tokens, get some from the faucet.');
+      } else {
+        setFormError('Transaction failed. Please try again.');
+      }
       console.error('Submission failed:', err);
       setSubmitted(false);
     } finally {
@@ -227,6 +261,10 @@ export default function PredictionForm() {
   /* ─ render ─ */
   return (
     <div className="relative">
+      {formError && (
+        <div className="text-red-600 text-center mb-4">{formError}</div>
+      )}
+
       {submitted ? (
         <div className="text-green-600 text-center">Prediction submitted!</div>
       ) : (
