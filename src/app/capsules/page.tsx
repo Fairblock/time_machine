@@ -68,10 +68,8 @@ function CapsuleCard({ creator, target, token, type, data, price }: Capsule) {
         <div className="relative flex items-center bg-white/60 border border-gray-300 rounded-lg px-4 py-3">
           {type === 'encrypted' ? (
             <>
-              <span className="font-mono text-xs text-gray-500 max-w-[70%]">
-                {tail}
-              </span>
-              <span className="ml-auto inline-block rounded-full bg-gray-200 px-2 py-0.5 text-[10px] font-semibold text-gray-600">
+          
+              <span className="ml-auto inline-block rounded-full bg-gray-200 px-8 py-0.5 text-[15px] font-semibold text-gray-600">
                 Encrypted
               </span>
             </>
