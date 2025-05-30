@@ -46,7 +46,7 @@ function Header() {
       walletType : WalletType.KEPLR,
       chainId    : PUBLIC_ENVIRONMENT.NEXT_PUBLIC_CHAIN_ID!,
     });
-    setShowWallet(false);
+    setShowWallet(false);            // ❌ no reload here
   }
 
   async function connectLeap() {
@@ -55,7 +55,7 @@ function Header() {
       walletType : WalletType.LEAP,
       chainId    : PUBLIC_ENVIRONMENT.NEXT_PUBLIC_CHAIN_ID!,
     });
-    setShowWallet(false);
+    setShowWallet(false);            // ❌ no reload here
   }
 
   /* retry with suggestChain if wallet needs the chain registered */
@@ -134,9 +134,11 @@ function Header() {
                     </button>
                     <button
                       className="flex items-center w-full px-4 py-2 text-sm text-red-600 hover:bg-gray-50"
-                      onClick={() => {
-                        disconnect();
+                      onClick={async () => {
+                        await disconnect();
                         setWalletMenu(false);
+                        /* —— refresh ONLY after disconnect —— */
+                        window.location.reload();
                       }}
                     >
                       <LogOut size={14} className="mr-2" /> Disconnect
@@ -210,9 +212,10 @@ function Header() {
                   <Button
                     variant="outline"
                     className="w-full"
-                    onClick={() => {
-                      disconnect();
+                    onClick={async () => {
+                      await disconnect();
                       setMobileOpen(false);
+                      window.location.reload();     // refresh on disconnect
                     }}
                   >
                     Disconnect

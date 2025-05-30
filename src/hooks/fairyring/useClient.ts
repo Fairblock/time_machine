@@ -4,7 +4,8 @@
 import { useEffect, useState } from 'react';
 import { Client as FRClient }  from 'fairyring-client-ts';
 import { FAIRYRING_ENV }       from '@/constant/env';
-
+import { useAccount } from 'graz';
+import { getOffline } from '@/services/fairyring/sign';
 /* derive the *instance* type from the constructor value */
 type FairyringClient = InstanceType<typeof FRClient>;
 
@@ -18,7 +19,8 @@ type UseClient = FairyringClient | null;
  */
 export function useClient(): UseClient {
   const [client, setClient] = useState<FairyringClient | null>(null);
-
+  const { data: account }     = useAccount();
+  const address               = account?.bech32Address;
   useEffect(() => {
     if (typeof window === 'undefined') return;            // ⛔ SSR
 
@@ -28,20 +30,21 @@ export function useClient(): UseClient {
       /* wait up to 2 s for the wallet to inject the signer */
       const start = Date.now();
       while (!cancelled && Date.now() - start < 2000) {
-        const signerFn = (window as any).getOfflineSigner;
-        if (typeof signerFn === 'function') {
+        const signerFn = await getOffline(address?.toString() || "", FAIRYRING_ENV.chainID);
+      
+       
           try {
             const inst = new FRClient(
               FAIRYRING_ENV,
-              await signerFn(FAIRYRING_ENV.chainID)
+             signerFn
             );
+            
             if (!cancelled) setClient(inst);
           } catch (err) {
             // swallow – component can retry on next mount or user refresh
           }
           return;
-        }
-        await new Promise(r => setTimeout(r, 100));
+        
       }
       /* signer never appeared → leave client as null (UI handles this) */
     }

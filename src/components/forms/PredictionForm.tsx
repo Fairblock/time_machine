@@ -169,8 +169,9 @@ export default function PredictionForm() {
         estimatedGas,
         Math.ceil(bytesToWrite * WRITE_PER_BYTE_GAS + 200_000) // base + per‑byte
       );
-
+      
       /* 3️⃣  broadcast */
+      
       const txResult = await client.FairyringPep.tx.sendMsgSubmitEncryptedTx({
         value: { creator: address, data: encryptedHex, targetBlockHeight: targetHeight },
         fee  : { amount: [{ denom: 'ufairy', amount: '0' }], gas: String(submitGas) },
