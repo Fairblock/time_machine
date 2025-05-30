@@ -1,13 +1,33 @@
-// services/fairyring/sign.ts
+import type { EncodeObject, OfflineSigner } from "@cosmjs/proto-signing";
+import { type StdFee, SigningStargateClient } from "@cosmjs/stargate";
+import { TxRaw } from "fairyring-client-ts/cosmos.tx.v1beta1/module";
+import { timelockEncrypt } from "ts-ibe";
+import { WalletType } from "graz";
 
-import type { EncodeObject } from '@cosmjs/proto-signing';
-import { type StdFee, SigningStargateClient } from '@cosmjs/stargate';
-import { TxRaw } from 'fairyring-client-ts/cosmos.tx.v1beta1/module';
-import { timelockEncrypt } from 'ts-ibe';
+import { FAIRYRING_ENV } from "@/constant/env";
 
-import { FAIRYRING_ENV } from '@/constant/env';
-import { off } from 'process';
+/* ───────────────────────── helpers ────────────────────────── */
+async function getWalletSigner(
+  wallet: WalletType,
+  chainID: string
+): Promise<OfflineSigner> {
+  if (wallet === WalletType.KEPLR) {
+    if (!window.keplr) throw new Error("Keplr extension not found");
+    await window.keplr.enable(chainID);
+    return window.keplr.getOfflineSignerAuto(chainID) as unknown as OfflineSigner;
+  }
 
+  if (wallet === WalletType.LEAP) {
+    if (!window.leap) throw new Error("Leap extension not found");
+    await window.leap.enable(chainID);
+    // Leap doesn’t expose `getOfflineSignerAuto`, use the direct signer:
+    return window.leap.getOfflineSigner(chainID);
+  }
+
+  throw new Error(`Unsupported wallet: ${wallet}`);
+}
+
+/* ───────────────── sign & encrypt ─────────────────────────── */
 export const signOfflineWithCustomNonce = async (
   signerAddress: string,
   endpoint: string,
@@ -16,97 +36,47 @@ export const signOfflineWithCustomNonce = async (
   fee: StdFee,
   memo: string,
   sequence: number,
+  walletType: WalletType
 ): Promise<Buffer> => {
-  // 1️⃣ Ensure the wallet is enabled on this chain
-  if (typeof window !== 'undefined') {
-    if ((window as any).keplr?.enable) {
-      await (window as any).keplr.enable(chainID);
-    } else if ((window as any).leap?.enable) {
-      await (window as any).leap.enable(chainID);
-    }
-  }
+  const offlineSigner = await getWalletSigner(walletType, chainID);
 
-  // 2️⃣ Grab the right offline signer (Keplr, Leap or fallback)
-  let offlineSigner: any;
-  if (typeof window === 'undefined') {
-    throw new Error('Window is undefined');
-  }
-  if ((window as any).keplr?.getOfflineSigner) {
-    offlineSigner = (window as any).keplr.getOfflineSigner(chainID);
-  } else if ((window as any).leap?.getOfflineSigner) {
-    offlineSigner = (window as any).leap.getOfflineSigner(chainID);
-  } else if ((window as any).getOfflineSigner) {
-    offlineSigner = (window as any).getOfflineSigner(chainID);
-  } else {
-    throw new Error('No offline signer available—install Keplr or Leap');
-  }
-
-  // 3️⃣ Check that the desired address is among the signer's accounts
+  /* address sanity‑check */
   const accounts = await offlineSigner.getAccounts();
-  const matching = accounts.find((a: any) => a.address === signerAddress);
-  if (!matching) {
-    offlineSigner = (window as any).leap.getOfflineSigner(chainID);
+  const match    = accounts.find((a) => a.address === signerAddress);
+  if (!match) {
+    throw new Error(
+      `Active ${walletType} account does not match ${signerAddress}`
+    );
   }
 
-  // 4️⃣ Connect and sign
-  const client = await SigningStargateClient.connectWithSigner(endpoint, offlineSigner);
+  /* sign */
+  const client        = await SigningStargateClient.connectWithSigner(
+    endpoint,
+    offlineSigner
+  );
   const { accountNumber } = await client.getSequence(signerAddress);
+
   const signed = await client.sign(
     signerAddress,
     messages,
     fee,
     memo,
-    { accountNumber, sequence, chainId: chainID },
+    { accountNumber, sequence, chainId: chainID }
   );
 
-  // 5️⃣ Return the raw bytes
-  const rawBytes = TxRaw.encode(signed).finish();
-  return Buffer.from(rawBytes);
+  return Buffer.from(TxRaw.encode(signed).finish());
 };
 
 export const encryptSignedTx = async (
   pubKeyHex: string,
   targetHeight: number,
   signedBuf: Buffer
-): Promise<string> => {
-  return timelockEncrypt(targetHeight.toString(), pubKeyHex, signedBuf);
-};
+): Promise<string> =>
+  timelockEncrypt(targetHeight.toString(), pubKeyHex, signedBuf);
 
+/* ───────────────── utility for useClient ───────────────────── */
 export const getOffline = async (
   signerAddress: string,
   chainID: string,
-
-): Promise<any> => {
-  // 1️⃣ Ensure the wallet is enabled on this chain
-  if (typeof window !== 'undefined') {
-    if ((window as any).keplr?.enable) {
-      await (window as any).keplr.enable(chainID);
-    } else if ((window as any).leap?.enable) {
-      await (window as any).leap.enable(chainID);
-    }
-  }
-
-  // 2️⃣ Grab the right offline signer (Keplr, Leap or fallback)
-  let offlineSigner: any;
-
-  if (typeof window === 'undefined') {
-    throw new Error('Window is undefined');
-  }
-  if ((window as any).keplr?.getOfflineSigner) {
-    offlineSigner = (window as any).keplr.getOfflineSigner(chainID);
-  } else if ((window as any).leap?.getOfflineSigner) {
-    offlineSigner = (window as any).leap.getOfflineSigner(chainID);
-  } else if ((window as any).getOfflineSigner) {
-    offlineSigner = (window as any).getOfflineSigner(chainID);
-  } else {
-    throw new Error('No offline signer available—install Keplr or Leap');
-  }
-
-  // 3️⃣ Check that the desired address is among the signer's accounts
-  const accounts = await offlineSigner.getAccounts();
-  const matching = accounts.find((a: any) => a.address === signerAddress);
-  if (!matching) {
-    offlineSigner = (window as any).leap.getOfflineSigner(chainID);
-  }
-  return offlineSigner;
-};
+  walletType: WalletType
+): Promise<OfflineSigner> => getWalletSigner(walletType, chainID);

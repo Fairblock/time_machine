@@ -48,15 +48,35 @@ function Header() {
     });
     setShowWallet(false);            // ❌ no reload here
   }
-
+   async function waitForLeap(ms = 2000): Promise<void> {
+    const start = Date.now();
+    while (Date.now() - start < ms) {
+      if (typeof window !== "undefined" && (window as any).leap) return;
+      await new Promise(r => setTimeout(r, 100));
+    }
+    throw new Error("Leap extension not detected");
+  }
   async function connectLeap() {
+    
     setAttempted(WalletType.LEAP);
+
+ try {
+     await waitForLeap();                 // show message if leap missing
+   } catch {
+     alert("Leap extension not detected.\nInstall/enable it and refresh the page.");
+     return;
+   }
+   try {
     await connect({
       walletType : WalletType.LEAP,
       chainId    : PUBLIC_ENVIRONMENT.NEXT_PUBLIC_CHAIN_ID!,
     });
-    setShowWallet(false);            // ❌ no reload here
+  } catch (e) {
+    /* falls back to suggest‑and‑connect if chain not added */
+    await suggestAndConnect({ chainInfo: fairyring, walletType: WalletType.LEAP });
   }
+  setShowWallet(false);
+}
 
   /* retry with suggestChain if wallet needs the chain registered */
   useEffect(() => {

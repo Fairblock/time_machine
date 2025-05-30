@@ -46,6 +46,7 @@ export default function PredictionForm() {
   const { data: activeToken } = useActiveToken();
   const client                = useClient();
   const { data: account }     = useAccount();
+  const { walletType } = useAccount();
   const address               = account?.bech32Address;
   const { data: pubkey }      = useKeysharePubKey();
 
@@ -159,7 +160,8 @@ export default function PredictionForm() {
         [sendMsg],
         { amount: [{ denom: 'ufairy', amount: '0' }], gas: String(estimatedGas) },
         memo,
-        nonce
+        nonce,
+        walletType!
       );
 
       /* encrypt & size‑aware gas for MsgSubmitEncryptedTx */
