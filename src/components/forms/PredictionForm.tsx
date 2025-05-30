@@ -49,6 +49,9 @@ export default function PredictionForm() {
   const address               = account?.bech32Address;
   const { data: pubkey }      = useKeysharePubKey();
 
+  /* ─── clear error when wallet changes ──────────────────────────── */
+  useEffect(() => { setFormError(null); }, [address]);
+
   /* ─ upcoming deadline ─ */
   useEffect(() => {
     fetch('/api/deadline/next')
@@ -113,6 +116,7 @@ export default function PredictionForm() {
     }
     if (targetHeight == null) return;
 
+    /* clear any previous error for this new attempt */
     setIsSending(true);
     setFormError(null);
 
