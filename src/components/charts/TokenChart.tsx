@@ -55,7 +55,7 @@ export default function TokenChart() {
     return <p className="text-sm text-gray-500">Loading price chart…</p>;
   }
   if (tokenErr || priceErr || !candles?.length) {
-    return <p className="text-sm text-red-500">Failed to load chart data</p>;
+    return <p className="text-sm text-gray-500">Loading price chart…</p>;
   }
 
   const data = {

@@ -30,59 +30,66 @@ interface PricePoint { timestamp: number; price: number; }
 // simple in-memory cache
 const priceCache: Record<string, { ts: number; data: PricePoint[] }> = {};
 
+
 export async function getPrices(
   fromMs: number,
   toMs: number,
   asset: string
 ): Promise<PricePoint[]> {
   const cacheKey = `${asset}:${fromMs}-${toMs}`;
-  const now = Date.now();
+  const now      = Date.now();
 
-  // 1) return cached if < 5 min old
+  // ── 1) serve fresh cache (<5 min) ────────────────────────────────
   if (priceCache[cacheKey] && now - priceCache[cacheKey].ts < 5 * 60_000) {
     return priceCache[cacheKey].data;
   }
 
-  // 2) otherwise fetch with retries
-  const maxRetries = 3;
-  let attempt = 0;
-  let delay = 1000; // start with 1s
+  // ── 2) fetch with adaptive retries ───────────────────────────────
+  const maxRetries = 5;          // ← a bit more forgiving
+  let   attempt    = 0;
+  let   delay      = 1_000;      // 1 s first back‑off
 
   while (attempt < maxRetries) {
     try {
-      const from = Math.floor(fromMs / 1000);
-      const to = Math.floor(toMs / 1000);
-      const url = `https://api.coingecko.com/api/v3/coins/${asset}/market_chart/range`;
+      const from  = Math.floor(fromMs / 1000);
+      const to    = Math.floor(toMs   / 1000);
 
-      const { data } = await axios.get<{
-        prices: [number, number][];
-      }>(url, {
+      const { data } = await axios.get<
+        { prices: [number, number][] }
+      >(`https://api.coingecko.com/api/v3/coins/${asset}/market_chart/range`, {
         params: { vs_currency: 'usd', from, to },
       });
 
-      // map to your PricePoint[]
-      const mapped = data.prices.map(([ts, price]) => ({
+      const mapped: PricePoint[] = data.prices.map(([ts, price]) => ({
         timestamp: ts,
         price,
       }));
 
-      // cache and return
-      priceCache[cacheKey] = { ts: now, data: mapped };
+      priceCache[cacheKey] = { ts: Date.now(), data: mapped }; // cache fresh
       return mapped;
     } catch (err: any) {
-      // if it’s a 429, wait & retry
-      if (err.response?.status === 429 && attempt < maxRetries - 1) {
-        await new Promise((r) => setTimeout(r, delay));
-        delay *= 2;
+      /* 429 handling --------------------------------------------------------- */
+      const status = err?.response?.status;
+
+      if (status === 429 && attempt < maxRetries - 1) {
+        // If CG supplies Retry‑After (seconds), obey it; otherwise use back‑off.
+        const retryAfterHeader = err.response?.headers?.['retry-after'];
+        const retryAfterMs     =
+          retryAfterHeader ? Number(retryAfterHeader) * 1000 : delay;
+
+        await new Promise((r) => setTimeout(r, retryAfterMs + Math.random() * 200));
+
+        // Exponential back‑off, cap at 30 s so we don’t wait forever
+        delay = Math.min(delay * 2, 30_000);
         attempt++;
         continue;
       }
-      // otherwise bubble up
+
+      /* any other status or last 429 → bubble up ----------------------------- */
       throw err;
     }
   }
 
-  // if we exit loop, throw generic
   throw new Error('Failed to fetch prices after multiple retries');
 }
 export async function getOHLC(
@@ -90,26 +97,44 @@ export async function getOHLC(
   toMs: number,
   asset: string
 ): Promise<[number, number, number, number, number][]> {
-  // compute rough days span
-  const seconds = (toMs - fromMs) / 1000;
-  const rawDays = Math.ceil(seconds / 86400);
-
-  // clamp to one of Coingecko’s allowed buckets
-  const allowed = [1, 7, 14, 30, 90, 180, 365];
+  // ── determine the smallest Coingecko bucket that fully covers the interval ──
+  const seconds  = (toMs - fromMs) / 1000;
+  const rawDays  = Math.ceil(seconds / 86_400);
+  const allowed  = [1, 7, 14, 30, 90, 180, 365] as const;
   const days =
     rawDays <= 1
       ? 1
       : allowed.find((d) => d >= rawDays) ?? allowed[allowed.length - 1];
 
-  const res = await fetch(
-    `https://api.coingecko.com/api/v3/coins/${asset}/ohlc?vs_currency=usd&days=${days}`
-  );
-  if (!res.ok) {
-    throw new Error(`Failed to fetch OHLC: ${res.status} ${res.statusText}`);
-  }
-  return (await res.json()) as [number, number, number, number, number][];
-}
+  // ── retry logic (same pattern as getPrices) ──
+  const maxRetries = 5;
+  let attempt = 0;
+  let delay   = 1_000; // 1 s
 
+  while (attempt < maxRetries) {
+    try {
+      const { data } = await axios.get<
+        [number, number, number, number, number][]
+      >(`https://api.coingecko.com/api/v3/coins/${asset}/ohlc`, {
+        params: { vs_currency: 'usd', days },
+      });
+
+      return data; // success
+    } catch (err: any) {
+      // 429 = rate‑limited → wait, double delay, and retry (unless out of attempts)
+      if (err.response?.status === 429 && attempt < maxRetries - 1) {
+        await new Promise((r) => setTimeout(r, delay));
+        delay *= 2;
+        attempt++;
+        continue;
+      }
+      // any other error (or final 429) → bubble up
+      throw err;
+    }
+  }
+
+  throw new Error('Failed to fetch OHLC after multiple retries');
+}
 export async function fetchPriceAt(date: Date, token: string): Promise<number> {
   try {
     console.log(`Fetching price for ${token} at ${date.toISOString()}`)
@@ -117,7 +142,10 @@ export async function fetchPriceAt(date: Date, token: string): Promise<number> {
     const endMs   = startMs + 24 * 60 * 60 * 1000
 
    
-    const pricePoints = await getPrices(startMs, endMs, token)
+    let pricePoints = await getPrices(startMs, endMs, token)
+    while (pricePoints[0]?.price === 0) {
+      pricePoints = await getPrices(startMs, endMs, token)
+    }
     console.log(`Price points for ${token}:`, pricePoints)
     return pricePoints[0]?.price ?? 0
   } catch (error) {

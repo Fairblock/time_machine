@@ -110,8 +110,11 @@ async function updateScoresForLastDeadline() {
   if (!targetHeight) return
 
   const fridayStart = new Date(last.deadline_date + 'Z')
-  const actualPrice = await fetchPriceAt(fridayStart, last.coingecko_id)
-
+  let actualPrice = await fetchPriceAt(fridayStart, last.coingecko_id)
+  while (actualPrice === 0) {
+    await new Promise((r) => setTimeout(r, 3000));
+    actualPrice = await fetchPriceAt(fridayStart, last.coingecko_id)
+  }
   const revealed = await fetchRevealedTxs(targetHeight)
   if (!revealed.length) return
 
