@@ -1,6 +1,8 @@
 import ClientLayout from '@/app/ClientLayout';
 import type { Metadata } from 'next';
 import './globals.css';
+// import Header from '@/components/header/Header';
+// import { useActiveToken } from '@/hooks/useActiveToken';
 
 export const metadata: Metadata = {
   title: 'Time Machine',
@@ -12,6 +14,7 @@ export default function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  // const { data: active } = useActiveToken();
   return (
     <html lang="en">
           <head>
@@ -22,6 +25,7 @@ export default function RootLayout({
         />
       </head>
       <body>
+        {/* <Header /> */}
         <ClientLayout>{children}</ClientLayout>
       </body>
     </html>

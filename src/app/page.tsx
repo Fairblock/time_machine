@@ -1,16 +1,16 @@
 /* app/page.tsx */
-'use client';
+"use client";
 
-import Image  from 'next/image';
-import Link    from 'next/link';
-import Header  from '@/components/header/Header';
-import { useActiveToken } from '@/hooks/useActiveToken';
+import Image from "next/image";
+import Link from "next/link";
+import Header from "@/components/header/Header";
+import { useActiveToken } from "@/hooks/useActiveToken";
 
 const TOKENS = [
-  { id: 'solana',   symbol: 'SOL',  logo: '/sol.png'  },
-  { id: 'bitcoin',  symbol: 'BTC',  logo: '/btc.png'  },
-  { id: 'ethereum', symbol: 'ETH',  logo: '/eth.png'  },
-  { id: 'chainlink',symbol: 'LINK', logo: '/link.png' },
+  { id: "solana", symbol: "SOL", logo: "/sol.png" },
+  { id: "bitcoin", symbol: "BTC", logo: "/btc.png" },
+  { id: "ethereum", symbol: "ETH", logo: "/eth.png" },
+  { id: "chainlink", symbol: "LINK", logo: "/link.png" },
 ];
 
 export default function Home() {
@@ -44,30 +44,27 @@ export default function Home() {
       >
         {/* copy */}
         <div className="max-w-xl space-y-6">
-          <h1
-            className="
-              font-extrabold uppercase leading-tight text-gray-900
-              text-3xl sm:text-4xl md:text-5xl lg:text-6xl xl:text-7xl
-            "
-            style={{ textShadow: '0 4px 6px rgba(0,0,0,0.15)' }}
-          >
-            <span className="block">Predict&nbsp;Price</span>
-            <span className="block">Encrypt&nbsp;It</span>
+          <h1 className="font-extrabold leading-tight text-3xl sm:text-4xl md:text-5xl lg:text-6xl uppercase">
+            <span className="block bg-gradient-to-b from-black via-neutral-800 to-neutral-100 bg-clip-text text-transparent">
+              Predict&nbsp;Price.
+            </span>
+            <span className="block bg-gradient-to-b from-black via-neutral-800 to-neutral-100 bg-clip-text text-transparent">
+              Encrypt&nbsp;It.
+            </span>
           </h1>
 
-          <p className="text-sm sm:text-base md:text-lg lg:text-xl text-gray-700">
-            Encrypt your price prediction. <br />
-            No one can see it, not even us. <br />
-            We’ll decrypt it next week. <br />
+          <p className="font-medium text-sm sm:text-base md:text-lg lg:text-2xl text-gray-700">
+            Encrypt your price prediction. No one can<br />
+            see it, not even us. We’ll decrypt it next week.<br />
             The closer you are, the more points you earn.
           </p>
 
           <Link
             href="/prediction"
             className="
-              inline-block rounded-md bg-gray-900 px-6 py-3
-              text-white text-sm sm:text-base md:text-lg font-semibold shadow
-              hover:bg-gray-800 transition-colors
+              bg-neutral-900 font-semibold inline-block px-5 py-[6px] rounded-xl
+              text-white text-sm sm:text-base md:text-lg shadow
+              hover:bg-neutral-800 transition-colors
             "
           >
             Predict now
@@ -103,18 +100,18 @@ export default function Home() {
               gap-3 lg:gap-4
             "
           >
-            {TOKENS.map(t => {
+            {TOKENS.map((t) => {
               const activeNow = t.id === active?.coingecko_id;
               return (
                 <div
                   key={t.id}
                   title={t.symbol}
                   className={[
-                    'rounded-full bg-white shadow transition-transform duration-200',
+                    "rounded-full bg-white shadow transition-transform duration-200",
                     activeNow
-                      ? 'ring-2 ring-white/70 scale-110 w-11 h-11 lg:w-14 lg:h-14'
-                      : 'filter grayscale opacity-40 w-8 h-8 lg:w-10 lg:h-10',
-                  ].join(' ')}
+                      ? "ring-2 ring-white/70 scale-110 w-11 h-11 lg:w-14 lg:h-14"
+                      : "filter grayscale opacity-40 w-8 h-8 lg:w-10 lg:h-10",
+                  ].join(" ")}
                 >
                   <Image
                     src={t.logo}

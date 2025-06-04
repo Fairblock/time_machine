@@ -52,18 +52,18 @@ function CapsuleCard({ creator, target, token, type, price }: Capsule) {
   const logo      = TOKEN_LOGOS[token.toUpperCase()] ?? null
 
   return (
-    <div className="rounded-3xl border border-gray-200 shadow-md overflow-hidden bg-gradient-to-b from-white to-gray-50">
+    <div className="rounded-2xl border border-gray-200 shadow-md overflow-hidden bg-gradient-to-b from-white to-gray-50">
       {/* header */}
-      <div className="flex items-center gap-3 bg-[#F3F8FE] px-5 py-4">
-        <img src={avatar(creator)} alt="" className="h-11 w-11 rounded" />
+      <div className="flex items-center gap-3 bg-[#F2F7FA] px-5 py-4">
+        <img src={avatar(creator)} alt="" className="h-8 w-8 rounded" />
         <span className="font-mono text-sm text-gray-700">{shortAddr}</span>
       </div>
 
       {/* body */}
-      <div className="p-5 space-y-3">
+      <div className="p-4 space-y-3">
         <p className="text-sm font-medium text-gray-600">Predicted price</p>
 
-        <div className="relative flex items-center bg-white/60 border border-gray-300 rounded-lg px-4 py-3">
+        <div className="relative flex items-center bg-white/60 border-2 border-gray-300 rounded-lg px-4 py-3">
           {type === 'encrypted' ? (
             <span className="ml-auto inline-block rounded-full bg-gray-200 px-8 py-0.5 text-[15px] font-semibold text-gray-600">
               Encrypted
@@ -285,7 +285,7 @@ export default function CapsulesPage() {
   return (
     <div className="font-sans bg-gradient-to-b from-white to-gray-100 min-h-screen">
       <Header />
-      <main className="max-w-6xl mx-auto px-4 py-10 space-y-6">
+      <main className="max-w-screen-2xl mx-auto px-4 py-10 space-y-6">
         <h1 className="text-3xl font-bold text-center uppercase tracking-wide">
           Encrypted Capsules
         </h1>

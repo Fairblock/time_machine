@@ -1,8 +1,8 @@
 'use client';
 
-import { useState, useEffect }         from 'react';
-import Image                           from 'next/image';
-import Link                            from 'next/link';
+import { useState, useEffect } from 'react';
+import Image from 'next/image';
+import Link from 'next/link';
 import { Copy, Menu, X as CloseIcon, LogOut } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
@@ -20,13 +20,13 @@ function Header() {
   /* ───────── wallet helpers ─────────────────────────────────────── */
   const [showWallet, setShowWallet] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
-  const [attempted, setAttempted]   = useState<WalletType | null>(null);
+  const [attempted, setAttempted] = useState<WalletType | null>(null);
   const [walletMenu, setWalletMenu] = useState(false);
 
   const { data: account, isConnected } = useAccount();
-  const { connect, error: walletErr }  = useConnect();
-  const { disconnect }                 = useDisconnect();
-  const { suggestAndConnect }          = useSuggestChainAndConnect();
+  const { connect, error: walletErr } = useConnect();
+  const { disconnect } = useDisconnect();
+  const { suggestAndConnect } = useSuggestChainAndConnect();
 
   const truncated = account?.bech32Address
     ? `${account.bech32Address.slice(0, 6)}…${account.bech32Address.slice(-4)}`
@@ -43,12 +43,12 @@ function Header() {
   async function connectKeplr() {
     setAttempted(WalletType.KEPLR);
     await connect({
-      walletType : WalletType.KEPLR,
-      chainId    : PUBLIC_ENVIRONMENT.NEXT_PUBLIC_CHAIN_ID!,
+      walletType: WalletType.KEPLR,
+      chainId: PUBLIC_ENVIRONMENT.NEXT_PUBLIC_CHAIN_ID!,
     });
     setShowWallet(false);            // ❌ no reload here
   }
-   async function waitForLeap(ms = 2000): Promise<void> {
+  async function waitForLeap(ms = 2000): Promise<void> {
     const start = Date.now();
     while (Date.now() - start < ms) {
       if (typeof window !== "undefined" && (window as any).leap) return;
@@ -57,26 +57,26 @@ function Header() {
     throw new Error("Leap extension not detected");
   }
   async function connectLeap() {
-    
+
     setAttempted(WalletType.LEAP);
 
- try {
-     await waitForLeap();                 // show message if leap missing
-   } catch {
-     alert("Leap extension not detected.\nInstall/enable it and refresh the page.");
-     return;
-   }
-   try {
-    await connect({
-      walletType : WalletType.LEAP,
-      chainId    : PUBLIC_ENVIRONMENT.NEXT_PUBLIC_CHAIN_ID!,
-    });
-  } catch (e) {
-    /* falls back to suggest‑and‑connect if chain not added */
-    await suggestAndConnect({ chainInfo: fairyring, walletType: WalletType.LEAP });
+    try {
+      await waitForLeap();                 // show message if leap missing
+    } catch {
+      alert("Leap extension not detected.\nInstall/enable it and refresh the page.");
+      return;
+    }
+    try {
+      await connect({
+        walletType: WalletType.LEAP,
+        chainId: PUBLIC_ENVIRONMENT.NEXT_PUBLIC_CHAIN_ID!,
+      });
+    } catch (e) {
+      /* falls back to suggest‑and‑connect if chain not added */
+      await suggestAndConnect({ chainInfo: fairyring, walletType: WalletType.LEAP });
+    }
+    setShowWallet(false);
   }
-  setShowWallet(false);
-}
 
   /* retry with suggestChain if wallet needs the chain registered */
   useEffect(() => {
@@ -89,8 +89,8 @@ function Header() {
   return (
     <>
       {/* ===== TOP BAR ===== */}
-      <header className="w-full bg-gray-100 font-sans">
-        <div className="flex items-center justify-between w-full px-4 py-2 relative">
+      <header className="w-full bg-[#E2E6E9] font-sans">
+        <div className="flex items-center justify-between w-full px-8 py-2 relative">
           {/* logo */}
           <Link href="/" className="flex-shrink-0">
             <Image
@@ -98,16 +98,16 @@ function Header() {
               alt="Fairblock"
               width={140}
               height={140}
-              className="w-28 sm:w-32 lg:w-36 h-auto"
+              className="w-28 sm:w-32 lg:w-36 xl:w-48 h-auto"
             />
           </Link>
 
           {/* nav (desktop) */}
-          <nav className="hidden md:flex flex-grow justify-center space-x-10 text-sm">
-            <Link href="/prediction"  className="text-gray-600 hover:text-gray-900 whitespace-nowrap">
+          <nav className="hidden font-medium md:flex flex-grow justify-center space-x-10 text-sm">
+            <Link href="/prediction" className="text-gray-600 hover:text-gray-900 whitespace-nowrap">
               Encrypt&nbsp;Prediction
             </Link>
-            <Link href="/capsules"    className="text-gray-600 hover:text-gray-900 whitespace-nowrap">
+            <Link href="/capsules" className="text-gray-600 hover:text-gray-900 whitespace-nowrap">
               Encrypted&nbsp;Capsules
             </Link>
             <Link href="/leaderboard" className="text-gray-600 hover:text-gray-900 whitespace-nowrap">
@@ -168,7 +168,7 @@ function Header() {
               </>
             ) : (
               <Button size="sm" onClick={() => setShowWallet(true)}>
-                Connect
+                Connect Wallet
               </Button>
             )}
           </div>
@@ -201,10 +201,10 @@ function Header() {
               <CloseIcon size={24} />
             </button>
 
-            <Link href="/prediction"  onClick={() => setMobileOpen(false)} className="block text-gray-900">
+            <Link href="/prediction" onClick={() => setMobileOpen(false)} className="block text-gray-900">
               Encrypt Prediction
             </Link>
-            <Link href="/capsules"    onClick={() => setMobileOpen(false)} className="block text-gray-900">
+            <Link href="/capsules" onClick={() => setMobileOpen(false)} className="block text-gray-900">
               Predictions
             </Link>
             <Link href="/leaderboard" onClick={() => setMobileOpen(false)} className="block text-gray-900">
