@@ -6,7 +6,6 @@ import { WalletType } from "graz";
 
 import { FAIRYRING_ENV } from "@/constant/env";
 
-/* ───────────────────────── helpers ────────────────────────── */
 async function getWalletSigner(
   wallet: WalletType,
   chainID: string
@@ -20,14 +19,12 @@ async function getWalletSigner(
   if (wallet === WalletType.LEAP) {
     if (!window.leap) throw new Error("Leap extension not found");
     await window.leap.enable(chainID);
-    // Leap doesn’t expose `getOfflineSignerAuto`, use the direct signer:
     return window.leap.getOfflineSigner(chainID);
   }
 
   throw new Error(`Unsupported wallet: ${wallet}`);
 }
 
-/* ───────────────── sign & encrypt ─────────────────────────── */
 export const signOfflineWithCustomNonce = async (
   signerAddress: string,
   endpoint: string,
@@ -40,7 +37,6 @@ export const signOfflineWithCustomNonce = async (
 ): Promise<Buffer> => {
   const offlineSigner = await getWalletSigner(walletType, chainID);
 
-  /* address sanity‑check */
   const accounts = await offlineSigner.getAccounts();
   const match    = accounts.find((a) => a.address === signerAddress);
   if (!match) {
@@ -49,7 +45,6 @@ export const signOfflineWithCustomNonce = async (
     );
   }
 
-  /* sign */
   const client        = await SigningStargateClient.connectWithSigner(
     endpoint,
     offlineSigner
@@ -74,9 +69,9 @@ export const encryptSignedTx = async (
 ): Promise<string> =>
   timelockEncrypt(targetHeight.toString(), pubKeyHex, signedBuf);
 
-/* ───────────────── utility for useClient ───────────────────── */
 export const getOffline = async (
   signerAddress: string,
   chainID: string,
   walletType: WalletType
 ): Promise<OfflineSigner> => getWalletSigner(walletType, chainID);
+
