@@ -61,12 +61,11 @@ function getNextFridayDeadline(now = new Date()) {
 
 /* ────────────────────────────────────────────  Scoring    */
 const K = 10
-function calcScore(pred: number, act: number) {
+function calcRaw(pred: number, act: number) {
   if (!act) return 0
   const pctDiff = Math.abs(pred - act) / act
-  return Math.floor(1000 * Math.exp(-pctDiff * K))
+  return Math.exp(-pctDiff * K)      
 }
-
 /* ────────────────────────────────────────────  Reveal read */
 async function fetchRevealedTxs(height: number) {
   const out: { creator: string; price: number }[] = []
@@ -94,8 +93,10 @@ async function fetchRevealedTxs(height: number) {
   return out
 }
 
+
 /* ────────────────────────────────────────────  Scoring pass */
 async function updateScoresForLastDeadline() {
+  /* — get the last finished deadline — */
   const { data: last } = await supabase
     .from('deadlines')
     .select('deadline_date,target_block,coingecko_id,symbol')
@@ -103,50 +104,74 @@ async function updateScoresForLastDeadline() {
     .order('deadline_date', { ascending: false })
     .limit(1)
     .single()
-
   if (!last) return
 
   const targetHeight = Number(last.target_block)
   if (!targetHeight) return
 
+  /* — actual price at Friday 00:00 UTC — */
   const fridayStart = new Date(last.deadline_date + 'Z')
-  let actualPrice = await fetchPriceAt(fridayStart, last.coingecko_id)
+  let actualPrice   = await fetchPriceAt(fridayStart, last.coingecko_id)
   while (actualPrice === 0) {
-    await new Promise((r) => setTimeout(r, 3000));
+    await new Promise(r => setTimeout(r, 3000))
     actualPrice = await fetchPriceAt(fridayStart, last.coingecko_id)
   }
+
+  /* — revealed predictions — */
   const revealed = await fetchRevealedTxs(targetHeight)
   if (!revealed.length) return
 
-  /* previous totals */
-  const submitters = [...new Set(revealed.map(r => r.creator))]
-  const { data: existing } = await supabase
+  /* — previous totals — */
+  const submitters      = [...new Set(revealed.map(r => r.creator))]
+  const { data: rows }  = await supabase
     .from('participants')
     .select('address,total_score')
     .in('address', submitters)
 
   const prevTotals = Object.fromEntries(
-    (existing ?? []).map(r => [r.address, Number(r.total_score) || 0])
+    (rows ?? []).map(r => [r.address, Number(r.total_score) || 0])
   )
 
-  /* build participant rows */
-  const prefix = COL_PREFIX[last.symbol as Token['symbol']]    // 'sol' | …
+  /* — STEP 1: raw exponential scores — */
+  const raw            = revealed.map(tx => calcRaw(tx.price, actualPrice))
+  const rawSum         = raw.reduce((a, b) => a + b, 0)
 
-  const participantRows = revealed.map(tx => {
-    const weekScore = calcScore(tx.price, actualPrice)
+  /* — STEP 2: scale so that ΣweekScore = 1000 — */
+  const scaled = raw.map(r => Math.floor((r / rawSum) * 1000))
+  let leftovers = 1000 - scaled.reduce((a, b) => a + b, 0)
+
+  /* distribute leftover points by largest residuals */
+  if (leftovers > 0) {
+    const residuals = raw.map((r, i) => ({
+      i,
+      frac: (r / rawSum) * 1000 - scaled[i]
+    }))
+    residuals.sort((a, b) => b.frac - a.frac)       // largest fractional part first
+    for (let k = 0; k < leftovers; k++) {
+      scaled[residuals[k].i]++
+    }
+  }
+
+  /* — STEP 3: build upsert rows — */
+  const prefix = COL_PREFIX[last.symbol as Token['symbol']]      // 'sol' | …
+
+  const participantRows = revealed.map((tx, idx) => {
+    const weekScore = scaled[idx]                  // final, normalised score
     const newTotal  = (prevTotals[tx.creator] ?? 0) + weekScore
 
     return {
-      address     : tx.creator,
-      total_score : newTotal,
-      [`${prefix}_guess`] : tx.price,
-      [`${prefix}_delta`] : Math.abs(tx.price - actualPrice),
-      [`${prefix}_score`] : weekScore
+      address            : tx.creator,
+      total_score        : newTotal,
+      [`${prefix}_guess`]: tx.price,
+      [`${prefix}_delta`]: Math.abs(tx.price - actualPrice),
+      [`${prefix}_score`]: weekScore
     }
   })
 
-  await supabase.from('participants').upsert(participantRows, { onConflict: 'address' })
+  await supabase.from('participants')
+    .upsert(participantRows, { onConflict: 'address' })
 }
+
 
 /* ────────────────────────────────────────────  Season reset */
 async function resetSeason() {
