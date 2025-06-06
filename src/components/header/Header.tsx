@@ -90,7 +90,7 @@ function Header() {
     <>
       {/* ===== TOP BAR ===== */}
       <header className="w-full bg-[#E2E6E9] font-sans">
-        <div className="flex items-center justify-between w-full px-8 py-2 relative">
+        <div className="flex items-center justify-between w-full px-2 py-2 relative">
           {/* logo */}
           <Link href="/" className="flex-shrink-0">
             <Image
@@ -98,12 +98,12 @@ function Header() {
               alt="Fairblock"
               width={140}
               height={140}
-              className="w-28 sm:w-32 lg:w-36 xl:w-48 h-auto"
+              className="w-40 lg:w-48 h-auto"
             />
           </Link>
 
           {/* nav (desktop) */}
-          <nav className="hidden font-medium md:flex flex-grow justify-center space-x-10 text-sm">
+          <nav className="hidden font-medium lg:flex flex-grow justify-center space-x-10 text-sm lg:text-base">
             <Link href="/prediction" className="text-gray-600 hover:text-gray-900 whitespace-nowrap">
               Encrypt&nbsp;Prediction
             </Link>
@@ -124,7 +124,7 @@ function Header() {
           </nav>
 
           {/* wallet button (desktop) */}
-          <div className="hidden md:block flex-shrink-0 relative">
+          <div className="hidden lg:block flex-shrink-0 relative mr-4">
             {isConnected ? (
               <>
                 <button
@@ -176,9 +176,9 @@ function Header() {
           {/* hamburger (mobile) */}
           <button
             onClick={() => setMobileOpen(true)}
-            className="md:hidden text-gray-700 hover:text-gray-900 flex-shrink-0"
+            className="mr-2 lg:hidden text-gray-700 hover:text-gray-900 flex-shrink-0"
           >
-            <Menu size={24} />
+            <Menu size={30} />
           </button>
         </div>
       </header>
@@ -186,7 +186,7 @@ function Header() {
       {/* ===== MOBILE SHEET ===== */}
       {mobileOpen && (
         <div
-          className="fixed inset-0 z-40 md:hidden"
+          className="fixed inset-0 z-40 lg:hidden"
           onClick={() => setMobileOpen(false)}
         >
           <div
@@ -195,10 +195,10 @@ function Header() {
           >
             {/* close button */}
             <button
-              className="absolute top-4 right-4 text-gray-500"
+              className="absolute top-6 right-4 text-gray-500"
               onClick={() => setMobileOpen(false)}
             >
-              <CloseIcon size={24} />
+              <CloseIcon size={30} />
             </button>
 
             <Link href="/prediction" onClick={() => setMobileOpen(false)} className="block text-gray-900">
