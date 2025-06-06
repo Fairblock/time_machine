@@ -167,7 +167,7 @@ function Header() {
                 )}
               </>
             ) : (
-              <Button size="sm" onClick={() => setShowWallet(true)}>
+              <Button className="bg-neutral-900 hover:bg-neutral-800 cursor-pointer inline-block px-4 py-[6px] rounded-xl shadow text-white text-sm sm:text-base transition-colors" onClick={() => setShowWallet(true)}>
                 Connect Wallet
               </Button>
             )}

@@ -24,7 +24,7 @@ export default function RootLayout({
           href="https://fonts.googleapis.com/css2?family=Montserrat:ital,wght@0,100..900;1,100..900&display=swap"
         />
       </head>
-      <body>
+      <body className='max-w-screen-2xl mx-auto'>
         {/* <Header /> */}
         <ClientLayout>{children}</ClientLayout>
       </body>
