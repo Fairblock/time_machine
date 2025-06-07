@@ -1,20 +1,20 @@
-'use client';
+"use client";
 
-import { useState, useEffect } from 'react';
-import Image from 'next/image';
-import Link from 'next/link';
-import { Copy, Menu, X as CloseIcon, LogOut } from 'lucide-react';
+import { useState, useEffect } from "react";
+import Image from "next/image";
+import Link from "next/link";
+import { Copy, Menu, X as CloseIcon, LogOut } from "lucide-react";
 
-import { Button } from '@/components/ui/button';
-import { fairyring } from '@/constant/chains';
+import { Button } from "@/components/ui/button";
+import { fairyring } from "@/constant/chains";
 import {
   useAccount,
   useConnect,
   useDisconnect,
   useSuggestChainAndConnect,
   WalletType,
-} from 'graz';
-import { PUBLIC_ENVIRONMENT } from '@/constant/env';
+} from "graz";
+import { PUBLIC_ENVIRONMENT } from "@/constant/env";
 
 function Header() {
   /* ───────── wallet helpers ─────────────────────────────────────── */
@@ -30,13 +30,15 @@ function Header() {
 
   const truncated = account?.bech32Address
     ? `${account.bech32Address.slice(0, 6)}…${account.bech32Address.slice(-4)}`
-    : '';
+    : "";
 
   /* === listen for global open‑wallet events === */
   useEffect(() => {
-    function handleOpen() { setShowWallet(true); }
-    window.addEventListener('open-wallet-modal', handleOpen);
-    return () => window.removeEventListener('open-wallet-modal', handleOpen);
+    function handleOpen() {
+      setShowWallet(true);
+    }
+    window.addEventListener("open-wallet-modal", handleOpen);
+    return () => window.removeEventListener("open-wallet-modal", handleOpen);
   }, []);
 
   /* ───────── connect helpers ────────────────────────────────────── */
@@ -46,24 +48,25 @@ function Header() {
       walletType: WalletType.KEPLR,
       chainId: PUBLIC_ENVIRONMENT.NEXT_PUBLIC_CHAIN_ID!,
     });
-    setShowWallet(false);            // ❌ no reload here
+    setShowWallet(false); // ❌ no reload here
   }
   async function waitForLeap(ms = 2000): Promise<void> {
     const start = Date.now();
     while (Date.now() - start < ms) {
       if (typeof window !== "undefined" && (window as any).leap) return;
-      await new Promise(r => setTimeout(r, 100));
+      await new Promise((r) => setTimeout(r, 100));
     }
     throw new Error("Leap extension not detected");
   }
   async function connectLeap() {
-
     setAttempted(WalletType.LEAP);
 
     try {
-      await waitForLeap();                 // show message if leap missing
+      await waitForLeap(); // show message if leap missing
     } catch {
-      alert("Leap extension not detected.\nInstall/enable it and refresh the page.");
+      alert(
+        "Leap extension not detected.\nInstall/enable it and refresh the page."
+      );
       return;
     }
     try {
@@ -73,7 +76,10 @@ function Header() {
       });
     } catch (e) {
       /* falls back to suggest‑and‑connect if chain not added */
-      await suggestAndConnect({ chainInfo: fairyring, walletType: WalletType.LEAP });
+      await suggestAndConnect({
+        chainInfo: fairyring,
+        walletType: WalletType.LEAP,
+      });
     }
     setShowWallet(false);
   }
@@ -89,7 +95,7 @@ function Header() {
   return (
     <>
       {/* ===== TOP BAR ===== */}
-      <header className="w-full bg-[#E2E6E9] font-sans">
+      <header className="fixed top-0 left-1/2 -translate-x-1/2 z-40 w-full max-w-screen-2xl bg-[#E2E6E9] font-sans">
         <div className="flex items-center justify-between w-full px-2 py-2 relative">
           {/* logo */}
           <Link href="/" className="flex-shrink-0">
@@ -104,13 +110,22 @@ function Header() {
 
           {/* nav (desktop) */}
           <nav className="hidden font-medium lg:flex flex-grow justify-center space-x-10 text-sm lg:text-base">
-            <Link href="/prediction" className="text-gray-600 hover:text-gray-900 whitespace-nowrap">
+            <Link
+              href="/prediction"
+              className="text-gray-600 hover:text-gray-900 whitespace-nowrap"
+            >
               Encrypt&nbsp;Prediction
             </Link>
-            <Link href="/capsules" className="text-gray-600 hover:text-gray-900 whitespace-nowrap">
+            <Link
+              href="/capsules"
+              className="text-gray-600 hover:text-gray-900 whitespace-nowrap"
+            >
               Encrypted&nbsp;Capsules
             </Link>
-            <Link href="/leaderboard" className="text-gray-600 hover:text-gray-900 whitespace-nowrap">
+            <Link
+              href="/leaderboard"
+              className="text-gray-600 hover:text-gray-900 whitespace-nowrap"
+            >
               Leaderboard
             </Link>
             <a
@@ -128,12 +143,14 @@ function Header() {
             {isConnected ? (
               <>
                 <button
-                  onClick={() => setWalletMenu(v => !v)}
+                  onClick={() => setWalletMenu((v) => !v)}
                   title={account?.bech32Address}
                   className="cursor-pointer p-0.5 rounded-full bg-gradient-to-r from-indigo-500 to-pink-500 hover:opacity-80 transition"
                 >
                   <div className="flex items-center space-x-2 bg-white rounded-full px-3 py-[3px]">
-                    <span className="font-mono text-xs text-gray-700">{truncated}</span>
+                    <span className="font-mono text-xs text-gray-700">
+                      {truncated}
+                    </span>
                   </div>
                 </button>
 
@@ -146,7 +163,8 @@ function Header() {
                     <button
                       className="flex items-center w-full px-4 py-2 text-sm hover:bg-gray-50"
                       onClick={() => {
-                        if (account) navigator.clipboard.writeText(account.bech32Address);
+                        if (account)
+                          navigator.clipboard.writeText(account.bech32Address);
                         setWalletMenu(false);
                       }}
                     >
@@ -167,7 +185,10 @@ function Header() {
                 )}
               </>
             ) : (
-              <Button className="bg-neutral-900 hover:bg-neutral-800 cursor-pointer inline-block px-4 py-[6px] rounded-xl shadow text-white text-sm sm:text-base transition-colors" onClick={() => setShowWallet(true)}>
+              <Button
+                className="bg-neutral-900 hover:bg-neutral-800 cursor-pointer inline-block px-4 py-[6px] rounded-xl shadow text-white text-sm sm:text-base transition-colors"
+                onClick={() => setShowWallet(true)}
+              >
                 Connect Wallet
               </Button>
             )}
@@ -201,13 +222,25 @@ function Header() {
               <CloseIcon size={30} />
             </button>
 
-            <Link href="/prediction" onClick={() => setMobileOpen(false)} className="block text-gray-900">
+            <Link
+              href="/prediction"
+              onClick={() => setMobileOpen(false)}
+              className="block text-gray-900"
+            >
               Encrypt Prediction
             </Link>
-            <Link href="/capsules" onClick={() => setMobileOpen(false)} className="block text-gray-900">
+            <Link
+              href="/capsules"
+              onClick={() => setMobileOpen(false)}
+              className="block text-gray-900"
+            >
               Predictions
             </Link>
-            <Link href="/leaderboard" onClick={() => setMobileOpen(false)} className="block text-gray-900">
+            <Link
+              href="/leaderboard"
+              onClick={() => setMobileOpen(false)}
+              className="block text-gray-900"
+            >
               Leaderboard
             </Link>
             <a
@@ -223,7 +256,10 @@ function Header() {
               {isConnected ? (
                 <>
                   <div
-                    onClick={() => account && navigator.clipboard.writeText(account.bech32Address)}
+                    onClick={() =>
+                      account &&
+                      navigator.clipboard.writeText(account.bech32Address)
+                    }
                     className="cursor-pointer flex items-center space-x-2 mb-4"
                   >
                     <span className="font-mono text-sm">{truncated}</span>
@@ -235,7 +271,7 @@ function Header() {
                     onClick={async () => {
                       await disconnect();
                       setMobileOpen(false);
-                      window.location.reload();     // refresh on disconnect
+                      window.location.reload(); // refresh on disconnect
                     }}
                   >
                     Disconnect
@@ -267,21 +303,34 @@ function Header() {
             onClick={(e) => e.stopPropagation()}
             className="w-[90%] sm:w-[420px] bg-white rounded-lg px-8 py-10 text-center space-y-8"
           >
-            <h2 className="text-3xl font-extrabold uppercase">Connect Wallet</h2>
+            <h2 className="text-3xl font-extrabold uppercase">
+              Connect Wallet
+            </h2>
             <p className="text-gray-700 text-sm">
-              By connecting your wallet, you agree to our&nbsp;
-              <span className="font-semibold underline">Terms of Service</span>
-              &nbsp;and&nbsp;
+              By connecting your wallet, you agree to our <br />
+              <span className="font-semibold underline">
+                Terms of Service
+              </span>{" "}
+              and
               <span className="font-semibold underline">Privacy Policy</span>.
             </p>
 
             {/* Keplr */}
             <div className="flex items-center justify-between">
               <div className="flex items-center space-x-3">
-                <Image src="/keplr.png" alt="Keplr icon" width={32} height={32} />
+                <Image
+                  src="/keplr.png"
+                  alt="Keplr icon"
+                  width={32}
+                  height={32}
+                />
                 <span className="text-lg font-medium">Keplr</span>
               </div>
-              <Button variant="outline" className="px-6 py-1" onClick={connectKeplr}>
+              <Button
+                variant="outline"
+                className="px-6 py-1"
+                onClick={connectKeplr}
+              >
                 Connect
               </Button>
             </div>
@@ -292,7 +341,11 @@ function Header() {
                 <Image src="/leap.png" alt="Leap icon" width={32} height={32} />
                 <span className="text-lg font-medium">Leap</span>
               </div>
-              <Button variant="outline" className="px-6 py-1" onClick={connectLeap}>
+              <Button
+                variant="outline"
+                className="px-6 py-1"
+                onClick={connectLeap}
+              >
                 Connect
               </Button>
             </div>
