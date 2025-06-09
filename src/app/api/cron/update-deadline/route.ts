@@ -89,13 +89,18 @@ async function purgeParticipantsIfEpochStart(symbolJustFinished: string) {
  */
 async function wipeProofsTable() {
   console.log('🧹  wiping proofs table')
+
   const { error } = await supabase
     .from('proofs')
-    .delete()
-    .neq('id', '')          // always matches for every UUID row
-  if (error) console.error('❌  proofs wipe failed:', error.message)
-}
+    .delete()                  // default: returning = 'minimal' → data is null
+    .not('id', 'is', null)     // harmless filter that matches every UUID row
 
+  if (error) {
+    console.error('❌  proofs wipe failed:', error.message)
+  } else {
+    console.log('✅  proofs wiped')
+  }
+}
 /* ────────────────────────────────────────────  Reveal read */
 async function fetchRevealedTxs(height: number) {
   const out: { creator: string; price: number }[] = []
