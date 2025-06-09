@@ -89,7 +89,11 @@ async function purgeParticipantsIfEpochStart(symbolJustFinished: string) {
  */
 async function wipeProofsTable() {
   console.log('🧹  wiping proofs table')
-  await supabase.from('proofs').delete().gt('id', 0)      // adjust column if necessary
+  const { error } = await supabase
+    .from('proofs')
+    .delete()
+    .neq('id', '')          // always matches for every UUID row
+  if (error) console.error('❌  proofs wipe failed:', error.message)
 }
 
 /* ────────────────────────────────────────────  Reveal read */
