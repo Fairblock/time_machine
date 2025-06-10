@@ -6,6 +6,7 @@ import { REVEAL_EVENT_TYPES, REVEAL_EVENT_ATTRS } from '@/constant/events'
 import { getBlock }      from '@/services/fairyring/block'
 import { fetchPriceAt }  from '@/lib/utils'
 import { FAIRYRING_ENV } from '@/constant/env'
+import { rawScore as calcRaw, weekScore } from '@/lib/score'
 
 /* ────────────────────────────────────────────  Supabase  */
 const supabase = createClient(
@@ -30,10 +31,10 @@ const TOKENS = [
 
 type Token = (typeof TOKENS)[number]
 const COL_PREFIX: Record<Token['symbol'], string> = {
-  SOL: 'sol',
-  BTC: 'btc',
-  ETH: 'eth',
-  LINK:'link'
+  SOL : 'sol',
+  BTC : 'btc',
+  ETH : 'eth',
+  LINK: 'link'
 }
 
 /* ────────────────────────────────────────────  Utility: pick next token */
@@ -60,47 +61,25 @@ function getNextFridayDeadline(now = new Date()) {
   return next
 }
 
-/* ────────────────────────────────────────────  Scoring    */
-const K = 10
-function calcRaw(pred: number, act: number) {
-  if (!act) return 0
-  const pctDiff = Math.abs(pred - act) / act
-  return Math.exp(-pctDiff * K)
-}
 
 /* ────────────────────────────────────────────  Maintenance helpers */
-
-/**
- * Delete all rows from the participants table before inserting week‑1
- * scores of a fresh epoch (i.e. when the LAST finished deadline was SOL).
- * Old results stay visible for a whole week (during SOL‑week) and are
- * purged right before we write the new SOL scores.
- */
 async function purgeParticipantsIfEpochStart(symbolJustFinished: string) {
   if (symbolJustFinished === TOKENS[0].symbol) {          // SOL
     console.log('🧹  purging participants for new epoch')
     await supabase.from('participants').delete().neq('address', '')
   }
 }
-
-/**
- * Remove every entry from the proofs table. Runs once per week,
- * after scoring finishes.
- */
 async function wipeProofsTable() {
   console.log('🧹  wiping proofs table')
-
   const { error } = await supabase
     .from('proofs')
-    .delete()                  // default: returning = 'minimal' → data is null
-    .not('id', 'is', null)     // harmless filter that matches every UUID row
-
-  if (error) {
-    console.error('❌  proofs wipe failed:', error.message)
-  } else {
-    console.log('✅  proofs wiped')
-  }
+    .delete()
+    .not('id', 'is', null)     // matches every UUID row
+  error
+    ? console.error('❌  proofs wipe failed:', error.message)
+    : console.log('✅  proofs wiped')
 }
+
 /* ────────────────────────────────────────────  Reveal read */
 async function fetchRevealedTxs(height: number) {
   const out: { creator: string; price: number }[] = []
@@ -170,27 +149,16 @@ async function updateScoresForLastDeadline() {
   )
 
   /* — STEP 1: raw exponential scores — */
-  const raw            = revealed.map(tx => calcRaw(tx.price, actualPrice))
-  const rawSum         = raw.reduce((a, b) => a + b, 0)
+  const raw        = revealed.map(tx => calcRaw(tx.price, actualPrice))
 
-  /* — STEP 2: scale so that ΣweekScore = 1000 — */
-  const scaled   = raw.map(r => Math.floor((r / rawSum) * 1000))
-  let leftovers  = 1000 - scaled.reduce((a, b) => a + b, 0)
-
-  if (leftovers > 0) {
-    const residuals = raw.map((r, i) => ({
-      i,
-      frac: (r / rawSum) * 1000 - scaled[i]
-    }))
-    residuals.sort((a, b) => b.frac - a.frac)
-    for (let k = 0; k < leftovers; k++) scaled[residuals[k].i]++
-  }
+  /* — STEP 2: absolute weekScore (no global normalisation) — */
+  const weekScores = raw.map(r => Math.round(r * 1000))   // 0 … 1000
 
   /* — STEP 3: build upsert rows — */
   const prefix = COL_PREFIX[last.symbol as Token['symbol']]
 
   const participantRows = revealed.map((tx, idx) => {
-    const weekScore = scaled[idx]
+    const weekScore = weekScores[idx]
     const newTotal  = (prevTotals[tx.creator] ?? 0) + weekScore
 
     return {
