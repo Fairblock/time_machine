@@ -8,5 +8,6 @@ export function rawScore(pred: number, act: number): number {
 }
 
 export function weekScore(pred: number, act: number): number {
-  return Math.round(rawScore(pred, act) * 1000)   // 0 … 1000
+  const base = Math.round(rawScore(pred, act) * 1000)        // 0 … 1000
+  return Math.max(5, base)                                   // ← floor at 5
 }

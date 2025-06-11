@@ -149,10 +149,7 @@ async function updateScoresForLastDeadline() {
   )
 
   /* — STEP 1: raw exponential scores — */
-  const raw        = revealed.map(tx => calcRaw(tx.price, actualPrice))
-
-  /* — STEP 2: absolute weekScore (no global normalisation) — */
-  const weekScores = raw.map(r => Math.round(r * 1000))   // 0 … 1000
+  const weekScores        = revealed.map(tx => weekScore(tx.price, actualPrice))
 
   /* — STEP 3: build upsert rows — */
   const prefix = COL_PREFIX[last.symbol as Token['symbol']]

@@ -33,7 +33,7 @@ describe('weekScore()', () => {
   it('trends to 0 for wildly wrong guesses', () => {
     const act = 25
     const far = 1000
-    expect(weekScore(far, act)).toBe(0)
+    expect(weekScore(far, act)).toBe(5)
   })
 
   it('is rawScore × 1000, rounded', () => {
@@ -44,7 +44,7 @@ describe('weekScore()', () => {
   })
 
   it('returns 0 when actual price is 0', () => {
-    expect(weekScore(123, 0)).toBe(0)
+    expect(weekScore(123, 0)).toBe(5)
   })
 
   it('returns identical scores for the same percentage error regardless of price scale', () => {
