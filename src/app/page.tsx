@@ -34,7 +34,7 @@ export default function Home() {
     <>
       <Header />
 
-      <div className="flex flex-col justify-center min-h-[80vh] font-sans relative p-4">
+      <div className="flex flex-col justify-center min-h-screen font-sans relative p-4 bg-gradient-to-r from-[#EBEFF7] via-white to-[#EBEFF7] pt-[88px]">
         <section className="flex flex-col-reverse justify-evenly items-center md:flex-row gap-12 md:gap-4">
           {/* HERO TEXT & ACTION BUTTON */}
           <div className="flex flex-col gap-4 md:gap-6 lg:gap-8 justify-around items-start">
@@ -81,8 +81,9 @@ export default function Home() {
                 />
 
                 {/* Tokens container */}
-                <div className="absolute top-[22%] left-1/2 -translate-x-1/2 flex flex-col items-center gap-3">
+                <div className="absolute top-[20%] lg:top-[17%] left-1/2 -translate-x-1/2 flex flex-col items-center gap-3">
                   {TOKENS.map((t) => {
+                    console.log(t);
                     const activeNow = t.id === active?.coingecko_id;
                     return (
                       <div
@@ -91,7 +92,7 @@ export default function Home() {
                         className={[
                           "rounded-full bg-white shadow transition-transform duration-200",
                           activeNow
-                            ? "ring-2 ring-white/70 scale-110 w-11 h-11 lg:w-14 lg:h-14"
+                            ? "ring-2 ring-white/70 scale-110 w-16 h-16 xl:w-20 xl:h-20"
                             : "filter grayscale opacity-40 w-8 h-8 lg:w-10 lg:h-10",
                         ].join(" ")}
                       >
