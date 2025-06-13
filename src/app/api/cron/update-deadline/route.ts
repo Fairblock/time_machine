@@ -6,6 +6,7 @@ import { REVEAL_EVENT_TYPES, REVEAL_EVENT_ATTRS } from '@/constant/events'
 import { getBlock }      from '@/services/fairyring/block'
 import { fetchPriceAt }  from '@/lib/utils'
 import { FAIRYRING_ENV } from '@/constant/env'
+import { rawScore as calcRaw, weekScore } from '@/lib/score'
 
 /* ────────────────────────────────────────────  Supabase  */
 const supabase = createClient(
@@ -30,12 +31,13 @@ const TOKENS = [
 
 type Token = (typeof TOKENS)[number]
 const COL_PREFIX: Record<Token['symbol'], string> = {
-  SOL: 'sol',
-  BTC: 'btc',
-  ETH: 'eth',
-  LINK:'link'
+  SOL : 'sol',
+  BTC : 'btc',
+  ETH : 'eth',
+  LINK: 'link'
 }
 
+/* ────────────────────────────────────────────  Utility: pick next token */
 async function pickNextToken(): Promise<Token> {
   const { data } = await supabase
     .from('deadlines')
@@ -59,13 +61,25 @@ function getNextFridayDeadline(now = new Date()) {
   return next
 }
 
-/* ────────────────────────────────────────────  Scoring    */
-const K = 10
-function calcRaw(pred: number, act: number) {
-  if (!act) return 0
-  const pctDiff = Math.abs(pred - act) / act
-  return Math.exp(-pctDiff * K)      
+
+/* ────────────────────────────────────────────  Maintenance helpers */
+async function purgeParticipantsIfEpochStart(symbolJustFinished: string) {
+  if (symbolJustFinished === TOKENS[0].symbol) {          // SOL
+    console.log('🧹  purging participants for new epoch')
+    await supabase.from('participants').delete().neq('address', '')
+  }
 }
+async function wipeProofsTable() {
+  console.log('🧹  wiping proofs table')
+  const { error } = await supabase
+    .from('proofs')
+    .delete()
+    .not('id', 'is', null)     // matches every UUID row
+  error
+    ? console.error('❌  proofs wipe failed:', error.message)
+    : console.log('✅  proofs wiped')
+}
+
 /* ────────────────────────────────────────────  Reveal read */
 async function fetchRevealedTxs(height: number) {
   const out: { creator: string; price: number }[] = []
@@ -93,7 +107,6 @@ async function fetchRevealedTxs(height: number) {
   return out
 }
 
-
 /* ────────────────────────────────────────────  Scoring pass */
 async function updateScoresForLastDeadline() {
   /* — get the last finished deadline — */
@@ -105,6 +118,9 @@ async function updateScoresForLastDeadline() {
     .limit(1)
     .single()
   if (!last) return
+
+  /* — if this was the first week (SOL) of a fresh epoch, wipe old data — */
+  await purgeParticipantsIfEpochStart(last.symbol)
 
   const targetHeight = Number(last.target_block)
   if (!targetHeight) return
@@ -121,7 +137,7 @@ async function updateScoresForLastDeadline() {
   const revealed = await fetchRevealedTxs(targetHeight)
   if (!revealed.length) return
 
-  /* — previous totals — */
+  /* — previous totals (after potential purge) — */
   const submitters      = [...new Set(revealed.map(r => r.creator))]
   const { data: rows }  = await supabase
     .from('participants')
@@ -133,30 +149,13 @@ async function updateScoresForLastDeadline() {
   )
 
   /* — STEP 1: raw exponential scores — */
-  const raw            = revealed.map(tx => calcRaw(tx.price, actualPrice))
-  const rawSum         = raw.reduce((a, b) => a + b, 0)
-
-  /* — STEP 2: scale so that ΣweekScore = 1000 — */
-  const scaled = raw.map(r => Math.floor((r / rawSum) * 1000))
-  let leftovers = 1000 - scaled.reduce((a, b) => a + b, 0)
-
-  /* distribute leftover points by largest residuals */
-  if (leftovers > 0) {
-    const residuals = raw.map((r, i) => ({
-      i,
-      frac: (r / rawSum) * 1000 - scaled[i]
-    }))
-    residuals.sort((a, b) => b.frac - a.frac)       // largest fractional part first
-    for (let k = 0; k < leftovers; k++) {
-      scaled[residuals[k].i]++
-    }
-  }
+  const weekScores        = revealed.map(tx => weekScore(tx.price, actualPrice))
 
   /* — STEP 3: build upsert rows — */
-  const prefix = COL_PREFIX[last.symbol as Token['symbol']]      // 'sol' | …
+  const prefix = COL_PREFIX[last.symbol as Token['symbol']]
 
   const participantRows = revealed.map((tx, idx) => {
-    const weekScore = scaled[idx]                  // final, normalised score
+    const weekScore = weekScores[idx]
     const newTotal  = (prevTotals[tx.creator] ?? 0) + weekScore
 
     return {
@@ -168,21 +167,9 @@ async function updateScoresForLastDeadline() {
     }
   })
 
-  await supabase.from('participants')
+  await supabase
+    .from('participants')
     .upsert(participantRows, { onConflict: 'address' })
-}
-
-
-/* ────────────────────────────────────────────  Season reset */
-async function resetSeason() {
-  console.log('🔄  wiping participants for new cycle')
-  await supabase.from('participants').update({
-    total_score : 0,
-    sol_guess: null, sol_delta: null, sol_score: null,
-    btc_guess: null, btc_delta: null, btc_score: null,
-    eth_guess: null, eth_delta: null, eth_score: null,
-    link_guess:null, link_delta:null, link_score:null
-  }).neq('address', '')
 }
 
 /* ────────────────────────────────────────────  Cron handler */
@@ -193,13 +180,13 @@ export async function GET() {
     /* 1 – score the week that just ended */
     await updateScoresForLastDeadline()
 
-    /* 2 – decide next token */
+    /* 2 – wipe proofs for the finished week */
+    await wipeProofsTable()
+
+    /* 3 – decide next token */
     const tokenNext = await pickNextToken()
 
-    /* if we’re about to start SOL again ⇒ previous token was LINK ⇒ reset */
-    if (tokenNext.symbol === TOKENS[0].symbol) await resetSeason()
-
-    /* 3 – create the next deadline row */
+    /* 4 – create the next deadline row */
     const now          = new Date()
     const deadlineTime = getNextFridayDeadline(now)
 
