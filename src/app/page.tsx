@@ -59,7 +59,7 @@ export default function Home() {
               href="/prediction"
               className="bg-neutral-900 hover:bg-neutral-800 font-medium inline-block px-5 py-[6px] rounded-xl shadow text-white text-sm sm:text-base md:text-lg transition-colors"
             >
-              Predict it now
+              Predict now
             </Link>
           </div>
 
