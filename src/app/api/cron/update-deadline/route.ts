@@ -192,7 +192,7 @@ export async function GET() {
 
     const currentHt    = await getCurrentBlockHeight()
     const secondsUntil = Math.ceil((deadlineTime.getTime() - now.getTime()) / 1000)
-    const targetBlock  = currentHt + Math.ceil(secondsUntil / 1.6)   // ≈1.6 s/block
+    const targetBlock  = currentHt + Math.ceil(secondsUntil / 1.62)   // ≈1.6 s/block
 
     await supabase.from('deadlines').upsert({
       deadline_date: deadlineTime.toISOString(),
