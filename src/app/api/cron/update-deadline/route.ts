@@ -176,7 +176,7 @@
        .upsert(participantRows, { onConflict: 'address' });
    }
    
-   const BLOCK_TIME_SEC = 1.62;
+   const BLOCK_TIME_SEC = 1.616;
    
    export async function GET() {
      const startTime = new Date();
