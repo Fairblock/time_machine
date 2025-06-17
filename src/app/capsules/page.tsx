@@ -106,7 +106,7 @@ function LoadingCapsules({
     <div className="col-span-full flex flex-col items-center mt-12 space-y-4">
       <div className="w-full max-w-sm h-2 bg-gray-200 rounded overflow-hidden">
         <div
-          className="h-full bg-gradient-to-r from-indigo-500 to-purple-500 transition-all duration-500"
+          className="h-full bg-gradient-to-r from-neutral-300 to-black transition-all duration-500"
           style={{ width: `${progress}%` }}
         />
       </div>

@@ -3,7 +3,14 @@
 
 import React, { useEffect, useMemo, useState } from "react";
 import { useAccount } from "graz";
-import { Copy, Menu, X as CloseIcon, Wallet, InfoIcon, CircleX } from "lucide-react";
+import {
+  Copy,
+  Menu,
+  X as CloseIcon,
+  Wallet,
+  InfoIcon,
+  CircleX,
+} from "lucide-react";
 
 import Header from "@/components/header/Header";
 import CountdownClock from "@/components/countdown-timer/CountdownClock";
@@ -247,19 +254,19 @@ export default function LeaderboardPage() {
             <CountdownClock />
 
             {/* wallet card */}
-            <div className="bg-white border-2 xl:border-3 border-[#A9BDC3] rounded-2xl shadow pt-4 flex flex-col items-center">
+            <div className="bg-white border-2 xl:border-3 border-[#A9BDC3] rounded-2xl shadow flex flex-col items-center justify-between">
               {avatar ? (
                 <img
                   src={avatar}
                   alt="avatar"
-                  className="h-16 w-16 rounded-full mb-4"
+                  className="h-24 w-24 rounded-full my-4"
                 />
               ) : (
-                <div className="h-20 w-20 rounded-full bg-gray-100 shadow-inner mb-4 flex items-center justify-center">
+                <div className="h-24 w-24 rounded-full bg-gray-100 shadow-inner my-4 flex items-center justify-center">
                   <Wallet size={34} className="text-gray-400" />
                 </div>
               )}
-              <div className="text-md font-medium break-all text-center">
+              <div className="text-xl font-medium break-all text-center">
                 {account?.bech32Address
                   ? longShort(account.bech32Address)
                   : "Connect wallet"}
@@ -267,14 +274,14 @@ export default function LeaderboardPage() {
 
               <div className="flex w-full mt-5 text-center border-t-2 border-[#A9BDC3]">
                 <div className="flex-1 border-r-2 border-[#A9BDC3] py-5">
-                  <p className="text-gray-500 text-xs">Rank</p>
-                  <p className="text-lg font-semibold">
+                  <p className="text-gray-500 text-base">Rank</p>
+                  <p className="text-5xl font-semibold">
                     {loading ? "—" : me.rank}
                   </p>
                 </div>
                 <div className="flex-1 py-5">
-                  <p className="text-gray-500 text-xs">Points</p>
-                  <p className="text-lg font-semibold">
+                  <p className="text-gray-500 text-base">Points</p>
+                  <p className="text-5xl font-semibold">
                     {loading ? "—" : me.points}
                   </p>
                 </div>
@@ -359,11 +366,13 @@ export default function LeaderboardPage() {
             <table className="w-full text-sm">
               <thead>
                 <tr className="bg-gray-50 text-gray-600">
-                  <th className="px-4 py-3 text-left">#</th>
-                  <th className="px-4 py-3 text-left">Address</th>
+                  <th className="px-4 md:px-8 py-3 text-left">#</th>
+                  <th className="px-4 md:px-8 py-3 text-left">Address</th>
                   {headers[active].map((h) => (
-                    <th key={h} className="px-4 py-3 text-right">
-                      <div className="flex gap-2 justify-end items-center">
+                    <th key={h} className="px-4 md:px-8 py-3 text-right">
+                      <div
+                        className="flex gap-2 justify-end items-center"
+                      >
                         {h}
                         {h === "Off by" && (
                           <div className="relative">
@@ -376,7 +385,11 @@ export default function LeaderboardPage() {
                               <p className="absolute -right-2 top-10 border border-gray-300 bg-white font-normal flex gap-2 items-center px-4 py-2 rounded-2xl text-sm bg-red-white min-w-fit whitespace-nowrap">
                                 The difference between your guess and the actual
                                 price
-                                <CircleX className="cursor-pointer text-red-800" width={18} onClick={() => setShowTooltip(false)} />
+                                <CircleX
+                                  className="cursor-pointer text-red-800"
+                                  width={18}
+                                  onClick={() => setShowTooltip(false)}
+                                />
                               </p>
                             )}
                           </div>
@@ -389,16 +402,16 @@ export default function LeaderboardPage() {
               <tbody>
                 {rows.slice(0, 50).map((r, i) => (
                   <tr key={r.address} className="odd:bg-white even:bg-gray-50">
-                    <td className="px-4 py-2">
+                    <td className="px-4 md:px-8 py-2">
                       {i < medals.length ? medals[i] : i + 1}
                     </td>
-                    <td className="px-4 py-2 font-mono break-all">
+                    <td className="px-4 md:px-8 py-2 font-mono break-all">
                       {longShort(r.address)}
                     </td>
                     {r.cols.map((c, idx) => (
                       <td
                         key={idx}
-                        className="px-4 py-2 text-right tabular-nums"
+                        className="px-4 py-2 md:px-8 text-right tabular-nums"
                       >
                         {c}
                       </td>

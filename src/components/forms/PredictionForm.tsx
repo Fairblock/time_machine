@@ -197,9 +197,7 @@ export default function PredictionForm() {
       );
 
       /* encrypt & size‑aware gas for MsgSubmitEncryptedTx */
-      const key =
-        (pubkey as any).activePubKey?.publicKey ??
-        (pubkey as any).queuedPubKey.publicKey;
+      const key = (pubkey as any).activePubKey?.publicKey ?? (pubkey as any).queuedPubKey.publicKey;
       const encryptedHex = await encryptSignedTx(key, targetHeight, signed);
 
       // Add gas for KV‑store write (WritePerByte)
@@ -370,6 +368,7 @@ export default function PredictionForm() {
             onChange={(e) => setPrediction(e.target.value)}
             placeholder="Eg: 168"
             className="w-full"
+            min={0}
           />
           <Button
             type="submit"
@@ -397,8 +396,8 @@ export default function PredictionForm() {
       )}
 
       {(isChecking || isSending) && (
-        <div className="absolute inset-0 z-10 grid place-items-center bg-[#E8ECEF]">
-          <Loader2 className="h-10 w-10 animate-spin text-gray-600" />
+        <div className="absolute inset-0 z-10 grid place-items-center bg-[#E8ECEF] w-full h-10 top-10">
+          <Loader2 className="h-8 w-8 animate-spin text-gray-600" />
         </div>
       )}
 

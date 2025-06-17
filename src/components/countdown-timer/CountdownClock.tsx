@@ -27,12 +27,12 @@ export default function CountdownCard() {
       className="
         w-full bg-white border-2 xl:border-3 border-[#A9BDC3] rounded-2xl shadow
         flex flex-col md:flex-row items-center justify-evenly
-        p-4 lg:p-0 lg:pl-4 gap-4 overflow-clip
+        pt-4 lg:pl-4 lg:pt-0 gap-4 overflow-clip
       "
     >
       {/* ─ left text block ─ */}
-      <div className="flex flex-col items-center md:items-start text-center md:text-left w-full md:w-1/2">
-        <p className="text-lg md:text-xl xl:text-2xl font-semibold text-gray-900">
+      <div className="flex flex-col items-center lg:items-start text-center md:text-left w-full md:w-3/5 lg:py-24">
+        <p className="text-lg md:text-xl lg:text-3xl xl:text-4xl font-semibold text-gray-900">
           Remaining time for Prediction
         </p>
         <p className="text-xs md:text-sm text-gray-500 mt-2">
@@ -42,7 +42,7 @@ export default function CountdownCard() {
 
       {/* ─ clock + overlay ─ */}
       <div
-        className={`flex items-end relative min-h-44 h-full w-full sm:w-1/2 bg-no-repeat bg-top-right`}
+        className={`flex items-end relative min-h-44 h-full w-full md:w-1/2 bg-top-right`}
         style={{
           backgroundImage: `url(${rightTextBg.src})`,
           backgroundSize: "100%",
@@ -53,7 +53,7 @@ export default function CountdownCard() {
           alt="Clock"
           fill
           priority
-          className="object-contain mt-6"
+          className="object-contain mt-6 xl:min-w-64 xl:min-h-64"
         />
 
         <div className="absolute top-16 inset-0 flex flex-col items-center justify-center text-white">

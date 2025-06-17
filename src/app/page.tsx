@@ -90,9 +90,9 @@ export default function Home() {
                         key={t.id}
                         title={t.symbol}
                         className={[
-                          "rounded-full bg-white shadow transition-transform duration-200",
+                          "rounded-full transition-transform duration-200",
                           activeNow
-                            ? "ring-2 ring-white/70 scale-110 w-16 h-16 xl:w-20 xl:h-20"
+                            ? "scale-110 w-16 h-16 xl:w-20 xl:h-20"
                             : "filter grayscale opacity-40 w-8 h-8 lg:w-10 lg:h-10",
                         ].join(" ")}
                       >

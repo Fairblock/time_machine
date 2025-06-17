@@ -25,7 +25,7 @@ export default function Prediction() {
       <Header />
 
       {/* === viewport‑locked wrapper ================================= */}
-      <div className="relative flex flex-col font-sans bg-gradient-to-r from-[#EBEFF7] via-white to-[#EBEFF7] pt-[80px]">
+      <div className="relative flex flex-col font-sans bg-gradient-to-r from-[#EBEFF7] via-white to-[#EBEFF7] pt-[80px] min-h-screen">
         {/* decorative edge images – show only ≥ lg */}
         <div
           className="absolute left-0 hidden lg:block pointer-events-none select-none"

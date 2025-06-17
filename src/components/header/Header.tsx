@@ -95,7 +95,7 @@ function Header() {
   return (
     <>
       {/* ===== TOP BAR ===== */}
-      <header className="fixed top-0 left-1/2 -translate-x-1/2 z-40 w-full max-w-screen-2xl bg-[#E2E6E9] font-sans">
+      <header className="fixed top-0 z-40 w-full bg-[#E2E6E9] font-sans">
         <div className="flex items-center justify-between w-full px-2 py-2 relative">
           {/* logo */}
           <Link href="/" className="flex-shrink-0">
