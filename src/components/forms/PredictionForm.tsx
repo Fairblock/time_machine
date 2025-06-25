@@ -140,16 +140,16 @@ export default function PredictionForm() {
     try {
       /* nonce helper (unchanged) */
       const {
-        data: { pepNonce },
+        data: { pep_nonce },
       } = await client.FairyringPep.query.queryPepNonce(address);
       let sent = 0;
       const {
-        data: { encryptedTxArray },
+        data: { encrypted_tx_array },
       } = await client.FairyringPep.query.queryEncryptedTxAll();
-      encryptedTxArray?.forEach((txs) =>
-        txs.encryptedTx?.forEach((tx) => tx.creator === address && sent++)
+      encrypted_tx_array?.forEach((txs) =>
+        txs.encrypted_txs?.forEach((tx) => tx.creator === address && sent++)
       );
-      const nonce = pepNonce?.nonce ? +pepNonce.nonce + sent : sent;
+      const nonce = pep_nonce?.nonce ? +pep_nonce.nonce + sent : sent;
 
       /* build send‑msg */
       const amount: Amount[] = [{ denom: "ufairy", amount: "1" }];

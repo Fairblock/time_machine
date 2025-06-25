@@ -22,7 +22,7 @@ export default function useFairyringKeyshare() {
     return useQuery({
       queryKey: [key],
       queryFn: () => {
-        return client.FairyringKeyshare.query.queryPubKey().then((res) => res.data);
+        return client.FairyringKeyshare.query.queryPubkey().then((res) => res.data);
       },
       ...options,
     });
