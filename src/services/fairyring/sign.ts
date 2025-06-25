@@ -1,6 +1,6 @@
 import type { EncodeObject, OfflineSigner } from "@cosmjs/proto-signing";
 import { type StdFee, SigningStargateClient } from "@cosmjs/stargate";
-import { TxRaw } from "fairyring-client-ts/cosmos.tx.v1beta1/module";
+import { TxRaw } from "fairblock-fairyring-client-ts/cosmos.tx.v1beta1/module";
 import { timelockEncrypt } from "ts-ibe";
 import { WalletType } from "graz";
 

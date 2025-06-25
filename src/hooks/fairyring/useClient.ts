@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Client as FRClient } from "fairyring-client-ts";
+import { Client as FRClient } from "fairblock-fairyring-client-ts";
 import { FAIRYRING_ENV } from "@/constant/env";
 import { useAccount, WalletType } from "graz";
 import { getOffline } from "@/services/fairyring/sign";
