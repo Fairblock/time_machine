@@ -224,17 +224,21 @@ export default function CapsulesPage() {
         /* 1️⃣ encrypted capsules */
         const encryptedCaps: Capsule[] = [];
         const now = await getCurrentBlockHeight();
-        const minHeight = now - ONE_WEEK;
+        const minHeight = (now - ONE_WEEK) > 0 ? now - ONE_WEEK : 0;
         const q = encodeURIComponent(
           `tx.height>${minHeight} AND message.action='/fairyring.pep.MsgSubmitEncryptedTx'`
         );
 
         let page = 1;
         while (!cancelled) {
-          const res = await fetch(
-            `${RPC}/tx_search?query=%22${q}%22&order_by=%22desc%22&per_page=${PER_PAGE}&page=${page}`
-          ).then((r) => r.json());
-
+          const url =
+          `${RPC}/tx_search` +
+          `?query=%22${q}%22` +           // "%22" … "%22" == JSON double-quotes
+          `&order_by=%22desc%22` +        // `"desc"` must also be JSON-quoted
+          `&per_page=${PER_PAGE}` +
+          `&page=${page}`;
+          const res = await fetch(url).then((r) => r.json());
+          console.log(res)
           const txs = res.result?.txs ?? [];
           for (const row of txs) {
             const raw = TxRaw.decode(Buffer.from(row.tx, "base64"));
