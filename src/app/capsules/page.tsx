@@ -65,9 +65,9 @@ function CapsuleCard({ creator, target, token, type, price }: Capsule) {
       <div className="p-3 space-y-2">
         <p className="text-sm font-medium text-gray-600">Predicted price</p>
 
-        <div className="relative flex items-center bg-white/60 border-2 border-gray-300 rounded-lg px-3 py-2">
+        <div className="relative flex justify-between bg-white/60 border-2 border-gray-300 rounded-lg px-3 py-2">
           {type === "encrypted" ? (
-            <span className="ml-auto inline-block rounded-full bg-gray-200 px-8 py-0.5 text-[15px] font-semibold text-gray-600">
+            <span className="inline-block rounded-xl bg-gray-200 px-4 py-2 text-[15px] font-semibold text-gray-600">
               Encrypted
             </span>
           ) : (
@@ -80,7 +80,7 @@ function CapsuleCard({ creator, target, token, type, price }: Capsule) {
             <Image
               src={logo}
               alt={token}
-              width={36}
+              width={40}
               height={36}
               className="flex-shrink-0 rounded-full ring-2 ring-gray-200 ml-3"
             />

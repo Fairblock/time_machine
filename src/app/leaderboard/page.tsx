@@ -327,7 +327,7 @@ export default function LeaderboardPage() {
               <button
                 key={k}
                 onClick={() => setActive(k)}
-                className={`px-4 py-1 rounded-xl text-sm transition
+                className={`px-4 py-1 rounded-xl text-sm transition hover:cursor-pointer
                 ${
                   active === k
                     ? "bg-gray-900 text-white"
@@ -362,65 +362,66 @@ export default function LeaderboardPage() {
           )}
 
           {/* leaderboard table */}
-          <section className="overflow-x-auto shadow ring-1 ring-gray-200 rounded-2xl bg-white">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="bg-gray-50 text-gray-600">
-                  <th className="px-4 md:px-8 py-3 text-left">#</th>
-                  <th className="px-4 md:px-8 py-3 text-left">Address</th>
-                  {headers[active].map((h) => (
-                    <th key={h} className="px-4 md:px-8 py-3 text-right">
-                      <div
-                        className="flex gap-2 justify-end items-center"
-                      >
-                        {h}
-                        {h === "Off by" && (
-                          <div className="relative">
-                            <InfoIcon
-                              width={18}
-                              onClick={() => setShowTooltip(!showTooltip)}
-                              className="cursor-pointer"
-                            />
-                            {showTooltip && (
-                              <p className="absolute -right-2 top-10 border border-gray-300 bg-white font-normal flex gap-2 items-center px-4 py-2 rounded-2xl text-sm bg-red-white min-w-fit whitespace-nowrap">
-                                The difference between your guess and the actual
-                                price
-                                <CircleX
-                                  className="cursor-pointer text-red-800"
-                                  width={18}
-                                  onClick={() => setShowTooltip(false)}
-                                />
-                              </p>
-                            )}
-                          </div>
-                        )}
-                      </div>
-                    </th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {rows.slice(0, 50).map((r, i) => (
-                  <tr key={r.address} className="odd:bg-white even:bg-gray-50">
-                    <td className="px-4 md:px-8 py-2">
-                      {i < medals.length ? medals[i] : i + 1}
-                    </td>
-                    <td className="px-4 md:px-8 py-2 font-mono break-all">
-                      {longShort(r.address)}
-                    </td>
-                    {r.cols.map((c, idx) => (
-                      <td
-                        key={idx}
-                        className="px-4 py-2 md:px-8 text-right tabular-nums"
-                      >
-                        {c}
-                      </td>
+          <div className="relative">
+            <section className="overflow-x-auto shadow ring-1 ring-gray-200 rounded-2xl bg-white">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="bg-gray-50 text-gray-600">
+                    <th className="px-4 md:px-8 py-3 text-left">#</th>
+                    <th className="px-4 md:px-8 py-3 text-left">Address</th>
+                    {headers[active].map((h) => (
+                      <th key={h} className="px-4 md:px-8 py-3 text-right">
+                        <div className="flex gap-2 justify-end items-center">
+                          {h}
+                          {h === "Off by" && (
+                            <div
+                              className="relative inline-block"
+                              onMouseEnter={() => setShowTooltip(true)}
+                              onMouseLeave={() => setShowTooltip(false)}
+                            >
+                              <InfoIcon
+                                width={18}
+                                // onClick={() => setShowTooltip(!showTooltip)}
+                                className="cursor-pointer"
+                              />
+                            </div>
+                          )}
+                        </div>
+                      </th>
                     ))}
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </section>
+                </thead>
+                <tbody>
+                  {rows.slice(0, 50).map((r, i) => (
+                    <tr
+                      key={r.address}
+                      className="odd:bg-white even:bg-gray-50"
+                    >
+                      <td className="px-4 md:px-8 py-2">
+                        {i < medals.length ? medals[i] : i + 1}
+                      </td>
+                      <td className="px-4 md:px-8 py-2 font-mono break-all">
+                        {longShort(r.address)}
+                      </td>
+                      {r.cols.map((c, idx) => (
+                        <td
+                          key={idx}
+                          className="px-4 py-2 md:px-8 text-right tabular-nums"
+                        >
+                          {c}
+                        </td>
+                      ))}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+              {showTooltip && (
+                <p className="absolute right-0 bottom-16 border-2 border-gray-[#A9BDC3] bg-gray-50 font-normal flex gap-2 items-center px-4 py-2 rounded-xl text-sm bg-red-white min-w-fit whitespace-nowrap z-50">
+                  The difference between your guess and the actual price.
+                </p>
+              )}
+            </section>
+          </div>
         </main>
       </div>
     </>

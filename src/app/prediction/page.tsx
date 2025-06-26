@@ -110,8 +110,8 @@ export default function Prediction() {
           {/* heading */}
           <h1
             className="
-            text-2xl sm:text-3xl md:text-4xl font-extrabold
-            uppercase gradient-text text-center
+            relative text-2xl sm:text-3xl md:text-4xl font-extrabold
+            uppercase gradient-text text-center z-20
           "
           >
             Predict {token!.coingecko_id} Price

@@ -33,7 +33,6 @@ export default function Home() {
   return (
     <>
       <Header />
-
       <div className="flex flex-col justify-center min-h-screen font-sans relative p-4 bg-gradient-to-r from-[#EBEFF7] via-white to-[#EBEFF7] pt-[88px]">
         <section className="flex flex-col-reverse justify-evenly items-center md:flex-row gap-12 md:gap-4">
           {/* HERO TEXT & ACTION BUTTON */}
@@ -77,7 +76,7 @@ export default function Home() {
                 <img
                   src="/capsule.png"
                   alt=""
-                  className="relative top-0 left-1/2 -translate-x-1/2 w-[22rem]"
+                  className="relative top-0 left-1/2 -translate-x-1/2 w-[22rem] 2xl:w-[24rem]"
                 />
 
                 {/* Tokens container */}
