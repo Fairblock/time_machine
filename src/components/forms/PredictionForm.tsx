@@ -17,7 +17,7 @@ import {
 } from "@/services/fairyring/sign";
 import { Amount } from "@/types/fairyring";
 import { useAccount } from "graz";
-import { Lock, Loader2, X as CloseIcon } from "lucide-react";
+import { Lock, Loader2, CircleX } from "lucide-react";
 import { TxRaw, TxBody } from "cosmjs-types/cosmos/tx/v1beta1/tx";
 import { MsgSubmitEncryptedTx } from "@/types/fairyring/codec/pep/tx";
 import { Buffer } from "buffer";
@@ -197,7 +197,9 @@ export default function PredictionForm() {
       );
 
       /* encrypt & size‑aware gas for MsgSubmitEncryptedTx */
-      const key = (pubkey as any).active_pubkey?.public_key ?? (pubkey as any).queued_pubkey.public_key;
+      const key =
+        (pubkey as any).active_pubkey?.public_key ??
+        (pubkey as any).queued_pubkey.public_key;
       const encryptedHex = await encryptSignedTx(key, targetHeight, signed);
 
       // Add gas for KV‑store write (WritePerByte)
@@ -295,18 +297,18 @@ export default function PredictionForm() {
     >
       <div
         onClick={(e) => e.stopPropagation()}
-        className="relative bg-white rounded-lg px-10 py-12 w-[90%] max-w-md text-center space-y-8"
+        className="relative bg-white rounded-xl px-10 py-12 w-[90%] max-w-md text-center space-y-8"
       >
         <button
           onClick={() => setShowModal(false)}
           className="absolute top-4 right-4 text-gray-400 hover:text-gray-600"
         >
-          <CloseIcon size={18} />
+          <CircleX size={22} />
         </button>
 
         <div
           className="absolute inset-0 pointer-events-none
-                        bg-[url('/stars.png')] bg-contain bg-center"
+                        bg-[url('/stars.png')] bg-contain bg-center filter grayscale"
         />
 
         <div className="relative z-10">
@@ -323,9 +325,7 @@ export default function PredictionForm() {
           <p className="text-lg font-medium">Prediction encrypted</p>
           <p className="text-xl">
             Share on&nbsp;<span className="font-bold">X</span>&nbsp;to&nbsp;
-            <span className="font-bold text-indigo-600">
-              earn 200&nbsp;points!
-            </span>
+            <span className="font-bold text-black">earn 200&nbsp;points!</span>
           </p>
           <p className="text-sm text-gray-600">
             Your proof‑token:&nbsp;
@@ -336,7 +336,7 @@ export default function PredictionForm() {
         <Link
           href={tweetUrl}
           target="_blank"
-          className="relative z-10 inline-block bg-black text-white px-8 py-3 rounded-md font-semibold hover:bg-gray-900 transition-colors"
+          className="relative z-10 inline-block bg-black text-white px-8 py-3 rounded-xl font-semibold hover:bg-gray-900 transition-colors"
         >
           Share on X
         </Link>

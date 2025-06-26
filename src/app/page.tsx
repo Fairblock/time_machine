@@ -77,7 +77,7 @@ export default function Home() {
                 <img
                   src="/capsule.png"
                   alt=""
-                  className="relative top-0 left-1/2 -translate-x-1/2 w-80"
+                  className="relative top-0 left-1/2 -translate-x-1/2 w-[22rem]"
                 />
 
                 {/* Tokens container */}

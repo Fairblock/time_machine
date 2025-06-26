@@ -145,10 +145,10 @@ function Header() {
                 <button
                   onClick={() => setWalletMenu((v) => !v)}
                   title={account?.bech32Address}
-                  className="cursor-pointer p-0.5 rounded-full bg-gradient-to-r from-indigo-500 to-pink-500 hover:opacity-80 transition"
+                  className="cursor-pointer"
                 >
-                  <div className="flex items-center space-x-2 bg-white rounded-full px-3 py-[3px]">
-                    <span className="font-mono text-xs text-gray-700">
+                  <div className="flex items-center space-x-2 bg-white border-2 border-[#A9BDC3] rounded-xl px-4 py-2">
+                    <span className="font-mono font-medium text-base text-gray-700">
                       {truncated}
                     </span>
                   </div>

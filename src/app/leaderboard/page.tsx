@@ -248,7 +248,7 @@ export default function LeaderboardPage() {
     <>
       <Header />
       <div className="font-sans bg-gray-50 min-h-screen pt-[80px]">
-        <main className="max-w-7xl mx-auto px-4 pt-12 space-y-12">
+        <main className="max-w-[1440px] mx-auto px-4 pt-12 space-y-12">
           {/* top panel grid */}
           <div className={`grid gap-8 grid-cols-1 ${gridCols}`}>
             <CountdownClock />
@@ -259,7 +259,7 @@ export default function LeaderboardPage() {
                 <img
                   src={avatar}
                   alt="avatar"
-                  className="h-24 w-24 rounded-full my-4"
+                  className="h-20 w-20 rounded-full my-4"
                 />
               ) : (
                 <div className="h-24 w-24 rounded-full bg-gray-100 shadow-inner my-4 flex items-center justify-center">
@@ -327,7 +327,7 @@ export default function LeaderboardPage() {
               <button
                 key={k}
                 onClick={() => setActive(k)}
-                className={`px-4 py-1 rounded-full text-sm transition
+                className={`px-4 py-1 rounded-xl text-sm transition
                 ${
                   active === k
                     ? "bg-gray-900 text-white"
@@ -341,14 +341,14 @@ export default function LeaderboardPage() {
 
           {/* price badge (skip for Overall / Tweets) */}
           {current && (
-            <div className="flex justify-center mb-2">
+            <div className="flex justify-center mb-8">
               <a
                 href={current.url ?? "#"}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="inline-flex items-center gap-2 px-3 py-1 rounded-full
+                className="inline-flex items-center gap-2 px-3 py-1 rounded-xl
                           bg-white/70 backdrop-blur ring-1 ring-gray-300/70 shadow-sm
-                          text-gray-700 hover:text-gray-900"
+                          text-gray-700 hover:text-gray-900 overflow-scroll sm:overflow-auto"
               >
                 <span>Price on {fmtDateUTC(current.date)} UTC</span>
                 <Bullet />
