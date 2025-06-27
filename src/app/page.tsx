@@ -46,7 +46,7 @@ export default function Home() {
               </span>
             </h1>
 
-            <p className="font-medium text-sm md:text-base lg:text-xl text-gray-700">
+            <p className="font-normal text-sm md:text-base lg:text-xl text-gray-700">
               Encrypt your price prediction. No one can
               <br />
               see it, not even us. We’ll decrypt it next week.

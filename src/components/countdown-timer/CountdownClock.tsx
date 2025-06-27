@@ -32,7 +32,7 @@ export default function CountdownCard() {
     >
       {/* ─ left text block ─ */}
       <div className="flex flex-col items-center lg:items-start text-center md:text-left w-full md:w-1/2 lg:py-12">
-        <p className="text-lg md:text-xl lg:text-2xl xl:text-3xl font-semibold text-gray-900">
+        <p className="text-xl md:text-2xl lg:text-3xl xl:text-4xl font-medium text-gray-900">
           Remaining time for Prediction
         </p>
         <p className="text-xs md:text-sm text-gray-500 mt-2">
@@ -42,12 +42,12 @@ export default function CountdownCard() {
 
       {/* ─ clock + overlay ─ */}
       <div
-        className={`flex items-end relative min-h-44 h-full w-full md:w-[55%] lg:w-1/2 xl:w-[55%] bg-top-right`}
-        style={{
-          backgroundImage: `url(${rightTextBg.src})`,
-          backgroundSize: "100%",
-        }}
+        className={`flex items-end relative min-h-44 h-full w-full md:w-[55%] lg:w-1/2 xl:w-[55%] bg-top-right filter`}
       >
+        <div  className={`flex items-end relative min-h-44 h-full w-full bg-top-right filter opacity-40`} style={{
+          backgroundImage: `url(${rightTextBg.src})`,
+          backgroundSize: "50%",
+        }}></div>
         <Image
           src="/Timer.png"
           alt="Clock"

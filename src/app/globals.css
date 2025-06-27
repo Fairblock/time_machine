@@ -1,21 +1,23 @@
-@import 'tailwindcss';
-@import 'tw-animate-css';
+@import "tailwindcss";
+@import "tw-animate-css";
 /* pull down Inter from Google Fonts */
-@import url('https://fonts.googleapis.com/css2?family=Montserrat:ital,wght@0,100..900;1,100..900&display=swap');
+@import url("https://fonts.googleapis.com/css2?family=Montserrat:ital,wght@0,100..900;1,100..900&display=swap");
 
 /* make sure body (and thus all elements) use Tailwind’s font-sans */
-html, body {
-  font-family: 'Montserrat', sans-serif;
+html,
+body {
+  /* font-family: "Montserrat", sans-serif; */
+  font-family: 'NeueMontreal', sans-serif;
 }
 @custom-variant dark (&:is(.dark *));
 .gradient-text {
   background: linear-gradient(to bottom, #000000, #b8b5b5);
   /* clip the background to the text glyphs… */
   -webkit-background-clip: text;
-          background-clip: text;
+  background-clip: text;
   /* …and make the text itself transparent so you see the gradient */
   -webkit-text-fill-color: transparent;
-          color: transparent;
+  color: transparent;
 }
 @theme inline {
   --color-background: var(--background);
@@ -132,5 +134,63 @@ html, body {
   }
   body {
     @apply bg-background text-foreground;
+  }
+  @font-face {
+    font-family: "NeueMontreal";
+    src: url("/fonts/NeueMontreal/NeueMontreal-Regular.otf") format("opentype");
+    font-weight: 400;
+    font-style: normal;
+  }
+
+  @font-face {
+    font-family: "NeueMontreal";
+    src: url("/fonts/NeueMontreal/NeueMontreal-Italic.otf") format("opentype");
+    font-weight: 400;
+    font-style: italic;
+  }
+
+  @font-face {
+    font-family: "NeueMontreal";
+    src: url("/fonts/NeueMontreal/NeueMontreal-Light.otf") format("opentype");
+    font-weight: 300;
+    font-style: normal;
+  }
+
+  @font-face {
+    font-family: "NeueMontreal";
+    src: url("/fonts/NeueMontreal/NeueMontreal-LightItalic.otf")
+      format("opentype");
+    font-weight: 300;
+    font-style: italic;
+  }
+
+  @font-face {
+    font-family: "NeueMontreal";
+    src: url("/fonts/NeueMontreal/NeueMontreal-Medium.otf") format("opentype");
+    font-weight: 500;
+    font-style: normal;
+  }
+
+  @font-face {
+    font-family: "NeueMontreal";
+    src: url("/fonts/NeueMontreal/NeueMontreal-MediumItalic.otf")
+      format("opentype");
+    font-weight: 500;
+    font-style: italic;
+  }
+
+  @font-face {
+    font-family: "NeueMontreal";
+    src: url("/fonts/NeueMontreal/NeueMontreal-Bold.otf") format("opentype");
+    font-weight: 700;
+    font-style: normal;
+  }
+
+  @font-face {
+    font-family: "NeueMontreal";
+    src: url("/fonts/NeueMontreal/NeueMontreal-BoldItalic.otf")
+      format("opentype");
+    font-weight: 700;
+    font-style: italic;
   }
 }

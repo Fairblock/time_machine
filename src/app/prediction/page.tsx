@@ -41,7 +41,7 @@ export default function Prediction() {
             alt=""
             fill
             priority
-            className="object-cover"
+            className="object-cover filter grayscale opacity-40"
           />
         </div>
         <div
@@ -58,7 +58,7 @@ export default function Prediction() {
             alt=""
             fill
             priority
-            className="object-cover"
+            className="object-cover filter grayscale opacity-40"
           />
         </div>
 

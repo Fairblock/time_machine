@@ -56,22 +56,22 @@ function CapsuleCard({ creator, target, token, type, price }: Capsule) {
       {/* header */}
       <div className="flex items-center gap-4 bg-[#F2F7FA] px-4 py-3 rounded-2xl">
         <img src={avatar(creator)} alt="" className="h-8 w-8 rounded" />
-        <span className="font-mono font-semibold text-lg text-gray-700">
+        <span className="font-mono font-normal text-lg text-gray-700">
           {shortAddr}
         </span>
       </div>
 
       {/* body */}
       <div className="p-3 space-y-2">
-        <p className="text-sm font-medium text-gray-600">Predicted price</p>
+        <p className="text-sm font-normal text-gray-600">Predicted price</p>
 
         <div className="relative flex justify-between bg-white/60 border-2 border-gray-300 rounded-lg px-3 py-2">
           {type === "encrypted" ? (
-            <span className="inline-block rounded-xl bg-gray-200 px-4 py-2 text-[15px] font-semibold text-gray-600">
+            <span className="inline-block rounded-xl bg-gray-200 px-4 py-2 text-[15px] font-normal text-gray-600">
               Encrypted
             </span>
           ) : (
-            <span className="mr-auto text-2xl font-semibold text-gray-900">
+            <span className="mr-auto text-2xl font-normal text-gray-900">
               ${price?.toLocaleString()}
             </span>
           )}
@@ -329,7 +329,7 @@ export default function CapsulesPage() {
             alt=""
             fill
             priority
-            className="object-cover"
+            className="object-cover filter grayscale opacity-40"
           />
         </div>
         <div
@@ -346,7 +346,7 @@ export default function CapsulesPage() {
             alt=""
             fill
             priority
-            className="object-cover"
+            className="object-cover filter grayscale opacity-40"
           />
         </div>
         <main className="bg-white border border-[#DCDCDC] mx-auto xl:my-16 px-4 sm:px-16 xl:px-8 py-10 rounded-xl space-y-6 max-w-[1360px] min-h-screen xl:min-h-[70vh] relative z-20">

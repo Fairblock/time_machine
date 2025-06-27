@@ -234,7 +234,7 @@ function Header() {
               onClick={() => setMobileOpen(false)}
               className="block text-gray-900"
             >
-              Predictions
+              Encrypted&nbsp;Capsules
             </Link>
             <Link
               href="/leaderboard"
