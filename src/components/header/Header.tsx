@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { usePathname } from 'next/navigation';
+import { usePathname } from "next/navigation";
 import { Copy, Menu, X as CloseIcon, LogOut } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -16,6 +16,7 @@ import {
   WalletType,
 } from "graz";
 import { PUBLIC_ENVIRONMENT } from "@/constant/env";
+import HowItWorksModal from "../modals/HowItWorksModal";
 
 function Header() {
   /* ───────── wallet helpers ─────────────────────────────────────── */
@@ -23,6 +24,7 @@ function Header() {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [attempted, setAttempted] = useState<WalletType | null>(null);
   const [walletMenu, setWalletMenu] = useState(false);
+  const [showModal, setShowModal] = useState<boolean>(false);
 
   const { data: account, isConnected } = useAccount();
   const { connect, error: walletErr } = useConnect();
@@ -115,25 +117,33 @@ function Header() {
           <nav className="hidden font-medium lg:flex flex-grow justify-center space-x-7 xl:space-x-10 text-sm lg:text-base">
             <Link
               href="/prediction"
-              className={`${pathname === "/prediction" ? "text-gray-900" : "text-gray-600"} whitespace-nowrap`}
+              className={`${
+                pathname === "/prediction" ? "text-gray-900" : "text-gray-600"
+              } whitespace-nowrap`}
             >
               Encrypt Prediction
             </Link>
-            <Link
-              href="/how-it-works"
-              className={`${pathname === "/how-it-works" ? "text-gray-900" : "text-gray-600"} whitespace-nowrap`}
+            <button
+              onClick={() => setShowModal(true)}
+              className={`${
+                showModal ? "text-gray-900" : "text-gray-600"
+              } whitespace-nowrap cursor-pointer`}
             >
               How it works
-            </Link>
+            </button>
             <Link
               href="/capsules"
-              className={`${pathname === "/capsules" ? "text-gray-900" : "text-gray-600"} whitespace-nowrap`}
+              className={`${
+                pathname === "/capsules" ? "text-gray-900" : "text-gray-600"
+              } whitespace-nowrap`}
             >
               Encrypted Capsules
             </Link>
             <Link
               href="/leaderboard"
-              className={`${pathname === "/leaderboard" ? "text-gray-900" : "text-gray-600"} whitespace-nowrap`}
+              className={`${
+                pathname === "/leaderboard" ? "text-gray-900" : "text-gray-600"
+              } whitespace-nowrap`}
             >
               Leaderboard
             </Link>
@@ -319,8 +329,8 @@ function Header() {
               By connecting your wallet, you agree to our <br />
               <span className="font-semibold underline">
                 Terms of Service
-              </span>{" "}
-              and
+              </span>
+              {" "}and{" "}
               <span className="font-semibold underline">Privacy Policy</span>.
             </p>
 
@@ -361,6 +371,8 @@ function Header() {
           </div>
         </div>
       )}
+
+      {showModal && <HowItWorksModal setShowModal={setShowModal} />}
     </>
   );
 }

@@ -34,9 +34,9 @@ export default function CountdownTimer() {
   }, []);
 
   return (
-    <div className="flex items-center gap-2 text-sm text-center text-muted-foreground mb-8">
+    <div className="flex items-center gap-2 text-center text-muted-foreground mb-8">
       <HourglassIcon className={"hidden sm:block"} width={18}/>
-      Your prediction decrypts around {deadlineText}
+      Your prediction decrypts around <span className="font-medium">{deadlineText}</span>
       <HourglassIcon className={"hidden sm:block"} width={18}/>
     </div>
   );

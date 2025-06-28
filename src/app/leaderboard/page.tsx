@@ -49,7 +49,7 @@ type SlideKey = (typeof SLIDES)[number];
 
 /* ── helpers ─────────────────────────────────────────────── */
 const longShort = (addr: string) => addr.slice(0, 10) + "…" + addr.slice(-6);
-const medals = ["🥇", "🥈", "🥉"] as const;
+const medals = ["/1st.png", "/2nd.png", "/3rd.png"] as const;
 
 const fmtPrice = (n: number | null) =>
   n === null
@@ -398,7 +398,7 @@ export default function LeaderboardPage() {
                       className="odd:bg-white even:bg-gray-50"
                     >
                       <td className="px-4 md:px-8 py-2">
-                        {i < medals.length ? medals[i] : i + 1}
+                        {i < medals.length ? <img src={medals[i]} className="h-4 w-4"/> : i + 1}
                       </td>
                       <td className="px-4 md:px-8 py-2 font-mono break-all">
                         {longShort(r.address)}

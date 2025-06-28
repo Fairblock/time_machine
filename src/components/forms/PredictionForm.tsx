@@ -336,7 +336,7 @@ export default function PredictionForm() {
         <Link
           href={tweetUrl}
           target="_blank"
-          className="relative z-10 inline-block bg-black text-white px-8 py-3 rounded-xl font-semibold hover:bg-gray-900 transition-colors"
+          className="relative z-10 inline-block bg-black text-white px-8 py-3 rounded-xl font-medium hover:bg-gray-900 transition-colors"
         >
           Share on X
         </Link>
@@ -352,7 +352,7 @@ export default function PredictionForm() {
       )}
 
       {submitted ? (
-        <div className="text-green-600 text-center">Prediction submitted!</div>
+        <div className="text-black text-lg text-center">Prediction encrypted!</div>
       ) : (
         <form
           onSubmit={handleSubmit}

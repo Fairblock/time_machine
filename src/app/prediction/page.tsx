@@ -109,7 +109,7 @@ export default function Prediction() {
         >
           {/* upcoming prediction */}
           <h3 className="font-medium border border-black mt-4 mb-2s px-5 py-2 rounded-2xl text-center text-sm uppercase">
-            Encrypt the Next <span className="font-bold">BTC</span> Move in 3 days
+            Next token in 3 days
           </h3>
 
           {/* heading */}

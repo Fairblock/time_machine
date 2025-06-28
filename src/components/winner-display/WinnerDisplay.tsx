@@ -74,7 +74,7 @@ export default function LeaderboardDisplay() {
               return (
                 <tr key={entry.address} className={rowBg(idx)}>
                   <td className="px-4 py-3 font-medium">
-                    {medals[idx] ?? idx + 1}
+                    {medals[idx] ? <img src={medals[idx]} className="h-4 w-4"/> : idx + 1}
                   </td>
 
                   <td className="px-4 py-3 font-mono break-all">
