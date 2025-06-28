@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import Image from "next/image";
 import Link from "next/link";
+import { usePathname } from 'next/navigation';
 import { Copy, Menu, X as CloseIcon, LogOut } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -27,6 +28,8 @@ function Header() {
   const { connect, error: walletErr } = useConnect();
   const { disconnect } = useDisconnect();
   const { suggestAndConnect } = useSuggestChainAndConnect();
+
+  const pathname = usePathname();
 
   const truncated = account?.bech32Address
     ? `${account.bech32Address.slice(0, 6)}…${account.bech32Address.slice(-4)}`
@@ -109,22 +112,28 @@ function Header() {
           </Link>
 
           {/* nav (desktop) */}
-          <nav className="hidden font-medium lg:flex flex-grow justify-center space-x-10 text-sm lg:text-base">
+          <nav className="hidden font-medium lg:flex flex-grow justify-center space-x-7 xl:space-x-10 text-sm lg:text-base">
             <Link
               href="/prediction"
-              className="text-gray-600 hover:text-gray-900 whitespace-nowrap"
+              className={`${pathname === "/prediction" ? "text-gray-900" : "text-gray-600"} whitespace-nowrap`}
             >
-              Encrypt&nbsp;Prediction
+              Encrypt Prediction
+            </Link>
+            <Link
+              href="/how-it-works"
+              className={`${pathname === "/how-it-works" ? "text-gray-900" : "text-gray-600"} whitespace-nowrap`}
+            >
+              How it works
             </Link>
             <Link
               href="/capsules"
-              className="text-gray-600 hover:text-gray-900 whitespace-nowrap"
+              className={`${pathname === "/capsules" ? "text-gray-900" : "text-gray-600"} whitespace-nowrap`}
             >
-              Encrypted&nbsp;Capsules
+              Encrypted Capsules
             </Link>
             <Link
               href="/leaderboard"
-              className="text-gray-600 hover:text-gray-900 whitespace-nowrap"
+              className={`${pathname === "/leaderboard" ? "text-gray-900" : "text-gray-600"} whitespace-nowrap`}
             >
               Leaderboard
             </Link>

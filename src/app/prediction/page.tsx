@@ -107,6 +107,11 @@ export default function Prediction() {
           px-6 sm:px-8 md:px-10 lg:px-12 py-6
         "
         >
+          {/* upcoming prediction */}
+          <h3 className="font-medium border border-black mt-4 mb-2s px-5 py-2 rounded-2xl text-center text-sm uppercase">
+            Encrypt the Next <span className="font-bold">BTC</span> Move in 3 days
+          </h3>
+
           {/* heading */}
           <h1
             className="
@@ -121,7 +126,7 @@ export default function Prediction() {
           <div
             className="
             w-full max-w-4xl
-            bg-white/90 backdrop-blur rounded-2xl shadow
+            bg-white/90 backdrop-blur rounded-xl shadow
             p-3 sm:p-4 md:p-5 lg:p-6
             space-y-4
           "
