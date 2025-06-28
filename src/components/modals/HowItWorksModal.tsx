@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { CircleX } from "lucide-react";
+import { CircleX, Discor } from "lucide-react";
 
 const HowItWorksModal = ({
   setShowModal,
@@ -44,7 +44,7 @@ const HowItWorksModal = ({
               decrypted and earn points.
             </li>
           </ul>
-          <p className="">The closer your prediction is to the actual price, and the earlier you predict, the more points you earn.</p>
+          <p className="">Need help? Join our <a className="font-medium" href="https://discord.gg/fairblock">Discord</a></p>
           <Link
             className="bg-black font-medium mx-auto px-6 py-2 rounded-xl text-white text-lg w-fit"
             href={"/prediction"}

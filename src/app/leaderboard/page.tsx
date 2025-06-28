@@ -416,7 +416,7 @@ export default function LeaderboardPage() {
                 </tbody>
               </table>
               {showTooltip && (
-                <p className="absolute right-0 bottom-16 border-2 border-gray-[#A9BDC3] bg-gray-50 font-normal flex gap-2 items-center px-4 py-2 rounded-xl text-sm bg-red-white min-w-fit whitespace-nowrap z-50">
+                <p className="absolute bottom-[120%] right-0 border-2 border-gray-[#A9BDC3] bg-gray-50 font-normal flex gap-2 items-center px-4 py-2 rounded-xl text-sm bg-red-white min-w-fit whitespace-nowrap z-50">
                   The difference between your guess and the actual price.
                 </p>
               )}
