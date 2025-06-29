@@ -398,7 +398,11 @@ export default function LeaderboardPage() {
                       className="odd:bg-white even:bg-gray-50"
                     >
                       <td className="px-4 md:px-8 py-2">
-                        {i < medals.length ? <img src={medals[i]} className="h-4 w-4"/> : i + 1}
+                        {i < medals.length ? (
+                          <img src={medals[i]} className="h-4 w-4" />
+                        ) : (
+                          i + 1
+                        )}
                       </td>
                       <td className="px-4 md:px-8 py-2 font-mono break-all">
                         {longShort(r.address)}
@@ -415,12 +419,12 @@ export default function LeaderboardPage() {
                   ))}
                 </tbody>
               </table>
-              {showTooltip && (
-                <p className="absolute bottom-[120%] right-0 border-2 border-gray-[#A9BDC3] bg-gray-50 font-normal flex gap-2 items-center px-4 py-2 rounded-xl text-sm bg-red-white min-w-fit whitespace-nowrap z-50">
-                  The difference between your guess and the actual price.
-                </p>
-              )}
             </section>
+            {showTooltip && (
+              <p className="absolute -top-12 right-0 border-2 border-gray-[#A9BDC3] bg-gray-50 font-normal flex gap-2 items-center px-4 py-2 rounded-xl text-sm bg-red-white min-w-fit whitespace-nowrap z-50">
+                The difference between your guess and the actual price.
+              </p>
+            )}
           </div>
         </main>
       </div>

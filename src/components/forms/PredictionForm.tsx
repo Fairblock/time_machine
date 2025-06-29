@@ -363,10 +363,12 @@ export default function PredictionForm() {
           </label>
           <Input
             id="prediction"
-            type="number"
+            type="text"
+            pattern="[0-9]*[.]?[0-9]*"
+            inputMode="decimal"
             value={prediction}
             onChange={(e) => setPrediction(e.target.value)}
-            placeholder="Eg: 168"
+            placeholder="Eg: 168.50"
             className="w-full"
             min={0}
           />
