@@ -248,6 +248,15 @@ function Header() {
             >
               Encrypt Prediction
             </Link>
+            <button
+              onClick={() => {
+                setMobileOpen(false);
+                setShowModal(true);
+              }}
+              className={`text-gray-900 whitespace-nowrap cursor-pointer`}
+            >
+              How it works
+            </button>
             <Link
               href="/capsules"
               onClick={() => setMobileOpen(false)}
@@ -329,8 +338,8 @@ function Header() {
               By connecting your wallet, you agree to our <br />
               <span className="font-semibold underline">
                 Terms of Service
-              </span>
-              {" "}and{" "}
+              </span>{" "}
+              and{" "}
               <span className="font-semibold underline">Privacy Policy</span>.
             </p>
 
