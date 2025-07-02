@@ -12,11 +12,40 @@ import { useActiveToken } from "@/hooks/useActiveToken";
 /* Height for edge images when visible (≥ lg) */
 const EDGE_HEIGHT = "70vh";
 
+/* ──────────────────────────────
+   Rotation & opening schedule
+   (UTC - Sun=0, Mon=1, Thu=4, Sat=6)
+   ────────────────────────────── */
+const ROTATION = ["SOL", "BTC", "ARB", "ETH"] as const;
+const TOKEN_OPEN_DOW: Record<(typeof ROTATION)[number], number> = {
+  SOL: 1, // Monday
+  BTC: 4, // Thursday
+  ARB: 1, // Monday
+  ETH: 4  // Thursday
+};
+
+/** How many days until `token` next opens? (min 1, in UTC) */
+function daysUntilNextOpen(token: typeof ROTATION[number]) {
+  const openDow = TOKEN_OPEN_DOW[token];
+  const now     = new Date();
+  const today   = now.getUTCDay();              // 0-6
+  let diff      = (openDow + 7 - today) % 7;    // 0-6
+  if (diff === 0) diff = 7;                     // always future
+  return diff;
+}
+
 export default function Prediction() {
   const [showBanner, setShowBanner] = useState(true);
 
   const { data: token, isLoading } = useActiveToken();
   if (isLoading) return <p className="text-center mt-20">Loading…</p>;
+
+  /* === next-token info =========================================== */
+  const currentIdx   = ROTATION.indexOf(token!.symbol as (typeof ROTATION)[number]);
+  const nextSymbol   = ROTATION[(currentIdx + 1) % ROTATION.length];
+  const daysToNext   = daysUntilNextOpen(nextSymbol);
+  const nextHeading  =
+    `Next token: ${nextSymbol} in ${daysToNext} day${daysToNext === 1 ? "" : "s"}`;
 
   const iconSrc = `/${token!.symbol.toLowerCase()}.png`;
 
@@ -24,9 +53,9 @@ export default function Prediction() {
     <>
       <Header />
 
-      {/* === viewport‑locked wrapper ================================= */}
+      {/* === viewport-locked wrapper ================================= */}
       <div className="relative flex flex-col font-sans bg-gradient-to-r from-[#EBEFF7] via-white to-[#EBEFF7] pt-[80px] min-h-screen">
-        {/* decorative edge images – show only ≥ lg */}
+        {/* decorative edge images – show only ≥ lg */}
         <div
           className="absolute left-0 hidden lg:block pointer-events-none select-none"
           style={{
@@ -61,8 +90,6 @@ export default function Prediction() {
             className="object-cover filter grayscale opacity-40"
           />
         </div>
-
-        {/* top nav */}
 
         {/* floating banner */}
         {showBanner && (
@@ -100,16 +127,16 @@ export default function Prediction() {
         {/* === MAIN =================================================== */}
         <main
           className="
-          flex-1                          /* fill remaining viewport height */
+          flex-1
           flex flex-col items-center
-          justify-center                  /* centre on taller screens */
+          justify-center
           gap-4 sm:gap-5 lg:gap-6
           px-6 sm:px-8 md:px-10 lg:px-12 py-6
         "
         >
           {/* upcoming prediction */}
-          <h3 className="font-medium border border-black mt-4 mb-2s px-5 py-2 rounded-2xl text-center text-sm uppercase">
-            Next token in 3 days
+          <h3 className="font-medium border border-black mt-4 px-5 py-2 rounded-2xl text-center text-sm uppercase">
+            {nextHeading}
           </h3>
 
           {/* heading */}
@@ -148,16 +175,16 @@ export default function Prediction() {
               </span>
             </div>
 
-            {/* chart ‑‑ cap at 30 vh on small, grow on large */}
+            {/* chart */}
             <div className="w-full h-[34vh] md:h-[38vh] lg:h-[42vh]">
               <TokenChart />
             </div>
           </div>
 
-          {/* form – stays compact */}
+          {/* form */}
           <PredictionForm
             label={`Your ${token!.symbol} prediction in USD`}
-            placeholder="Eg: $168"
+            placeholder="Eg: $168"
             buttonText="Encrypt Now"
           />
 
