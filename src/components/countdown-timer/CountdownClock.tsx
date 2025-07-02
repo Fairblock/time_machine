@@ -3,24 +3,58 @@
 
 import { useEffect, useState } from "react";
 import { differenceInDays } from "date-fns";
-import { getNextFridayDeadline } from "@/lib/utils";
 import Image from "next/image";
 import rightTextBg from "../../../public/Right.png";
+import { useActiveToken } from "@/hooks/useActiveToken";
+
+/* decrypt weekday (UTC, Sun = 0) */
+const DECRYPT_DOW: Record<string, number> = {
+  SOL: 3, // Wednesday
+  ARB: 3,
+  BTC: 6, // Saturday
+  ETH: 6,
+};
+
+/* build next cut-off - 23:59 UTC on that weekday */
+function nextDecryptDeadline(symbol: string, now = new Date()) {
+  const targetDow = DECRYPT_DOW[symbol] ?? 3;
+  const deadline  = new Date(now);
+  deadline.setUTCHours(23, 59, 0, 0);
+
+  const delta = (targetDow + 7 - now.getUTCDay()) % 7;
+  if (delta === 0 && now < deadline) {
+    /* tonight */
+  } else {
+    deadline.setUTCDate(deadline.getUTCDate() + (delta || 7));
+  }
+  return deadline;
+}
 
 export default function CountdownCard() {
+  const { data: token } = useActiveToken();
   const [daysRemaining, setDaysRemaining] = useState<number | null>(null);
+  const [weekdayText, setWeekdayText] = useState<string>("");
 
   /* update once a minute */
   useEffect(() => {
+    if (!token) return;
+
     const update = () => {
-      const now = new Date();
-      const deadline = getNextFridayDeadline();
+      const now      = new Date();
+      const deadline = nextDecryptDeadline(token.symbol, now);
       setDaysRemaining(Math.max(0, differenceInDays(deadline, now)));
+
+      const wd = deadline.toLocaleDateString("en-US", {
+        weekday: "long",
+        timeZone: "UTC",
+      });
+      setWeekdayText(wd);
     };
+
     update();
-    const id = setInterval(update, 60_000); // 1 min
+    const id = setInterval(update, 60_000); // 1 min
     return () => clearInterval(id);
-  }, []);
+  }, [token]);
 
   return (
     <div
@@ -36,18 +70,22 @@ export default function CountdownCard() {
           Remaining time for Prediction
         </p>
         <p className="text-xs md:text-sm text-gray-500 mt-2">
-          Unlocks weekly on Fridays around 23:59 UTC.
+          Unlocks on {weekdayText} around 23:59 UTC.
         </p>
       </div>
 
       {/* ─ clock + overlay ─ */}
       <div
-        className={`flex items-end relative min-h-44 h-full w-full md:w-[55%] lg:w-1/2 xl:w-[55%] bg-top-right filter`}
+        className="flex items-end relative min-h-44 h-full w-full md:w-[55%] lg:w-1/2 xl:w-[55%]"
       >
-        <div  className={`flex items-end relative min-h-44 h-full w-full bg-top-right filter opacity-40`} style={{
-          backgroundImage: `url(${rightTextBg.src})`,
-          backgroundSize: "50%",
-        }}></div>
+        <div
+          className="flex items-end relative min-h-44 h-full w-full opacity-40"
+          style={{
+            backgroundImage: `url(${rightTextBg.src})`,
+            backgroundSize: "50%",
+            backgroundPosition: "top right",
+          }}
+        />
         <Image
           src="/Timer.png"
           alt="Clock"
@@ -57,7 +95,6 @@ export default function CountdownCard() {
         />
 
         <div className="absolute top-5 inset-0 flex flex-col items-center justify-center text-white">
-          {/* fluid font‑size: 28 px → 48 px */}
           <span className="font-bold leading-none text-6xl lg:text-5xl xl:text-8xl">
             {daysRemaining ?? "--"}
           </span>
