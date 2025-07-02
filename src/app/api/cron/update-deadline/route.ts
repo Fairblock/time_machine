@@ -44,7 +44,7 @@ const TOKEN_SCHEDULE: Record<Token['symbol'], { open: number; decrypt: number }>
 };
 
 /* timing multipliers */
-const DAY_MULTIPLIERS = [3, 2, 1] as const;  // Day-1, Day-2, Day-3+
+const DAY_MULTIPLIERS = [2.25, 1.5, 1] as const;  // Day-1, Day-2, Day-3+
 
 function getNextDeadline(start: Date, token: Token) {
   const targetDow = TOKEN_SCHEDULE[token.symbol].decrypt;   // 0-6, Sun=0

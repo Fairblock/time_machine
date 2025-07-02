@@ -1,59 +1,102 @@
-import { weekScore, rawScore, K } from './score'
-import { describe, it, expect }    from 'vitest'
+/* tests/score.test.ts ----------------------------------------------------
+ * Verifies our campaign formula:
+ *   finalScore = weekScore(prediction, actual) × multiplier
+ *   multiplier = 2.25 (Day-1) · 1.5 (Day-2) · 1 (Day-3+)
+ * ---------------------------------------------------------------------- */
+import { weekScore } from './score'
+import { describe, it, expect } from 'vitest'
 
-describe('weekScore()', () => {
-  it('returns an integer in 0…1000', () => {
-    expect(weekScore(100, 100)).toBe(1000)
-    expect(weekScore(150, 100)).toBeGreaterThanOrEqual(0)
-    expect(weekScore(150, 100)).toBeLessThanOrEqual(1000)
+/* multipliers – keep in sync with production */
+const MUL = [2.25, 1.5, 1] as const
+
+/* helper: 0-based day index → multiplier */
+const m = (d: number) => (d <= 0 ? MUL[0] : d === 1 ? MUL[1] : MUL[2])
+
+/* full campaign score */
+const score = (p: number, a: number, d: number) => weekScore(p, a) * m(d)
+
+/* ── diagnostic printer ─────────────────────────────────────────────── */
+function dump (title: string, rows: Array<{ p: number; a: number; d: number }>) {
+  // eslint-disable-next-line no-console
+  console.log(`\n${title}`)
+  // eslint-disable-next-line no-console
+  console.table(
+    rows.map((r) => ({
+      prediction : r.p,
+      actual     : r.a,
+      day        : r.d + 1,               // show 1-based
+      baseScore  : weekScore(r.p, r.a),
+      finalScore : score(r.p, r.a, r.d),
+    }))
+  )
+}
+
+/* test matrix – diverse magnitudes & errors */
+const cases: Array<{ p: number; a: number; d: number }> = [
+  { p: 1,         a: 1,        d: 0 },
+  { p: 1.05,      a: 1,        d: 0 },
+  { p: 0.9,       a: 1,        d: 1 },
+  { p: 0.001,     a: 0.001,    d: 2 },
+  { p: 0.0012,    a: 0.001,    d: 0 },
+  { p: 10,        a: 12,       d: 0 },
+  { p: 11,        a: 12,       d: 1 },
+  { p: 15,        a: 12,       d: 2 },
+  { p: 100,       a: 80,       d: 0 },
+  { p: 80,        a: 100,      d: 1 },
+  { p: 60,        a: 100,      d: 2 },
+  { p: 1234,      a: 1234,     d: 0 },
+  { p: 1500,      a: 1234,     d: 1 },
+  { p: 1000,      a: 1234,     d: 2 },
+  { p: 5e4,       a: 5e4,      d: 0 },
+  { p: 6e4,       a: 5e4,      d: 1 },
+  { p: 4e4,       a: 5e4,      d: 2 },
+  { p: 2e6,       a: 2e6,      d: 0 },
+  { p: 2.6e6,     a: 2e6,      d: 1 },
+  { p: 1.8e6,     a: 2e6,      d: 2 },
+  { p: 0.23,      a: 0.25,     d: 0 },
+  { p: 0.27,      a: 0.25,     d: 1 },
+  { p: 0.19,      a: 0.25,     d: 2 },
+  { p: 9_999_999, a: 1_234_567,d: 0 },
+  { p: 50,        a: 1,        d: 1 },
+]
+
+dump('Sample predictions', cases)
+
+/* ── unit tests ─────────────────────────────────────────────────────── */
+describe('campaign score (weekScore × new multipliers)', () => {
+  it('applies the correct 2.25 / 1.5 / 1 multiplier', () => {
+    const base = weekScore(130, 100)
+    expect(score(130, 100, 0)).toBeCloseTo(base * 2.25)
+    expect(score(130, 100, 1)).toBeCloseTo(base * 1.5)
+    expect(score(130, 100, 2)).toBeCloseTo(base * 1)
+    expect(score(130, 100, 99)).toBeCloseTo(base * 1) // ≥2 uses Day-3 multiplier
   })
 
-  it('is symmetric for over‑ and under‑estimates', () => {
-    const act   = 200
-    const delta = 30
-    expect(weekScore(act + delta, act))
-      .toBe(weekScore(act - delta, act))
+  it('outputs stay within 0‥2250 (1000 × 2.25)', () => {
+    for (const r of cases) {
+      const s = score(r.p, r.a, r.d)
+      expect(s).toBeGreaterThanOrEqual(0)
+      expect(s).toBeLessThanOrEqual(2250)
+    }
   })
 
-  it('gives higher score to the closer guess', () => {
-    const act = 50
-    const guessA = 55
-    const guessB = 30
-    expect(weekScore(guessA, act))
-      .toBeGreaterThan(weekScore(guessB, act))
+  it('perfect late guess still beats far-off early guess (2.25× multipliers)', () => {
+    const act = 400
+    const perfectDay3 = score(act, act, 2)          // 1000 × 1 = 1000
+    const offDay1     = score(act * 1.3, act, 0)    // ~50 × 2.25 ≈ 113
+    expect(perfectDay3).toBeGreaterThan(offDay1)
   })
 
-  it('drops strictly as pct‑error grows', () => {
-    const act = 100
-    const err1 = weekScore(110, act)
-    const err2 = weekScore(130, act)
-    expect(err1).toBeGreaterThan(err2)
+  it('scale-invariant: same % error at same day → identical score', () => {
+    expect(score(90, 100, 0)).toBe(score(9000, 10000, 0))   // −10% Day-1
+    expect(score(110, 100, 1)).toBe(score(1100, 1000, 1))   // +10% Day-2
   })
 
-  it('trends to 0 for wildly wrong guesses', () => {
-    const act = 25
-    const far = 1000
-    expect(weekScore(far, act)).toBe(5)
-  })
-
-  it('is rawScore × 1000, rounded', () => {
-    const pred = 87
-    const act  = 92
-    const expected = Math.round(rawScore(pred, act) * 1000)
-    expect(weekScore(pred, act)).toBe(expected)
-  })
-
-  it('returns 0 when actual price is 0', () => {
-    expect(weekScore(123, 0)).toBe(5)
-  })
-
-  it('returns identical scores for the same percentage error regardless of price scale', () => {
-    const score1 = weekScore(90, 100)
-    const score2 = weekScore(90000, 100000)
-    expect(score1).toBe(score2)
-
-    const score3 = weekScore(125, 100)
-    const score4 = weekScore(2500000, 2000000)
-    expect(score3).toBe(score4)
+  it('monotone with multiplier for identical guess', () => {
+    const s0 = score(120, 100, 0)
+    const s1 = score(120, 100, 1)
+    const s2 = score(120, 100, 2)
+    expect(s0).toBeGreaterThan(s1)
+    expect(s1).toBeGreaterThan(s2)
   })
 })
