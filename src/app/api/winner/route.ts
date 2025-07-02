@@ -13,7 +13,7 @@ const supabase = createClient(
 /* ── constants ─────────────────────────────────────────────────────────── */
 type TokenKey = 'SOL' | 'BTC' | 'ETH' | 'ARB';
 const TOKENS: TokenKey[] = ['SOL', 'BTC', 'ETH', 'ARB'];
-const COL_PREFIX = { SOL: 'sol', BTC: 'btc', ETH: 'eth', ARB: 'ARB' } as const;
+const COL_PREFIX = { SOL: 'sol', BTC: 'btc', ETH: 'eth', ARB: 'arb' } as const;
 
 const ddmmyyyy = (d: Date) =>
   `${String(d.getUTCDate()).padStart(2, '0')}-${String(d.getUTCMonth() + 1).padStart(2, '0')}-${d.getUTCFullYear()}`;
