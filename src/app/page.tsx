@@ -11,8 +11,8 @@ import capsuleBg from "../../public/capsuleBg.png";
 const TOKENS = [
   { id: "solana", symbol: "SOL", logo: "/sol.png" },
   { id: "bitcoin", symbol: "BTC", logo: "/btc.png" },
-  { id: "ethereum", symbol: "ETH", logo: "/eth.png" },
   { id: "arbitrum", symbol: "ARB", logo: "/arb.png" },
+  { id: "ethereum", symbol: "ETH", logo: "/eth.png" },
 ];
 
 export default function Home() {

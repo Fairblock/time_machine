@@ -43,7 +43,7 @@ type ApiResp = {
 type PendingProof = { token: string; createdAt: string };
 
 /* ── constants ───────────────────────────────────────────── */
-const TOKENS = ["SOL", "BTC", "ETH", "ARB"] as const;
+const TOKENS = ["SOL", "BTC", "ARB", "ETH"] as const; 
 const SLIDES = ["Overall", "Tweets", ...TOKENS] as const;
 type SlideKey = (typeof SLIDES)[number];
 
