@@ -34,16 +34,16 @@ type TokenMeta = {
 
 type ApiResp = {
   overall: OverallRow[];
-  tokens: Record<"SOL" | "BTC" | "ETH" | "LINK", TokenRow[]>;
+  tokens: Record<"SOL" | "BTC" | "ETH" | "ARB", TokenRow[]>;
   tweetScores: { address: string; score: number }[];
-  tokenInfo: Record<"SOL" | "BTC" | "ETH" | "LINK", TokenMeta>;
+  tokenInfo: Record<"SOL" | "BTC" | "ETH" | "ARB", TokenMeta>;
 };
 
 /* ── extra type for tweet claim flow ─────────────────────── */
 type PendingProof = { token: string; createdAt: string };
 
 /* ── constants ───────────────────────────────────────────── */
-const TOKENS = ["SOL", "BTC", "ETH", "LINK"] as const;
+const TOKENS = ["SOL", "BTC", "ETH", "ARB"] as const;
 const SLIDES = ["Overall", "Tweets", ...TOKENS] as const;
 type SlideKey = (typeof SLIDES)[number];
 
@@ -101,14 +101,14 @@ export default function LeaderboardPage() {
     SOL: [],
     BTC: [],
     ETH: [],
-    LINK: [],
+    ARB: [],
   });
   const [tweets, setTweets] = useState<ApiResp["tweetScores"]>([]);
   const [meta, setMeta] = useState<ApiResp["tokenInfo"]>({
     SOL: { price: null, date: null, url: null, block: null },
     BTC: { price: null, date: null, url: null, block: null },
     ETH: { price: null, date: null, url: null, block: null },
-    LINK: { price: null, date: null, url: null, block: null },
+    ARB: { price: null, date: null, url: null, block: null },
   });
 
   /* tweet‑claim flow */
@@ -222,7 +222,7 @@ export default function LeaderboardPage() {
     SOL: ["Score", "Guess", "Off by"],
     BTC: ["Score", "Guess", "Off by"],
     ETH: ["Score", "Guess", "Off by"],
-    LINK: ["Score", "Guess", "Off by"],
+    ARB: ["Score", "Guess", "Off by"],
   };
 
   /* other derived data */

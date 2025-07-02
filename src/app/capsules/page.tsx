@@ -40,7 +40,7 @@ const TOKEN_LOGOS: Record<string, string> = {
   SOL: "/sol.png",
   BTC: "/btc.png",
   ETH: "/eth.png",
-  LINK: "/link.png",
+  ARB: "/arb.png",
 };
 const avatar = (addr: string) =>
   `https://api.dicebear.com/9.x/identicon/svg?seed=${encodeURIComponent(addr)}`;

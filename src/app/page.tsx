@@ -12,7 +12,7 @@ const TOKENS = [
   { id: "solana", symbol: "SOL", logo: "/sol.png" },
   { id: "bitcoin", symbol: "BTC", logo: "/btc.png" },
   { id: "ethereum", symbol: "ETH", logo: "/eth.png" },
-  { id: "chainlink", symbol: "LINK", logo: "/link.png" },
+  { id: "arbitrum", symbol: "ARB", logo: "/arb.png" },
 ];
 
 export default function Home() {

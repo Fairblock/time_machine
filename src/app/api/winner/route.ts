@@ -11,9 +11,9 @@ const supabase = createClient(
 );
 
 /* ── constants ─────────────────────────────────────────────────────────── */
-type TokenKey = 'SOL' | 'BTC' | 'ETH' | 'LINK';
-const TOKENS: TokenKey[] = ['SOL', 'BTC', 'ETH', 'LINK'];
-const COL_PREFIX = { SOL: 'sol', BTC: 'btc', ETH: 'eth', LINK: 'link' } as const;
+type TokenKey = 'SOL' | 'BTC' | 'ETH' | 'ARB';
+const TOKENS: TokenKey[] = ['SOL', 'BTC', 'ETH', 'ARB'];
+const COL_PREFIX = { SOL: 'sol', BTC: 'btc', ETH: 'eth', ARB: 'ARB' } as const;
 
 const ddmmyyyy = (d: Date) =>
   `${String(d.getUTCDate()).padStart(2, '0')}-${String(d.getUTCMonth() + 1).padStart(2, '0')}-${d.getUTCFullYear()}`;
@@ -42,7 +42,7 @@ async function collectTokenInfo(boundaryISO: string | null) {
       SOL: { price: null, date: null, url: null, block: null },
       BTC: { price: null, date: null, url: null, block: null },
       ETH: { price: null, date: null, url: null, block: null },
-      LINK: { price: null, date: null, url: null, block: null }
+      ARB: { price: null, date: null, url: null, block: null }
     };
 
   let q = supabase
@@ -92,7 +92,7 @@ export async function GET() {
         sol_guess,sol_delta,sol_score,
         btc_guess,btc_delta,btc_score,
         eth_guess,eth_delta,eth_score,
-        link_guess,link_delta,link_score
+        arb_guess,arb_delta,arb_score
       `);
 
     if (error) throw error;
@@ -120,7 +120,7 @@ export async function GET() {
       SOL : board('SOL'),
       BTC : board('BTC'),
       ETH : board('ETH'),
-      LINK: board('LINK')
+      ARB: board('ARB')
     };
 
     /* 4️⃣ tweet leaderboard --------------------------------------- */
