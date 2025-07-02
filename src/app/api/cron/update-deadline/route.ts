@@ -46,19 +46,25 @@ const TOKEN_SCHEDULE: Record<Token['symbol'], { open: number; decrypt: number }>
 /* timing multipliers */
 const DAY_MULTIPLIERS = [3, 2, 1] as const;  // Day-1, Day-2, Day-3+
 
-/**
- * Return the next decrypt deadline (23:59 UTC on Wed or Sat)
- * for the given token, relative to `start`.
- */
 function getNextDeadline(start: Date, token: Token) {
-  const targetDow = TOKEN_SCHEDULE[token.symbol].decrypt;      // 0-6, Sun=0
-  const startDow  = start.getUTCDay();
-  let daysUntil   = (targetDow + 7 - startDow) % 7;
-  if (daysUntil === 0) daysUntil = 7;                          // always the *next* Wed/Sat
-  const next = new Date(start);
-  next.setUTCDate(start.getUTCDate() + daysUntil);
-  next.setUTCHours(23, 59, 0, 0);                              // 23:59 UTC
-  return next;
+  const targetDow = TOKEN_SCHEDULE[token.symbol].decrypt;   // 0-6, Sun=0
+  const todayDow  = start.getUTCDay();
+
+  // Candidate deadline on *today* at 23:59 UTC
+  const candidate = new Date(start);
+  candidate.setUTCHours(23, 59, 0, 0);
+
+  if (todayDow === targetDow && start < candidate) {
+    // Still before tonight’s cutoff → use today
+    return candidate;
+  }
+
+  // Otherwise jump forward to the next target weekday
+  let daysUntil = (targetDow + 7 - todayDow) % 7;
+  if (daysUntil === 0) daysUntil = 7;                      // only happens if we’re past tonight
+  candidate.setUTCDate(start.getUTCDate() + daysUntil);
+  // hours/minutes already set above
+  return candidate;
 }
 
 /* ──────────────────────────  RPC helpers  ───────────────────────── */
