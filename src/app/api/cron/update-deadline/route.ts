@@ -1,12 +1,12 @@
-import { NextResponse }  from 'next/server';
-import { createClient }  from '@supabase/supabase-js';
-import axios             from 'axios';
+import { NextResponse }              from 'next/server';
+import { createClient }              from '@supabase/supabase-js';
+import axios                         from 'axios';
 
 import { REVEAL_EVENT_TYPES, REVEAL_EVENT_ATTRS } from '@/constant/events';
-import { getBlock, getBlockWithTime }      from '@/services/fairyring/block';
-import { fetchPriceAt }  from '@/lib/utils';
-import { FAIRYRING_ENV } from '@/constant/env';
-import { weekScore }     from '@/lib/score';            // base accuracy score
+import { getBlock, getBlockWithTime }            from '@/services/fairyring/block';
+import { fetchPriceAt }                          from '@/lib/utils';
+import { FAIRYRING_ENV }                         from '@/constant/env';
+import { weekScore }                             from '@/lib/score';
 
 /* ───────────────────────────  Supabase  ─────────────────────────── */
 const supabase = createClient(
@@ -16,18 +16,19 @@ const supabase = createClient(
 
 /* ───────────────────────────  RPC config  ───────────────────────── */
 const RPC_URL = FAIRYRING_ENV.rpcURL ?? 'https://testnet-rpc.fairblock.network';
+const PER_PAGE = 100;                // Tendermint /tx_search page size
+const ENC_TYPE_URL = '/fairyring.pep.MsgSubmitEncryptedTx';
 
-/* ────────────────  2-WEEK / 4-TOKEN ROTATION  ──────────────── */
+/* ─────────────  2-week / 4-token rotation  ───────────── */
 const TOKENS = [
-  { coingecko_id: 'solana',    symbol: 'SOL'  },  // week-1 (Mon-Wed)
-  { coingecko_id: 'bitcoin',   symbol: 'BTC'  },  // week-1 (Thu-Sat)
-  { coingecko_id: 'arbitrum',  symbol: 'ARB'  },  // week-2 (Mon-Wed)
-  { coingecko_id: 'ethereum',  symbol: 'ETH'  }   // week-2 (Thu-Sat)
+  { coingecko_id: 'solana',    symbol: 'SOL' },
+  { coingecko_id: 'bitcoin',   symbol: 'BTC' },
+  { coingecko_id: 'arbitrum',  symbol: 'ARB' },
+  { coingecko_id: 'ethereum',  symbol: 'ETH' }
 ] as const;
 
 type Token = (typeof TOKENS)[number];
 
-/* prefixes for participant columns */
 const COL_PREFIX: Record<Token['symbol'], string> = {
   SOL : 'sol',
   BTC : 'btc',
@@ -35,39 +36,31 @@ const COL_PREFIX: Record<Token['symbol'], string> = {
   ETH : 'eth'
 };
 
-/* weekday schedule for each token (UTC, Sun=0) */
 const TOKEN_SCHEDULE: Record<Token['symbol'], { open: number; decrypt: number }> = {
-  SOL: { open: 1, decrypt: 3 },  // Mon → Wed
-  BTC: { open: 4, decrypt: 6 },  // Thu → Sat
-  ARB: { open: 1, decrypt: 3 },  // Mon → Wed
-  ETH: { open: 4, decrypt: 6 }   // Thu → Sat
+  SOL: { open: 1, decrypt: 3 },   // Mon → Wed
+  BTC: { open: 4, decrypt: 6 },   // Thu → Sat
+  ARB: { open: 1, decrypt: 3 },
+  ETH: { open: 4, decrypt: 6 }
 };
 
-/* timing multipliers */
-const DAY_MULTIPLIERS = [2.25, 1.5, 1] as const;  // Day-1, Day-2, Day-3+
+const DAY_MULTIPLIERS = [2.25, 1.5, 1] as const;  // Day-1 · Day-2 · Day-3+
 
+/* ───────────── helper: next 23 : 59 deadline ──────────── */
 function getNextDeadline(start: Date, token: Token) {
-  const targetDow = TOKEN_SCHEDULE[token.symbol].decrypt;   // 0-6, Sun=0
-  const todayDow  = start.getUTCDay();
-
-  // Candidate deadline on *today* at 23:59 UTC
-  const candidate = new Date(start);
+  const targetDow  = TOKEN_SCHEDULE[token.symbol].decrypt;    // 0-6
+  const todayDow   = start.getUTCDay();
+  const candidate  = new Date(start);
   candidate.setUTCHours(23, 59, 0, 0);
 
-  if (todayDow === targetDow && start < candidate) {
-    // Still before tonight’s cutoff → use today
-    return candidate;
-  }
+  if (todayDow === targetDow && start < candidate) return candidate;
 
-  // Otherwise jump forward to the next target weekday
-  let daysUntil = (targetDow + 7 - todayDow) % 7;
-  if (daysUntil === 0) daysUntil = 7;                      // only happens if we’re past tonight
-  candidate.setUTCDate(start.getUTCDate() + daysUntil);
-  // hours/minutes already set above
+  let days = (targetDow + 7 - todayDow) % 7;
+  if (days === 0) days = 7;
+  candidate.setUTCDate(start.getUTCDate() + days);
   return candidate;
 }
 
-/* ──────────────────────────  RPC helpers  ───────────────────────── */
+/* ───────────── RPC helpers ───────────── */
 async function getCurrentBlockHeight(retries = 5, delayMs = 2_000): Promise<number> {
   for (let i = 0; i < retries; i++) {
     try {
@@ -88,25 +81,20 @@ async function waitUntilHeight(target: number, intervalMs = 5_000) {
     await new Promise(r => setTimeout(r, intervalMs));
     h = await getCurrentBlockHeight();
   }
-  console.log(`✅ reached target height ${h}`);
 }
-/* ───────── helper 1: fetch header time for a height ───────── */
+
 async function getBlockTime(h: number): Promise<Date> {
-  const block = await getBlockWithTime(h);
-  return new Date(block.result.block.header.time); // RFC-3339 in UTC
+  const blk = await getBlockWithTime(h);
+  return new Date(blk.result.block.header.time);
 }
 
-/* ───────── helper 2: moving-average block time (N = 400) ─── */
 async function avgBlockTime(lookback = 400): Promise<number> {
-  const latestH = await getCurrentBlockHeight();
-  const [tLatest, tPast] = await Promise.all([
-    getBlockTime(latestH),
-    getBlockTime(latestH - lookback),
-  ]);
-  return (tLatest.getTime() - tPast.getTime()) / (lookback * 1000); // seconds
+  const tip       = await getCurrentBlockHeight();
+  const [tTip, tPast] = await Promise.all([getBlockTime(tip), getBlockTime(tip - lookback)]);
+  return (tTip.getTime() - tPast.getTime()) / (lookback * 1000);
 }
 
-/* ───────────────────────  token rotation logic  ─────────────────── */
+/* ───────────── token rotation ───────────── */
 async function pickNextToken(): Promise<Token> {
   const { data } = await supabase
     .from('deadlines')
@@ -116,108 +104,96 @@ async function pickNextToken(): Promise<Token> {
     .single();
 
   if (!data?.symbol) return TOKENS[0];
-  const lastIdx = TOKENS.findIndex(t => t.symbol === data.symbol);
-  return TOKENS[(lastIdx + 1) % TOKENS.length];
+  const idx = TOKENS.findIndex(t => t.symbol === data.symbol);
+  return TOKENS[(idx + 1) % TOKENS.length];
 }
 
-/* ───────────────────────  participant housekeeping  ─────────────── */
-async function purgeParticipantsIfEpochStart(symbolJustFinished: string) {
-  if (symbolJustFinished === TOKENS[0].symbol) {                // SOL → start of new epoch
+/* ───────────── maintenance helpers ───────────── */
+async function purgeParticipantsIfEpochStart(symbol: string) {
+  if (symbol === TOKENS[0].symbol) {
     console.log('🧹  purging participants for new epoch');
     await supabase.from('participants').delete().neq('address', '');
   }
 }
 
 async function wipeProofsTable() {
-  console.log('🧹  wiping proofs table');
-  const { error } = await supabase
-    .from('proofs')
-    .delete()
-    .not('id', 'is', null);
-  error
-    ? console.error('❌  proofs wipe failed:', error.message)
-    : console.log('✅  proofs wiped');
+  await supabase.from('proofs').delete().not('id', 'is', null);
 }
 
-/* ───────────────────────────  events parsing  ───────────────────── */
-/** Revealed prediction plus the *original* submission time (if provided). */
-interface RevealedTx {
-  creator     : string;
-  price       : number;
-  submittedAt : Date | null;
-}
+/* ────────────────────────────────────────────────────────────
+ * 1.  FETCH revealed (decrypted) events at height+1
+ * 2.  FETCH **encrypted** submissions with same targetHeight
+ * 3.  Join by creator to recover submission time
+ * 4.  Bucket → keep LOWEST score & LATEST time   (spam =  penalty)
+ * ──────────────────────────────────────────────────────────── */
 
-async function fetchRevealedTxs(height: number): Promise<RevealedTx[]> {
-  const out: RevealedTx[] = [];
-  const block  = await getBlock(height + 1);
-  const events = block?.result?.finalize_block_events ?? [];
+/* ---------- 1️⃣  revealed events (as before) ---------------- */
+interface Revealed { creator: string; price: number }
+async function getRevealed(height: number): Promise<Revealed[]> {
+  const blk  = await getBlock(height + 1);
+  const evts = blk?.result?.finalize_block_events ?? [];
+  const out: Revealed[] = [];
 
-  events
+  evts
     .filter((e: any) => e.type === REVEAL_EVENT_TYPES.revealed)
     .forEach((e: any) => {
       const attrs = e.attributes.reduce<Record<string,string>>(
-        (acc,{key,value}) => ((acc[key] = value), acc), {});
-      const memoStr = attrs[REVEAL_EVENT_ATTRS.memo];
-      if (!memoStr) return;
+        (m,{key,value}) => (m[key]=value, m), {}
+      );
+      const memo = attrs[REVEAL_EVENT_ATTRS.memo];
+      if (!memo) return;
 
-      let parsed: any;
-      try { parsed = JSON.parse(memoStr); } catch { return; }
-      if (parsed.tag !== 'price-predict') return;
+      let p: any; try { p = JSON.parse(memo); } catch { return; }
+      if (p.tag !== 'price-predict') return;
 
-      /* submitted_at or submittedAt - ISO-string, optional */
-      const iso = parsed.memo?.submitted_at ?? parsed.memo?.submittedAt ?? null;
-      const submittedAt = iso ? new Date(iso) : null;
-      console.log("txs: ", parsed);
       out.push({
-        creator    : attrs[REVEAL_EVENT_ATTRS.creator],
-        price      : Number(parsed.memo.prediction),
-        submittedAt
+        creator: attrs[REVEAL_EVENT_ATTRS.creator],
+        price  : Number(p.memo.prediction)
       });
     });
 
   return out;
 }
 
-/* ───────────────────────  score calculation  ────────────────────── */
-function multiplierForSubmission(
-  submittedAt: Date | null,
-  decryptDate: Date
-): number {
-  if (!submittedAt) return 1;                                   // no info → default
-  /* window opens two days *before* decrypt day at 00:00 UTC */
-  const openDate = new Date(decryptDate);
-  openDate.setUTCDate(openDate.getUTCDate() - 2);
-  openDate.setUTCHours(0, 0, 0, 0);
-
-  const dayIndex = Math.floor(
-    (submittedAt.getTime() - openDate.getTime()) / 86_400_000
-  );                                                            // 0,1,≥2
-  if (dayIndex <= 0) return DAY_MULTIPLIERS[0];                 // Day-1 (3×)
-  if (dayIndex === 1) return DAY_MULTIPLIERS[1];                // Day-2 (2×)
-  return DAY_MULTIPLIERS[2];                                    // Day-3+ (1×)
+/* ---------- 2️⃣  encrypted tx search ------------------------ */
+interface EncTx { creator: string; submittedAt: Date }
+async function fetchEncryptedTimes(targetHeight: number): Promise<Map<string,Date>> {
+  const map = new Map<string,Date>();
+  const q = encodeURIComponent(`message.action='${ENC_TYPE_URL}' AND pep.MsgSubmitEncryptedTx.target_block_height=${targetHeight}`);
+  for (let page = 1; ; page++) {
+    const url = `${RPC_URL}/tx_search?query=\"${q}\"&page=${page}&per_page=${PER_PAGE}&order_by=\"asc\"`;
+    const { data } = await axios.get(url);
+    const txs = data.result?.txs ?? [];
+    for (const row of txs) {
+      const h   = Number(row.height);
+      const blk = await getBlockTime(h);
+      /* creator address lives in the tx message – decode just once  */
+      const msgAny   = JSON.parse(Buffer.from(row.tx_result.data, 'base64').toString('utf8')) as any;
+      const creator  = msgAny?.creator ?? msgAny?.value?.creator;
+      if (!creator) continue;
+      const prev = map.get(creator);
+      if (!prev || blk > prev) map.set(creator, blk);  // keep latest send-time
+    }
+    if (txs.length < PER_PAGE) break;                 // last page reached
+  }
+  return map;
 }
-function inSubmissionWindow(
-  submittedAt: Date | null,
-  decryptDate: Date
-): boolean {
-  console.log("submittedAt: ",submittedAt);
-  if (!submittedAt) return false;                 // no timestamp → ignore
 
-  // window opens 2 days *before* decrypt at 00:00 UTC
-  const openDate = new Date(decryptDate);
-  openDate.setUTCDate(openDate.getUTCDate() - 2);
-  openDate.setUTCHours(0, 0, 0, 0);
-
-  return submittedAt >= openDate && submittedAt <= decryptDate;
+/* ---------- 3️⃣  scoring pipeline --------------------------- */
+function multiplierFor(submitted: Date|null, decrypt: Date): number {
+  if (!submitted) return 1;
+  const open = new Date(decrypt); open.setUTCDate(open.getUTCDate()-2); open.setUTCHours(0,0,0,0);
+  const idx  = Math.floor((submitted.getTime()-open.getTime())/86_400_000);
+  return idx<=0 ? DAY_MULTIPLIERS[0] : idx===1 ? DAY_MULTIPLIERS[1] : DAY_MULTIPLIERS[2];
 }
+
 async function updateScoresForLastDeadline() {
-  const { data: last } = await supabase
+  const { data:last } = await supabase
     .from('deadlines')
     .select('deadline_date,target_block,coingecko_id,symbol')
     .lt('deadline_date', new Date().toISOString())
-    .order('deadline_date', { ascending: false })
-    .limit(1)
-    .single();
+    .order('deadline_date',{ ascending:false })
+    .limit(1).single();
   if (!last) return;
 
   await purgeParticipantsIfEpochStart(last.symbol);
@@ -225,118 +201,121 @@ async function updateScoresForLastDeadline() {
   const targetHeight = Number(last.target_block);
   if (!targetHeight) return;
 
-  const decryptDate = new Date(last.deadline_date + 'Z');       // Wed/Sat @23:59
-  let actualPrice   = await fetchPriceAt(decryptDate, last.coingecko_id);
-  while (actualPrice === 0) {
-    await new Promise(r => setTimeout(r, 3_000));
-    actualPrice = await fetchPriceAt(decryptDate, last.coingecko_id);
+  const decryptDate = new Date(last.deadline_date + 'Z');
+
+  /* price on decrypt */
+  let actual = await fetchPriceAt(decryptDate, last.coingecko_id);
+  while (actual === 0) {
+    await new Promise(r=>setTimeout(r,3_000));
+    actual = await fetchPriceAt(decryptDate, last.coingecko_id);
   }
-  /* only keep submissions inside the 3-day window */
-  const revealed = (await fetchRevealedTxs(targetHeight)).filter(tx =>
-    inSubmissionWindow(tx.submittedAt, decryptDate)
-  );
-  if (!revealed.length) return;   // nothing valid → exit
-  const submitters      = [...new Set(revealed.map(r => r.creator))];
-  const { data: rows }  = await supabase
+
+  /* revealed & encrypted */
+  const [revealed, encTimes] = await Promise.all([
+    getRevealed(targetHeight),
+    fetchEncryptedTimes(targetHeight)
+  ]);
+  if (!revealed.length) return;
+
+  /* slot previous totals */
+  const addrs      = [...new Set(revealed.map(r=>r.creator))];
+  const { data:prevRows } = await supabase
     .from('participants')
     .select('address,total_score')
-    .in('address', submitters);
+    .in('address', addrs);
+  const prevTotal = Object.fromEntries((prevRows??[]).map(r=>[r.address,Number(r.total_score)||0]));
 
-  const prevTotals = Object.fromEntries(
-    (rows ?? []).map(r => [r.address, Number(r.total_score) || 0])
-  );
+  /* bucket by creator → worst score, latest time */
+  interface Acc { worst:number; latest:Date|null; guess:number; delta:number }
+  const bucket = new Map<string,Acc>();
+
+  for (const tx of revealed) {
+    const submitted = encTimes.get(tx.creator) ?? null;
+    if (!submitted) continue;                         // cannot verify submission time
+    if (submitted > decryptDate) continue;            // sanity guard
+
+    /* only keep within 3-day window */
+    const open = new Date(decryptDate); open.setUTCDate(open.getUTCDate()-2); open.setUTCHours(0,0,0,0);
+    if (submitted < open) continue;
+
+    const mult = multiplierFor(submitted, decryptDate);
+    const base = weekScore(tx.price, actual);
+    const scr  = base * mult;
+    const dlt  = Math.abs(tx.price-actual);
+
+    const prev = bucket.get(tx.creator);
+    if (!prev || scr < prev.worst) {                  // lower score = worse
+      bucket.set(tx.creator,{ worst:scr, latest:submitted, guess:tx.price, delta:dlt });
+    } else if (prev && submitted>prev.latest!) {
+      prev.latest = submitted;                        // update “latest”
+    }
+  }
+  if (!bucket.size) return;                           // nothing valid
 
   const prefix = COL_PREFIX[last.symbol as Token['symbol']];
+  const rows   = Array.from(bucket, ([addr,v])=>({
+    address            : addr,
+    total_score        : (prevTotal[addr]??0)+v.worst,
+    [`${prefix}_guess`]: v.guess,
+    [`${prefix}_delta`]: v.delta,
+    [`${prefix}_score`]: v.worst
+  }));
 
-  const participantRows = revealed.map(tx => {
-    const baseScore  = weekScore(tx.price, actualPrice);
-    const multiplier = multiplierForSubmission(tx.submittedAt, decryptDate);
-    const score      = baseScore * multiplier;
-    const newTotal   = (prevTotals[tx.creator] ?? 0) + score;
-
-    return {
-      address            : tx.creator,
-      total_score        : newTotal,
-      [`${prefix}_guess`]: tx.price,
-      [`${prefix}_delta`]: Math.abs(tx.price - actualPrice),
-      [`${prefix}_score`]: score
-    };
-  });
-
-  await supabase
-    .from('participants')
-    .upsert(participantRows, { onConflict: 'address' });
+  await supabase.from('participants').upsert(rows,{ onConflict:'address' });
 }
 
-/* ────────────────────────────  constants  ───────────────────────── */
-const BLOCK_TIME_SEC = 1.616;
+/* ───────────── deadline-height estimator ───────────── */
+async function estimateTargetHeight(start:Date, baseH:number, deadline:Date){
+  const secPer = await avgBlockTime(400);
+  const tipT   = await getBlockTime(baseH);
+  const left   = (deadline.getTime()-tipT.getTime())/1_000;
+  const safe   = secPer*1.002;
+  return baseH + Math.floor(left/safe);
+}
 
-/* ────────────────────────────  entrypoint  ──────────────────────── */
+/* ───────────── GET handler ───────────── */
 export async function GET() {
-  const startTime = new Date();
-
+  const now = new Date();
   try {
     console.log('▶ cron/update-deadline start');
 
-    /* 1️⃣ ensure previous decrypt finished */
-    const { data: last } = await supabase
+    /* wait for previous target */
+    const { data:lastRow } = await supabase
       .from('deadlines')
       .select('target_block')
-      .order('deadline_date', { ascending: false })
-      .limit(1)
-      .single();
-    if (!last?.target_block) throw new Error('no previous deadline row');
+      .order('deadline_date',{ ascending:false })
+      .limit(1).single();
+    if (!lastRow?.target_block) throw new Error('no previous deadline row');
 
-    const expectedTarget = Number(last.target_block);
-    const baseHeight     = await getCurrentBlockHeight();
-    console.log(`◇ base height at deadline: ${baseHeight}`);
+    const tipH    = await getCurrentBlockHeight();
+    if (tipH < Number(lastRow.target_block)) await waitUntilHeight(Number(lastRow.target_block));
 
-    if (baseHeight < expectedTarget) {
-      await waitUntilHeight(expectedTarget);
-    } else {
-      console.log(`⏩ already past target (${baseHeight} ≥ ${expectedTarget})`);
-    }
-
-    /* 2️⃣ update scores & wipe proofs */
     await updateScoresForLastDeadline();
     await wipeProofsTable();
 
-    /* 3️⃣ schedule the next token */
-    const tokenNext    = await pickNextToken();
-    const deadlineTime = getNextDeadline(startTime, tokenNext);
-
-    /* ── improved height estimator ─────────────────────────── */
-    const AVG_LOOKBACK = 400;        // blocks (~7-10 min)
-    const SLOW_FACTOR  = 1.002;      // +0.2 % safety → always < 23:59
-
-    const secPerBlock = await avgBlockTime(AVG_LOOKBACK);             // moving-avg
-    const latestTime  = await getBlockTime(baseHeight);               // header.time
-    const secsUntil   = (deadlineTime.getTime() - latestTime.getTime()) / 1_000;
-
-    // assume blocks will be a hair *slower* (= bigger) than recent average
-    const safeSec     = secPerBlock * SLOW_FACTOR;
-    const estDelta    = Math.floor(secsUntil / safeSec);              // round *down*
-    let   targetBlock = baseHeight + estDelta;
+    /* next schedule */
+    const nextTok   = await pickNextToken();
+    const deadline  = getNextDeadline(now, nextTok);
+    const targetBlk = await estimateTargetHeight(now, tipH, deadline);
 
     const { error } = await supabase.from('deadlines').upsert({
-      deadline_date: deadlineTime.toISOString(),
-      target_block : targetBlock,
-      coingecko_id : tokenNext.coingecko_id,
-      symbol       : tokenNext.symbol
-    }, { onConflict: 'deadline_date' });
-    if (error) throw new Error(`deadline upsert failed: ${error.message}`);
+      deadline_date: deadline.toISOString(),
+      target_block : targetBlk,
+      coingecko_id : nextTok.coingecko_id,
+      symbol       : nextTok.symbol
+    },{ onConflict:'deadline_date' });
+    if (error) throw new Error(error.message);
 
-    console.log(`✅ ${deadlineTime.toISOString()} → ${tokenNext.symbol} @ block ${targetBlock}`);
-
+    console.log(`✅ new deadline ${deadline.toISOString()} → ${nextTok.symbol} @ block ${targetBlk}`);
     return NextResponse.json({
-      success  : true,
-      deadline : deadlineTime.toISOString(),
-      targetBlock,
-      token    : tokenNext.coingecko_id,
-      symbol   : tokenNext.symbol
+      success:true,
+      deadline:deadline.toISOString(),
+      targetBlock:targetBlk,
+      token:nextTok.coingecko_id,
+      symbol:nextTok.symbol
     });
-  } catch (err: any) {
+  } catch (err:any) {
     console.error('❌ cron/update-deadline failed', err);
-    return NextResponse.json({ error: err.message }, { status: 500 });
+    return NextResponse.json({ error:err.message },{ status:500 });
   }
 }
