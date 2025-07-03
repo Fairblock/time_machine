@@ -38,7 +38,11 @@ export const getBlock = async (blockNumber: number | string) => {
   const blockData = await fetch(apiUrl);
   return await blockData.json();
 };
-
+export const getBlockWithTime = async (blockNumber: number | string) => {
+  const apiUrl = `${PUBLIC_ENVIRONMENT.NEXT_PUBLIC_TENDERMINT_URL}/block?height=${blockNumber}`;
+  const blockData = await fetch(apiUrl);
+  return await blockData.json();
+};
 export const useBlocks = (blocks: number[] | string[]) => {
   const res = useQueries({
     queries: blocks.map((block) => ({

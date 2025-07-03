@@ -3,7 +3,7 @@ import { createClient }  from '@supabase/supabase-js';
 import axios             from 'axios';
 
 import { REVEAL_EVENT_TYPES, REVEAL_EVENT_ATTRS } from '@/constant/events';
-import { getBlock }      from '@/services/fairyring/block';
+import { getBlock, getBlockWithTime }      from '@/services/fairyring/block';
 import { fetchPriceAt }  from '@/lib/utils';
 import { FAIRYRING_ENV } from '@/constant/env';
 import { weekScore }     from '@/lib/score';            // base accuracy score
@@ -92,8 +92,8 @@ async function waitUntilHeight(target: number, intervalMs = 5_000) {
 }
 /* ───────── helper 1: fetch header time for a height ───────── */
 async function getBlockTime(h: number): Promise<Date> {
-  const block = await getBlock(h);
-  return new Date(block.header.time); // RFC-3339 in UTC
+  const block = await getBlockWithTime(h);
+  return new Date(block.result.block.header.time); // RFC-3339 in UTC
 }
 
 /* ───────── helper 2: moving-average block time (N = 400) ─── */
