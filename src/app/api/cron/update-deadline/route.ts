@@ -181,7 +181,19 @@ function multiplierForSubmission(
   if (dayIndex === 1) return DAY_MULTIPLIERS[1];                // Day-2 (2×)
   return DAY_MULTIPLIERS[2];                                    // Day-3+ (1×)
 }
+function inSubmissionWindow(
+  submittedAt: Date | null,
+  decryptDate: Date
+): boolean {
+  if (!submittedAt) return false;                 // no timestamp → ignore
 
+  // window opens 2 days *before* decrypt at 00:00 UTC
+  const openDate = new Date(decryptDate);
+  openDate.setUTCDate(openDate.getUTCDate() - 2);
+  openDate.setUTCHours(0, 0, 0, 0);
+
+  return submittedAt >= openDate && submittedAt <= decryptDate;
+}
 async function updateScoresForLastDeadline() {
   const { data: last } = await supabase
     .from('deadlines')
@@ -203,10 +215,11 @@ async function updateScoresForLastDeadline() {
     await new Promise(r => setTimeout(r, 3_000));
     actualPrice = await fetchPriceAt(decryptDate, last.coingecko_id);
   }
-
-  const revealed = await fetchRevealedTxs(targetHeight);
-  if (!revealed.length) return;
-
+  /* only keep submissions inside the 3-day window */
+  const revealed = (await fetchRevealedTxs(targetHeight)).filter(tx =>
+    inSubmissionWindow(tx.submittedAt, decryptDate)
+  );
+  if (!revealed.length) return;   // nothing valid → exit
   const submitters      = [...new Set(revealed.map(r => r.creator))];
   const { data: rows }  = await supabase
     .from('participants')
