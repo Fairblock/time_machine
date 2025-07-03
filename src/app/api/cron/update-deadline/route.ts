@@ -200,6 +200,7 @@ function inSubmissionWindow(
   submittedAt: Date | null,
   decryptDate: Date
 ): boolean {
+  console.log("submittedAt: ",submittedAt);
   if (!submittedAt) return false;                 // no timestamp → ignore
 
   // window opens 2 days *before* decrypt at 00:00 UTC
