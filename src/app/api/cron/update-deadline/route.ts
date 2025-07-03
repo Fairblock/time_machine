@@ -167,7 +167,7 @@ async function fetchRevealedTxs(height: number): Promise<RevealedTx[]> {
       /* submitted_at or submittedAt - ISO-string, optional */
       const iso = parsed.memo?.submitted_at ?? parsed.memo?.submittedAt ?? null;
       const submittedAt = iso ? new Date(iso) : null;
-
+      console.log("txs: ", parsed);
       out.push({
         creator    : attrs[REVEAL_EVENT_ATTRS.creator],
         price      : Number(parsed.memo.prediction),
