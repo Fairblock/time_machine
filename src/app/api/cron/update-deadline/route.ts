@@ -90,6 +90,21 @@ async function waitUntilHeight(target: number, intervalMs = 5_000) {
   }
   console.log(`✅ reached target height ${h}`);
 }
+/* ───────── helper 1: fetch header time for a height ───────── */
+async function getBlockTime(h: number): Promise<Date> {
+  const block = await getBlock(h);
+  return new Date(block.result.block.header.time); // RFC-3339 in UTC
+}
+
+/* ───────── helper 2: moving-average block time (N = 400) ─── */
+async function avgBlockTime(lookback = 400): Promise<number> {
+  const latestH = await getCurrentBlockHeight();
+  const [tLatest, tPast] = await Promise.all([
+    getBlockTime(latestH),
+    getBlockTime(latestH - lookback),
+  ]);
+  return (tLatest.getTime() - tPast.getTime()) / (lookback * 1000); // seconds
+}
 
 /* ───────────────────────  token rotation logic  ─────────────────── */
 async function pickNextToken(): Promise<Token> {
@@ -288,8 +303,19 @@ export async function GET() {
     /* 3️⃣ schedule the next token */
     const tokenNext    = await pickNextToken();
     const deadlineTime = getNextDeadline(startTime, tokenNext);
-    const secondsUntil = Math.ceil((deadlineTime.getTime() - startTime.getTime()) / 1_000);
-    const targetBlock  = baseHeight + Math.ceil(secondsUntil / BLOCK_TIME_SEC);
+
+    /* ── improved height estimator ─────────────────────────── */
+    const AVG_LOOKBACK = 400;        // blocks (~7-10 min)
+    const SLOW_FACTOR  = 1.002;      // +0.2 % safety → always < 23:59
+
+    const secPerBlock = await avgBlockTime(AVG_LOOKBACK);             // moving-avg
+    const latestTime  = await getBlockTime(baseHeight);               // header.time
+    const secsUntil   = (deadlineTime.getTime() - latestTime.getTime()) / 1_000;
+
+    // assume blocks will be a hair *slower* (= bigger) than recent average
+    const safeSec     = secPerBlock * SLOW_FACTOR;
+    const estDelta    = Math.floor(secsUntil / safeSec);              // round *down*
+    let   targetBlock = baseHeight + estDelta;
 
     const { error } = await supabase.from('deadlines').upsert({
       deadline_date: deadlineTime.toISOString(),
