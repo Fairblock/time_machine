@@ -93,7 +93,7 @@ async function waitUntilHeight(target: number, intervalMs = 5_000) {
 /* ───────── helper 1: fetch header time for a height ───────── */
 async function getBlockTime(h: number): Promise<Date> {
   const block = await getBlock(h);
-  return new Date(block.result.block.header.time); // RFC-3339 in UTC
+  return new Date(block.header.time); // RFC-3339 in UTC
 }
 
 /* ───────── helper 2: moving-average block time (N = 400) ─── */
