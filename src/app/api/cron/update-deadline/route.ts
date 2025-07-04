@@ -151,7 +151,7 @@ async function getRevealed(height: number): Promise<Revealed[]> {
         price  : Number(p.memo.prediction)
       });
     });
-
+    console.log("out: ", out);
   return out;
 }
 
@@ -176,6 +176,7 @@ async function fetchEncryptedTimes(targetHeight: number): Promise<Map<string,Dat
     }
     if (txs.length < PER_PAGE) break;                 // last page reached
   }
+  console.log("map: ", map);
   return map;
 }
 
