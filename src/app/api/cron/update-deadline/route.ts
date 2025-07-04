@@ -234,7 +234,7 @@ async function updateScoresForLastDeadline() {
     const submitted = encTimes.get(tx.creator) ?? null;
     if (!submitted) continue;                         // cannot verify submission time
     if (submitted > decryptDate) continue;            // sanity guard
-
+    console.log("submitted: ",submitted);
     /* only keep within 3-day window */
     const open = new Date(decryptDate); open.setUTCDate(open.getUTCDate()-2); open.setUTCHours(0,0,0,0);
     if (submitted < open) continue;
