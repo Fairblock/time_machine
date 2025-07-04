@@ -86,14 +86,14 @@ export async function GET() {
 
     /* 1️⃣ pull participants ----------------------------------------- */
     const { data: participants, error } = await supabase
-      .from('participants')
-      .select(`
-        address,total_score,tweet_points,
-        sol_guess,sol_delta,sol_score,
-        btc_guess,btc_delta,btc_score,
-        eth_guess,eth_delta,eth_score,
-        arb_guess,arb_delta,arb_score
-      `);
+    .from('participants')
+    .select(`
+      address,total_score,tweet_points,
+      sol_guess,sol_delta,sol_score,sol_mult,
+      btc_guess,btc_delta,btc_score,btc_mult,
+      eth_guess,eth_delta,eth_score,eth_mult,
+      arb_guess,arb_delta,arb_score,arb_mult
+    `);
 
     if (error) throw error;
 
@@ -108,10 +108,11 @@ export async function GET() {
       return participants
         .filter(r => r[`${p}_score`] !== null)
         .map(r => ({
-          address: r.address,
-          score  : Number(r[`${p}_score`]),
-          guess  : Number(r[`${p}_guess`]),
-          delta  : Number(r[`${p}_delta`])
+          address : r.address,
+          score   : Number(r[`${p}_score`]),
+          guess   : Number(r[`${p}_guess`]),
+          delta   : Number(r[`${p}_delta`]),
+          mult    : Number(r[`${p}_mult`] ?? 1)       // ← NEW
         }))
         .sort((a, b) => b.score - a.score);
     };

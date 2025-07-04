@@ -43,7 +43,7 @@ const TOKEN_SCHEDULE: Record<Token['symbol'], { open: number; decrypt: number }>
   ETH: { open: 4, decrypt: 6 }
 };
 
-const DAY_MULTIPLIERS = [2.25, 1.5, 1] as const;  // Day-1 · Day-2 · Day-3+
+const DAY_MULTIPLIERS = [1.1, 1.05, 1] as const;  // Day-1 · Day-2 · Day-3+
 
 /* ───────────── helper: next 23 : 59 deadline ──────────── */
 function getNextDeadline(start: Date, token: Token) {
@@ -246,7 +246,14 @@ async function updateScoresForLastDeadline() {
   const prevTotal = Object.fromEntries((prevRows??[]).map(r=>[r.address,Number(r.total_score)||0]));
 
   /* bucket by creator → worst score, latest time */
-  interface Acc { worst:number; latest:Date|null; guess:number; delta:number }
+  interface Acc {
+    worst  : number          // lowest score kept
+    latest : Date | null     // latest submission time
+    guess  : number
+    delta  : number
+    mult   : number          // ← NEW
+  }
+  
   const bucket = new Map<string,Acc>();
 
   for (const tx of revealed) {
@@ -266,20 +273,28 @@ async function updateScoresForLastDeadline() {
 
     const prev = bucket.get(tx.creator);
     if (!prev || scr < prev.worst) {                  // lower score = worse
-      bucket.set(tx.creator,{ worst:scr, latest:submitted, guess:tx.price, delta:dlt });
+      bucket.set(tx.creator, {
+        worst : scr,
+        latest: submitted,
+        guess : tx.price,
+        delta : dlt,
+        mult  : mult,                          // store it
+      });
     } else if (prev && submitted>prev.latest!) {
-      prev.latest = submitted;                        // update “latest”
+      prev.latest = submitted; 
+      prev.mult   = mult;                       // update “latest”
     }
   }
   if (!bucket.size) return;                           // nothing valid
 
   const prefix = COL_PREFIX[last.symbol as Token['symbol']];
-  const rows   = Array.from(bucket, ([addr,v])=>({
-    address            : addr,
-    total_score        : (prevTotal[addr]??0)+v.worst,
-    [`${prefix}_guess`]: v.guess,
-    [`${prefix}_delta`]: v.delta,
-    [`${prefix}_score`]: v.worst
+  const rows = Array.from(bucket, ([addr, v]) => ({
+    address             : addr,
+    total_score         : (prevTotal[addr] ?? 0) + v.worst,
+    [`${prefix}_guess`] : v.guess,
+    [`${prefix}_delta`] : v.delta,
+    [`${prefix}_score`] : v.worst,
+    [`${prefix}_mult`]  : v.mult,            
   }));
 
   await supabase.from('participants').upsert(rows,{ onConflict:'address' });

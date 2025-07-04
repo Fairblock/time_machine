@@ -20,10 +20,11 @@ import { Button } from "@/components/ui/button";
 /* ── API types ────────────────────────────────────────────── */
 type OverallRow = { address: string; totalScore: number };
 type TokenRow = {
-  address: string;
-  guess: number;
-  delta: number;
-  score: number;
+  address : string
+  guess   : number
+  delta   : number
+  score   : number
+  mult    : number          // ← NEW
 };
 type TokenMeta = {
   price: number | null;
@@ -197,24 +198,40 @@ export default function LeaderboardPage() {
 
   /* ── table rows & headers ─ */
   const rows =
-    active === "Overall"
-      ? overall.map((r) => ({
-          address: r.address,
-          cols: [r.totalScore.toLocaleString()],
-        }))
-      : active === "Tweets"
-      ? tweets.map((r) => ({
-          address: r.address,
-          cols: [r.score.toLocaleString()],
-        }))
-      : tokens[active as keyof typeof tokens].map((r) => ({
-          address: r.address,
-          cols: [
-            r.score.toLocaleString(),
-            r.guess.toLocaleString(),
-            r.delta.toLocaleString(),
-          ],
-        }));
+  active === "Overall"
+    ? overall.map(r => ({ address:r.address, cols:[ r.totalScore.toLocaleString() ] }))
+    : active === "Tweets"
+    ? tweets.map(r => ({ address:r.address, cols:[ r.score.toLocaleString() ] }))
+    : tokens[active as keyof typeof tokens].map(r => ({
+        address: r.address,
+        cols: [
+          /* Score  ─ number on top, multiplier pill below */
+          (
+            <span className="flex flex-col items-end leading-snug">
+              {/* score */}
+              <span className=" text-gray-900 tabular-nums">
+                {r.score.toLocaleString()}
+              </span>
+        
+              {/* multiplier pill */}
+              <span
+                className="
+                  mt-[2px] px-2 py-[1px]
+                  rounded-full bg-gray-200/70
+                  text-[12px] font-medium text-gray-700 tabular-nums
+                "
+                title="Time-bonus multiplier"
+              >
+                ×{r.mult.toFixed(2)}
+              </span>
+            </span>
+          ),
+        
+          /* remaining columns unchanged */
+          r.guess.toLocaleString(),
+          r.delta.toLocaleString()
+        ]
+      }));
 
   const headers: Record<SlideKey, string[]> = {
     Overall: ["Total Pts"],
