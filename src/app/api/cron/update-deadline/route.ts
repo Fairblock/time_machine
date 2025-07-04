@@ -91,6 +91,7 @@ async function fetchEncryptedTimes(deadlineHeight:number){
   for(let page=1;;page++){
     const url = `${RPC_HTTP}/tx_search?query="%22${q}%22"&order_by="desc"&per_page=${PER_PAGE}&page=${page}`
     const {data}=await axios.get(url); const txs=data.result?.txs??[]
+    console.log("data: ", data);
     for(const row of txs){
       /* fast height filter */
       if(+row.height < minH) break
