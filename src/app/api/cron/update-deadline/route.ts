@@ -194,7 +194,7 @@ async function fetchEncryptedTimes(targetHeight: number): Promise<Map<string,Dat
       if (!prev || blk > prev) map.set(creator, blk); 
 
     }
-console.log("map:", map);
+
   
   return map;
 }
@@ -253,12 +253,13 @@ async function updateScoresForLastDeadline() {
     const submitted = encTimes.get(tx.creator) ?? null;
     if (!submitted) continue;                         // cannot verify submission time
     if (submitted > decryptDate) continue;            // sanity guard
-    console.log("submitted: ",submitted);
+    
     /* only keep within 3-day window */
     const open = new Date(decryptDate); open.setUTCDate(open.getUTCDate()-2); open.setUTCHours(0,0,0,0);
     if (submitted < open) continue;
 
     const mult = multiplierFor(submitted, decryptDate);
+    console.log("mult:", mult);
     const base = weekScore(tx.price, actual);
     const scr  = base * mult;
     const dlt  = Math.abs(tx.price-actual);
