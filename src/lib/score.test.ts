@@ -64,7 +64,7 @@ dump('Sample predictions', cases)
 
 /* ── unit tests ─────────────────────────────────────────────────────── */
 describe('campaign score (weekScore × new multipliers)', () => {
-  it('applies the correct 2.25 / 1.5 / 1 multiplier', () => {
+  it('applies the correct 1.1 / 1.05 / 1 multiplier', () => {
     const base = weekScore(130, 100)
     expect(score(130, 100, 0)).toBeCloseTo(base * 1.1)
     expect(score(130, 100, 1)).toBeCloseTo(base * 1.05)
