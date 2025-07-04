@@ -174,11 +174,10 @@ async function fetchEncryptedTimes(targetHeight: number): Promise<Map<string,Dat
     console.log(res)
     const txs = res.result?.txs ?? [];
     for (const row of txs) {
-      console.log("row: ", row);
+      const h   = Number(row.height);
       const raw = TxRaw.decode(Buffer.from(row.tx, "base64"));
       const body = TxBody.decode(raw.bodyBytes);
-      console.log("raw:", raw);
-      console.log("body:", body);
+   
       const anyMsg = body.messages.find(
         (m) => m.typeUrl === "/fairyring.pep.MsgSubmitEncryptedTx"
       );
@@ -191,11 +190,11 @@ async function fetchEncryptedTimes(targetHeight: number): Promise<Map<string,Dat
       if (msg.targetBlockHeight !== targetHeight) continue;
       const creator = msg.creator;
       const prev = map.get(creator);
-      break;
-     // if (!prev || blk > prev) map.set(creator, blk); 
+      const blk = await getBlockTime(h);
+      if (!prev || blk > prev) map.set(creator, blk); 
 
     }
-
+console.log("map:", map);
   
   return map;
 }
