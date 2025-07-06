@@ -195,11 +195,12 @@ export default function PredictionForm() {
         nonce,
         walletType!
       );
-
+      let key = (pubkey as any).active_pubkey?.public_key;
       /* encrypt & size‑aware gas for MsgSubmitEncryptedTx */
-      const key =
-        (pubkey as any).active_pubkey?.public_key ??
-        (pubkey as any).queued_pubkey.public_key;
+      if (targetHeight > Number((pubkey as any).active_pubkey?.expiry)){
+        key = (pubkey as any).queued_pubkey?.public_key;
+      }
+      
       const encryptedHex = await encryptSignedTx(key, targetHeight, signed);
 
       // Add gas for KV‑store write (WritePerByte)
