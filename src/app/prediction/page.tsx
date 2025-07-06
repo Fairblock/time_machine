@@ -123,15 +123,17 @@ export default function Prediction() {
           <CountdownTimer />
         </main>
 
-        {/* Sunday overlay banner */}
-        {closedToday && (
-          <div className="fixed inset-0 z-40 flex items-center justify-center">
-            <div className="bg-white/90 backdrop-blur-lg shadow-xl ring-1 ring-gray-300 rounded-2xl px-8 py-6 text-center max-w-md mx-auto">
-              <p className="text-lg font-semibold text-gray-900 mb-2">Prediction window is closed.</p>
-              <p className="text-sm text-gray-700">It will open on Monday.</p>
-            </div>
-          </div>
-        )}
+       {/* Sunday overlay banner */}
+{closedToday && (
+  <div className="fixed inset-0 z-30 pointer-events-none flex items-center justify-center">
+    <div className="pointer-events-auto bg-white/90 backdrop-blur-lg shadow-xl ring-1 ring-gray-300 rounded-2xl px-8 py-6 text-center max-w-md mx-auto">
+      <p className="text-lg font-semibold text-gray-900 mb-2">
+        Prediction window is closed.
+      </p>
+      <p className="text-sm text-gray-700">It will open on Monday.</p>
+    </div>
+  </div>
+)}
       </div>
     </>
   );
