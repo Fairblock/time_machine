@@ -200,7 +200,7 @@ export default function PredictionForm() {
       if (targetHeight > Number((pubkey as any).active_pubkey?.expiry)){
         key = (pubkey as any).queued_pubkey?.public_key;
       }
-      console.log("using key:", key);
+      
       const encryptedHex = await encryptSignedTx(key, targetHeight, signed);
 
       // Add gas for KV‑store write (WritePerByte)

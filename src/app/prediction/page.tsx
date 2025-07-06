@@ -39,7 +39,7 @@ export default function Prediction() {
 
   /* 2️⃣ Sunday window-closed logic (UTC) */
   const todayDow = new Date().getUTCDay();      // 0 = Sunday
-  const closedToday = todayDow === 1;           // no token on Sundays
+  const closedToday = todayDow === 0;           // no token on Sundays
 
   /* 3️⃣ heading helpers */
   const idx = ROTATION.indexOf(token!.symbol as (typeof ROTATION)[number]);
