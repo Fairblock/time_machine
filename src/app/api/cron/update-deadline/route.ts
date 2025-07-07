@@ -43,7 +43,7 @@ const TOKEN_SCHEDULE: Record<Token['symbol'], { open: number; decrypt: number }>
   ETH: { open: 4, decrypt: 6 }
 };
 
-const DAY_MULTIPLIERS = [1.1, 1.05, 1] as const;  // Day-1 · Day-2 · Day-3+
+const DAY_MULTIPLIERS = [1.5, 1.25, 1] as const;  // Day-1 · Day-2 · Day-3+
 
 /* ───────────── helper: next 23 : 59 deadline ──────────── */
 function getNextDeadline(start: Date, token: Token) {

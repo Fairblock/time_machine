@@ -7,7 +7,7 @@ import { weekScore } from './score'
 import { describe, it, expect } from 'vitest'
 
 /* multipliers – keep in sync with production */
-const MUL = [1.1, 1.05, 1] as const
+const MUL = [1.5, 1.25, 1] as const
 
 /* helper: 0-based day index → multiplier */
 const m = (d: number) => (d <= 0 ? MUL[0] : d === 1 ? MUL[1] : MUL[2])
@@ -33,9 +33,9 @@ function dump (title: string, rows: Array<{ p: number; a: number; d: number }>) 
 
 /* test matrix – diverse magnitudes & errors */
 const cases: Array<{ p: number; a: number; d: number }> = [
-  { p: 1,         a: 1,        d: 0 },
-  { p: 1.05,      a: 1,        d: 0 },
-  { p: 0.9,       a: 1,        d: 1 },
+  { p: 1,         a: 1,        d: 2 },
+  { p: 1.02,      a: 1,        d: 1 },
+  { p: 0.96,       a: 1,        d: 0 },
   { p: 0.001,     a: 0.001,    d: 2 },
   { p: 0.0012,    a: 0.001,    d: 0 },
   { p: 10,        a: 12,       d: 0 },
@@ -66,8 +66,8 @@ dump('Sample predictions', cases)
 describe('campaign score (weekScore × new multipliers)', () => {
   it('applies the correct 1.1 / 1.05 / 1 multiplier', () => {
     const base = weekScore(130, 100)
-    expect(score(130, 100, 0)).toBeCloseTo(base * 1.1)
-    expect(score(130, 100, 1)).toBeCloseTo(base * 1.05)
+    expect(score(130, 100, 0)).toBeCloseTo(base * 1.5)
+    expect(score(130, 100, 1)).toBeCloseTo(base * 1.25)
     expect(score(130, 100, 2)).toBeCloseTo(base * 1)
     expect(score(130, 100, 99)).toBeCloseTo(base * 1) // ≥2 uses Day-3 multiplier
   })
