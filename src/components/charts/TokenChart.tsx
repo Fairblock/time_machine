@@ -6,11 +6,11 @@ import { useActiveToken } from "@/hooks/useActiveToken";
 
 /* Map your token symbols → TradingView symbols */
 const TV_SYMBOL: Record<string, string> = {
-  BTC: "BINANCE:BTCUSDT",
-  ETH: "BINANCE:ETHUSDT",
-  SOL: "BINANCE:SOLUSDT",
-  ARB: "BINANCE:ARBUSDT",
-};
+    BTC: "COINBASE:BTCUSD",  
+    ETH: "COINBASE:ETHUSD",
+    SOL: "COINBASE:SOLUSD",
+    ARB: "COINBASE:ARBUSD",  
+  };
 
 export default function TokenChart() {
   const { data: token, isLoading } = useActiveToken();
@@ -32,7 +32,7 @@ export default function TokenChart() {
 
     /** Initialise the widget */
     ensureScript().then(() => {
-      const symbol = TV_SYMBOL[token.symbol] ?? "BINANCE:BTCUSDT";
+      const symbol = TV_SYMBOL[token.symbol] ?? "COINBASE:BTCUSD";
 
       // @ts-ignore TradingView injected globally by tv.js
       new window.TradingView.widget({
