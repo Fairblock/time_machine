@@ -294,9 +294,9 @@ export default function PredictionForm() {
   /* ─ tweet modal ─ */
   const tweetText = encodeURIComponent(
     `BREAKING: Man time travels to 2026, returns with ${activeToken?.symbol ?? ""} price, and encrypts it so no one can copy him.
-    Is this legal? Is this alpha? Who knows.
-    Try free time travelling before they patch the glitch: https://timemachine.fairblock.network/
-    Proof → ${proofToken}`
+Is this legal? Is this alpha? Who knows.
+Try free time travelling before they patch the glitch: https://timemachine.fairblock.network/
+Proof → ${proofToken}`
     // `I just encrypted my ${
     //   activeToken?.symbol ?? ""
     // } price prediction on @0xfairblock. ` +
