@@ -1,99 +1,78 @@
 /* components/charts/TokenChart.tsx */
-'use client';
+"use client";
 
-import { useQuery } from '@tanstack/react-query';
-import {
-  Chart as ChartJS,
-  CategoryScale,
-  LinearScale,
-  TimeScale,
-  Tooltip,
-  Legend,
-} from 'chart.js';
-import {
-  CandlestickController,
-  CandlestickElement,
-} from 'chartjs-chart-financial';
-import 'chartjs-adapter-date-fns';
-import { Chart } from 'react-chartjs-2';
+import { useEffect, useRef } from "react";
+import { useActiveToken } from "@/hooks/useActiveToken";
 
-import { getLastFridayStart, getOHLC } from '@/lib/utils';
-import { useActiveToken } from '@/hooks/useActiveToken';
-import type { IPriceCandle } from '@/types/global';
-
-/* one‑time registry */
-ChartJS.register(
-  CategoryScale,
-  LinearScale,
-  TimeScale,
-  Tooltip,
-  Legend,
-  CandlestickController,
-  CandlestickElement
-);
+/* Map your token symbols → TradingView symbols */
+const TV_SYMBOL: Record<string, string> = {
+  BTC: "BINANCE:BTCUSDT",
+  ETH: "BINANCE:ETHUSDT",
+  SOL: "BINANCE:SOLUSDT",
+  ARB: "BINANCE:ARBUSDT",
+};
 
 export default function TokenChart() {
-  const { data: token, isLoading: tokenLoading, isError: tokenErr } =
-    useActiveToken();
+  const { data: token, isLoading } = useActiveToken();
+  const id = "tvchart";
+  const ref = useRef<HTMLDivElement>(null);
 
-  const {
-    data: candles,
-    isLoading: priceLoading,
-    isError: priceErr,
-  } = useQuery<IPriceCandle[]>({
-    enabled: !!token,
-    queryKey: ['candles', token?.coingecko_id],
-    queryFn: async () => {
-      const from = getLastFridayStart().getTime();
-      const to = Date.now();
-      const ohlc = await getOHLC(from, to, token!.coingecko_id);
-      return ohlc.map(([ts, o, h, l, c]) => ({ x: ts, o, h, l, c }));
-    },
-  });
+  useEffect(() => {
+    if (!token) return;
 
-  if (tokenLoading || priceLoading) {
-    return <p className="text-sm text-gray-500">Loading price chart…</p>;
-  }
-  if (tokenErr || priceErr || !candles?.length) {
-    return <p className="text-sm text-gray-500">Loading price chart…</p>;
-  }
+    /** Ensure tv.js is loaded only once */
+    const ensureScript = () =>
+      new Promise<void>((resolve) => {
+        if ((window as any).TradingView) return resolve();
+        const script = document.createElement("script");
+        script.src = "https://s3.tradingview.com/tv.js";
+        script.onload = () => resolve();
+        document.head.appendChild(script);
+      });
 
-  const data = {
-    datasets: [
-      {
-        label: `${token!.symbol} Price (USD)`,
-        data: candles,
-        color: {
-          up: '#16a34a',
-          down: '#dc2626',
-          unchanged: '#6b7280',
+    /** Initialise the widget */
+    ensureScript().then(() => {
+      const symbol = TV_SYMBOL[token.symbol] ?? "BINANCE:BTCUSDT";
+
+      // @ts-ignore TradingView injected globally by tv.js
+      new window.TradingView.widget({
+        container_id: id,
+        symbol,
+        interval: "60",
+        timezone: "Etc/UTC",
+        autosize: true,
+        theme: "light",
+        style: "1",                // candlesticks
+        /* Toolbars & logo bar are kept (default = visible) */
+        withdateranges: false,
+        allow_symbol_change: false,
+        save_image: false,
+
+        overrides: {
+          /* --- match your palette --- */
+          "mainSeriesProperties.candleStyle.upColor": "#16a34a",
+          "mainSeriesProperties.candleStyle.downColor": "#dc2626",
+          "mainSeriesProperties.candleStyle.borderUpColor": "#16a34a",
+          "mainSeriesProperties.candleStyle.borderDownColor": "#dc2626",
+          "mainSeriesProperties.candleStyle.wickUpColor": "#16a34a",
+          "mainSeriesProperties.candleStyle.wickDownColor": "#dc2626",
+          /* --- background & subtle grid --- */
+          "paneProperties.backgroundType": "solid",
+          "paneProperties.background": "#ffffff",
+          "paneProperties.vertGridProperties.color": "rgba(0,0,0,0.05)",
+          "paneProperties.horzGridProperties.color": "rgba(0,0,0,0.05)",
+          /* Less noisy legend */
+          "paneProperties.legendProperties.showSeriesOHLC": false,
+          "paneProperties.legendProperties.showVolume": false,
+          "mainSeriesProperties.statusViewStyle.showInterval": false,
         },
-      },
-    ],
-  };
+      });
+    });
+  }, [token]);
 
-  const options = {
-    responsive: true,
-    maintainAspectRatio: false,          // let the wrapper dictate size
-    layout: { padding: 8 },              // keep wicks off the border
-    plugins: { legend: { position: 'top' as const } },
-    scales: {
-      x: { type: 'time' as const, time: { unit: 'hour' } },
-      y: {
-        ticks: { callback: (v: number) => `$${v.toFixed(2)}` },
-        beginAtZero: false,
-      },
-    },
-  };
+  if (isLoading) {
+    return <p className="text-sm text-gray-500">Loading price chart…</p>;
+  }
 
-  return (
-    <div className="w-full h-full">
-      <Chart
-        type="candlestick"
-        data={data}
-        options={options}
-        style={{ width: '100%', height: '100%' }}
-      />
-    </div>
-  );
+  return <div ref={ref} id={id} className="w-full h-full" />;
 }
