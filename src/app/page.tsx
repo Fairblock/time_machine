@@ -49,11 +49,13 @@ export default function Home() {
             </h1>
 
             <p className="font-normal text-sm md:text-base lg:text-xl text-gray-700">
-              Encrypt your price prediction.
+            Step into the time machine.
               <br />
-              Your alpha stays confidential.
+              Your prediction is encrypted and lost to time.
               <br />
-              The earlier and more accurate you are, the more you earn.
+              When the capsule reopens, truth comes to light.
+              <br />
+              And rewards those who saw it coming.
             </p>
 
             <button
