@@ -20,11 +20,11 @@ import { Button } from "@/components/ui/button";
 /* ── API types ────────────────────────────────────────────── */
 type OverallRow = { address: string; totalScore: number };
 type TokenRow = {
-  address : string
-  guess   : number
-  delta   : number
-  score   : number
-  mult    : number          // ← NEW
+  address: string;
+  guess: number;
+  delta: number;
+  score: number;
+  mult: number; // ← NEW
 };
 type TokenMeta = {
   price: number | null;
@@ -44,7 +44,7 @@ type ApiResp = {
 type PendingProof = { token: string; createdAt: string };
 
 /* ── constants ───────────────────────────────────────────── */
-const TOKENS = ["SOL", "BTC", "ARB", "ETH"] as const; 
+const TOKENS = ["SOL", "BTC", "ARB", "ETH"] as const;
 const SLIDES = ["Overall", "Tweets", ...TOKENS] as const;
 type SlideKey = (typeof SLIDES)[number];
 
@@ -198,21 +198,27 @@ export default function LeaderboardPage() {
 
   /* ── table rows & headers ─ */
   const rows =
-  active === "Overall"
-    ? overall.map(r => ({ address:r.address, cols:[ r.totalScore.toLocaleString() ] }))
-    : active === "Tweets"
-    ? tweets.map(r => ({ address:r.address, cols:[ r.score.toLocaleString() ] }))
-    : tokens[active as keyof typeof tokens].map(r => ({
-        address: r.address,
-        cols: [
-          /* Score  ─ number on top, multiplier pill below */
-          (
-            <span className="flex flex-col items-end leading-snug">
+    active === "Overall"
+      ? overall.map((r) => ({
+          address: r.address,
+          cols: [r.totalScore.toLocaleString()],
+        }))
+      : active === "Tweets"
+      ? tweets.map((r) => ({
+          address: r.address,
+          cols: [r.score.toLocaleString()],
+        }))
+      : tokens[active as keyof typeof tokens].map((r) => ({
+          address: r.address,
+          cols: [
+            /* Score  ─ number on top, multiplier pill below */
+            <span className="flex justify-center leading-snug">
               {/* score */}
               <span className=" text-gray-900 tabular-nums">
                 {r.score.toLocaleString()}
               </span>
-        
+            </span>,
+            <span className="flex justify-center leading-snug">
               {/* multiplier pill */}
               <span
                 className="
@@ -224,22 +230,20 @@ export default function LeaderboardPage() {
               >
                 ×{r.mult.toFixed(2)}
               </span>
-            </span>
-          ),
-        
-          /* remaining columns unchanged */
-          r.guess.toLocaleString(),
-          r.delta.toLocaleString()
-        ]
-      }));
+            </span>,
+            /* remaining columns unchanged */
+            r.guess.toLocaleString(),
+            r.delta.toLocaleString(),
+          ],
+        }));
 
   const headers: Record<SlideKey, string[]> = {
     Overall: ["Total Pts"],
     Tweets: ["Points"], // ← NEW
-    SOL: ["Score", "Guess", "Off by"],
-    BTC: ["Score", "Guess", "Off by"],
-    ETH: ["Score", "Guess", "Off by"],
-    ARB: ["Score", "Guess", "Off by"],
+    SOL: ["Points", "Early Boost", "Prediction", "Delta"],
+    BTC: ["Points", "Early Boost", "Prediction", "Delta"],
+    ETH: ["Points", "Early Boost", "Prediction", "Delta"],
+    ARB: ["Points", "Early Boost", "Prediction", "Delta"],
   };
 
   /* other derived data */
@@ -384,13 +388,13 @@ export default function LeaderboardPage() {
               <table className="w-full text-sm">
                 <thead>
                   <tr className="bg-gray-50 text-gray-600">
-                    <th className="px-4 md:px-8 py-3 text-left">#</th>
-                    <th className="px-4 md:px-8 py-3 text-left">Address</th>
+                    <th className="px-4 md:px-8 py-3 text-center">#</th>
+                    <th className="px-4 md:px-8 py-3 text-center">Address</th>
                     {headers[active].map((h) => (
-                      <th key={h} className="px-4 md:px-8 py-3 text-right">
-                        <div className="flex gap-2 justify-end items-center">
+                      <th key={h} className="px-4 md:px-8 py-3 text-center">
+                        <div className="flex gap-2 justify-center items-center min-w-24">
                           {h}
-                          {h === "Off by" && (
+                          {h === "Delta" && (
                             <div
                               className="relative inline-block"
                               onMouseEnter={() => setShowTooltip(true)}
@@ -414,24 +418,26 @@ export default function LeaderboardPage() {
                       key={r.address}
                       className="odd:bg-white even:bg-gray-50"
                     >
-                      <td className="px-4 md:px-8 py-2">
+                      <td className="pl-4 md:px-8 py-2 flex items-center justify-center">
                         {i < medals.length ? (
-                          <img src={medals[i]} className="h-4 w-4" />
+                          <img src={medals[i]} className="w-4" />
                         ) : (
                           i + 1
                         )}
                       </td>
-                      <td className="px-4 md:px-8 py-2 font-mono break-all">
+                      <td className="px-4 md:px-8 py-2 font-mono break-all truncate text-center">
                         {longShort(r.address)}
                       </td>
-                      {r.cols.map((c, idx) => (
-                        <td
-                          key={idx}
-                          className="px-4 py-2 md:px-8 text-right tabular-nums"
-                        >
-                          {c}
-                        </td>
-                      ))}
+                      {r.cols.map((c, idx) => {
+                        return (
+                          <td
+                            key={idx}
+                            className="px-4 py-2 md:px-8 text-center tabular-nums"
+                          >
+                            {c}
+                          </td>
+                        );
+                      })}
                     </tr>
                   ))}
                 </tbody>

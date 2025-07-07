@@ -44,7 +44,7 @@ export default function PredictionForm() {
 
   /* UX states */
   const [proofToken, setProofToken] = useState("");
-  const [formError, setFormError] = useState<string | null>(null);
+  const [formError, setFormError] = useState<string | React.ReactNode | null>(null);
 
   /* hooks */
   const { data: activeToken } = useActiveToken();
@@ -197,10 +197,10 @@ export default function PredictionForm() {
       );
       let key = (pubkey as any).active_pubkey?.public_key;
       /* encrypt & size‑aware gas for MsgSubmitEncryptedTx */
-      if (targetHeight > Number((pubkey as any).active_pubkey?.expiry)){
+      if (targetHeight > Number((pubkey as any).active_pubkey?.expiry)) {
         key = (pubkey as any).queued_pubkey?.public_key;
       }
-      
+
       const encryptedHex = await encryptSignedTx(key, targetHeight, signed);
 
       // Add gas for KV‑store write (WritePerByte)
@@ -263,7 +263,18 @@ export default function PredictionForm() {
     } catch (err: any) {
       const msg = String(err?.message || err);
       if (/insufficien/i.test(msg) || /does not exist on chain/i.test(msg)) {
-        setFormError("Insufficient testnet tokens, get some from the faucet.");
+        setFormError(<p className="text-red-500">
+        Insufficient testnet tokens, get some from the{" "}
+        <a
+          href="https://testnet-faucet.fairblock.network/"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="underline"
+        >
+          faucet
+        </a>
+        .
+      </p>);
       } else {
         setFormError("Transaction failed. Please try again.");
       }
@@ -282,10 +293,14 @@ export default function PredictionForm() {
 
   /* ─ tweet modal ─ */
   const tweetText = encodeURIComponent(
-    `I just encrypted my ${
-      activeToken?.symbol ?? ""
-    } price prediction on @0xfairblock. ` +
-      `Proof→${proofToken}  Join the weekly game and earn points!`
+    `BREAKING: Man time travels to 2026, returns with ${activeToken?.symbol ?? ""} price, and encrypts it so no one can copy him.
+    Is this legal? Is this alpha? Who knows.
+    Try free time travelling before they patch the glitch: https://timemachine.fairblock.network/
+    Proof → ${proofToken}`
+    // `I just encrypted my ${
+    //   activeToken?.symbol ?? ""
+    // } price prediction on @0xfairblock. ` +
+    //   `Proof→${proofToken}  Join the weekly game and earn points!`
   );
   const tweetUrl = `${SHARE_URL}?text=${tweetText}&url=${encodeURIComponent(
     "https://timemachine.fairblock.network"
@@ -353,7 +368,9 @@ export default function PredictionForm() {
       )}
 
       {submitted ? (
-        <div className="text-black text-lg text-center">Prediction encrypted!</div>
+        <div className="text-black text-lg text-center">
+          Prediction encrypted!
+        </div>
       ) : (
         <form
           onSubmit={handleSubmit}

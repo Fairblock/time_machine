@@ -3,10 +3,10 @@
 
 import { useState, useEffect } from "react";
 import Image from "next/image";
-import Link from "next/link";
 import Header from "@/components/header/Header";
 import { useActiveToken } from "@/hooks/useActiveToken";
 import capsuleBg from "../../public/capsuleBg.png";
+import { useHowItWorksContext } from "@/contexts/HowItWorksContext";
 
 const TOKENS = [
   { id: "solana", symbol: "SOL", logo: "/sol.png" },
@@ -18,6 +18,8 @@ const TOKENS = [
 export default function Home() {
   const [bgSize, setBgSize] = useState("100%");
   const { data: active } = useActiveToken();
+  const [] = useState<boolean>(false);
+  const { showModal, setShowModal } = useHowItWorksContext();
 
   useEffect(() => {
     const handleResize = () => {
@@ -32,7 +34,7 @@ export default function Home() {
 
   return (
     <>
-      <Header />
+      <Header showModal={showModal} setShowModal={setShowModal} />
       <div className="flex flex-col justify-center min-h-screen font-sans relative p-4 bg-gradient-to-r from-[#EBEFF7] via-white to-[#EBEFF7] pt-[88px]">
         <section className="flex flex-col justify-evenly sm:items-center md:flex-row gap-12 md:gap-4">
           {/* HERO TEXT & ACTION BUTTON */}
@@ -47,19 +49,20 @@ export default function Home() {
             </h1>
 
             <p className="font-normal text-sm md:text-base lg:text-xl text-gray-700">
-              Encrypt your price prediction. No one can
+              Encrypt your price prediction.
               <br />
-              see it, not even us. We’ll decrypt it next week.
+              Your alpha stays confidential.
               <br />
-              The closer you are, the more points you earn.
+              The earlier and more accurate you are, the more you earn.
             </p>
 
-            <Link
-              href="/prediction"
+            <button
+              // href="/prediction"
+              onClick={() => setShowModal(true)}
               className="bg-neutral-900 hover:bg-neutral-800 font-medium inline-block px-5 py-[6px] rounded-xl shadow text-white text-sm sm:text-base md:text-lg transition-colors"
             >
               Predict now
-            </Link>
+            </button>
           </div>
 
           {/* HERO IMAGE (CAPSULE) & ACTIVE TOKENS */}
@@ -82,7 +85,6 @@ export default function Home() {
                 {/* Tokens container */}
                 <div className="absolute top-[20%] lg:top-[17%] left-1/2 -translate-x-1/2 flex flex-col items-center gap-3">
                   {TOKENS.map((t) => {
-                    console.log(t);
                     const activeNow = t.id === active?.coingecko_id;
                     return (
                       <div

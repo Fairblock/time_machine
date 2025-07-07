@@ -26,14 +26,14 @@ const HowItWorksModal = ({
           <h2 className="font-bold text-center text-4xl">HOW IT WORKS</h2>
           <p className="">
             Time Machine allows you to encrypt your prediction. every week we
-            will add 2 tokens for the next 2 weeks, meaning everyone can guess
+            will add 2 tokens for the next 2 weeks, meaning everyone can predict
             what will be the price and encrypt prediction to earn points. the
             closer your prediction the more points you will get.
           </p>
           <ul className="text-lg ml-5">
             <li className="list-disc list-outside">
-              <span className="font-medium">Step 1:</span> Guess what its price
-              will be next week for the given token.
+              <span className="font-medium">Step 1:</span> Predict what its
+              price will be next week for the given token.
             </li>
             <li className="list-disc list-outside">
               <span className="font-medium">Step 2:</span> Enter you prediction
@@ -44,7 +44,20 @@ const HowItWorksModal = ({
               decrypted and earn points.
             </li>
           </ul>
-          <p className="">Need help? Join our <a className="font-medium" href="https://discord.gg/fairblock">Discord</a></p>
+          <p>
+            <span className="font-medium">
+              Get boosters on your predictions to get more points
+            </span>
+            <p>Predict on day one: 1.1x</p>
+            <p>Predict on day two: 1.05x</p>
+            <p>Predict on day three: 1x</p>
+          </p>
+          <p className="">
+            Need help? Join our 
+            <a className="font-medium" href="https://discord.gg/fairblock">
+              Discord
+            </a>
+          </p>
           <Link
             className="bg-black font-medium mx-auto px-6 py-2 rounded-xl text-white text-lg w-fit"
             href={"/prediction"}

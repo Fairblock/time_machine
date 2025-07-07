@@ -17,6 +17,7 @@ import {
 } from "graz";
 import { PUBLIC_ENVIRONMENT } from "@/constant/env";
 import HowItWorksModal from "../modals/HowItWorksModal";
+import { useHowItWorksContext } from "@/contexts/HowItWorksContext";
 
 function Header() {
   /* ───────── wallet helpers ─────────────────────────────────────── */
@@ -24,12 +25,12 @@ function Header() {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [attempted, setAttempted] = useState<WalletType | null>(null);
   const [walletMenu, setWalletMenu] = useState(false);
-  const [showModal, setShowModal] = useState<boolean>(false);
 
   const { data: account, isConnected } = useAccount();
   const { connect, error: walletErr } = useConnect();
   const { disconnect } = useDisconnect();
   const { suggestAndConnect } = useSuggestChainAndConnect();
+  const { showModal, setShowModal } = useHowItWorksContext();
 
   const pathname = usePathname();
 
