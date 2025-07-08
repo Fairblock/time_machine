@@ -163,7 +163,9 @@ async function fetchEncryptedTimes(targetHeight: number): Promise<Map<string,Dat
   const q = encodeURIComponent(
     `tx.height>${minHeight} AND message.action='/fairyring.pep.MsgSubmitEncryptedTx'`
   );
-  let page = 1;
+
+ 
+  for (let page = 1; page <= 50; page++) {
     const url =
     `${RPC_URL}/tx_search` +
     `?query=%22${q}%22` +           // "%22" … "%22" == JSON double-quotes
@@ -171,7 +173,8 @@ async function fetchEncryptedTimes(targetHeight: number): Promise<Map<string,Dat
     `&per_page=${PER_PAGE}` +
     `&page=${page}`;
     const res = await fetch(url).then((r) => r.json());
-    console.log(res)
+    
+
     const txs = res.result?.txs ?? [];
     for (const row of txs) {
       const h   = Number(row.height);
@@ -195,7 +198,10 @@ async function fetchEncryptedTimes(targetHeight: number): Promise<Map<string,Dat
 
     }
 
-  
+    /* stop early if last page had < PER_PAGE items */
+    if (txs.length < PER_PAGE) break;
+  }
+
   return map;
 }
 
