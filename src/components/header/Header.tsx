@@ -50,11 +50,29 @@ function Header() {
   /* ───────── connect helpers ────────────────────────────────────── */
   async function connectKeplr() {
     setAttempted(WalletType.KEPLR);
-    await connect({
-      walletType: WalletType.KEPLR,
-      chainId: PUBLIC_ENVIRONMENT.NEXT_PUBLIC_CHAIN_ID!,
-    });
-    setShowWallet(false); // ❌ no reload here
+  
+    /* —— detect missing extension —— */
+    if (typeof window === "undefined" || !(window as any).keplr) {
+      alert(
+        "Keplr extension not detected.\nInstall/enable it and refresh the page."
+      );
+      return;
+    }
+  
+    try {
+      await connect({
+        walletType: WalletType.KEPLR,
+        chainId: PUBLIC_ENVIRONMENT.NEXT_PUBLIC_CHAIN_ID!,
+      });
+    } catch {
+      /* falls back to suggest-and-connect if chain not added */
+      await suggestAndConnect({
+        chainInfo: fairyring,
+        walletType: WalletType.KEPLR,
+      });
+    }
+  
+    setShowWallet(false);
   }
   async function waitForLeap(ms = 2000): Promise<void> {
     const start = Date.now();
