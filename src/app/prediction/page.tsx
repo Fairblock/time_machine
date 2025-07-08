@@ -1,4 +1,3 @@
-/* app/prediction/page.tsx */
 "use client";
 
 import { useState } from "react";
@@ -8,6 +7,7 @@ import TokenChart from "@/components/charts/TokenChart";
 import CountdownTimer from "@/components/countdown-timer/CountdownTimer";
 import PredictionForm from "@/components/forms/PredictionForm";
 import { useActiveToken } from "@/hooks/useActiveToken";
+import { differenceInDays } from "date-fns";
 
 /* Height for decorative side images (≥ lg) */
 const EDGE_HEIGHT = "70vh";
@@ -22,12 +22,21 @@ const TOKEN_OPEN_DOW: Record<(typeof ROTATION)[number], number> = {
 };
 
 /* === helpers ===================================================== */
-function daysUntilNextOpen(symbol: (typeof ROTATION)[number]) {
-  const open = TOKEN_OPEN_DOW[symbol];
-  const today = new Date().getUTCDay();
-  let diff = (open + 7 - today) % 7;
-  if (diff === 0) diff = 7;          // always future-looking
-  return diff;
+/**
+ * Returns a Date at 00:00 UTC on the next opening weekday for this token.
+ * Using a real Date lets us round days the same way date-fns does, so the
+ * ribbon and countdown card always agree.
+ */
+function nextOpenDate(
+  symbol: (typeof ROTATION)[number],
+  now: Date = new Date(),
+) {
+  const openDow = TOKEN_OPEN_DOW[symbol];
+  const date = new Date(now);
+  date.setUTCHours(0, 0, 0, 0);                       // midnight UTC today
+  const delta = (openDow + 7 - date.getUTCDay()) % 7 || 7; // always future-looking
+  date.setUTCDate(date.getUTCDate() + delta);
+  return date;
 }
 
 export default function Prediction() {
@@ -44,7 +53,10 @@ export default function Prediction() {
   /* 3️⃣ heading helpers */
   const idx = ROTATION.indexOf(token!.symbol as (typeof ROTATION)[number]);
   const nextSymbol = ROTATION[(idx + 1) % ROTATION.length];
-  const daysToNext = daysUntilNextOpen(nextSymbol);
+  const daysToNext = Math.max(
+    0,
+    differenceInDays(nextOpenDate(nextSymbol), new Date()),
+  );
   const nextHeading = `Next token: ${nextSymbol} in ${daysToNext} day${daysToNext === 1 ? "" : "s"}`;
 
   /* 4️⃣ image src */
@@ -124,16 +136,16 @@ export default function Prediction() {
         </main>
 
        {/* Sunday overlay banner */}
-{closedToday && (
-  <div className="fixed inset-0 z-30 pointer-events-none flex items-center justify-center">
-    <div className="pointer-events-auto bg-white/90 backdrop-blur-lg shadow-xl ring-1 ring-gray-300 rounded-2xl px-8 py-6 text-center max-w-md mx-auto">
-      <p className="text-lg font-semibold text-gray-900 mb-2">
-        Prediction window is closed.
-      </p>
-      <p className="text-sm text-gray-700">It will open on Monday.</p>
-    </div>
-  </div>
-)}
+      {closedToday && (
+        <div className="fixed inset-0 z-30 pointer-events-none flex items-center justify-center">
+          <div className="pointer-events-auto bg-white/90 backdrop-blur-lg shadow-xl ring-1 ring-gray-300 rounded-2xl px-8 py-6 text-center max-w-md mx-auto">
+            <p className="text-lg font-semibold text-gray-900 mb-2">
+              Prediction window is closed.
+            </p>
+            <p className="text-sm text-gray-700">It will open on Monday.</p>
+          </div>
+        </div>
+      )}
       </div>
     </>
   );
