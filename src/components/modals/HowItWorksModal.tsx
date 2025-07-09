@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { CircleX, Discor } from "lucide-react";
+import { CircleX } from "lucide-react";
 
 const HowItWorksModal = ({
   setShowModal,
@@ -13,7 +13,7 @@ const HowItWorksModal = ({
     >
       <div
         onClick={(e) => e.stopPropagation()}
-        className="relative bg-white border rounded-xl border-[#DCDCDC] lg:w-1/2 xl:w-2/5"
+        className="relative bg-white border rounded-xl border-[#DCDCDC] lg:w-1/2 xl:w-3/5"
       >
         <button
           onClick={() => setShowModal(false)}
@@ -22,39 +22,51 @@ const HowItWorksModal = ({
           <CircleX size={22} />
         </button>
 
-        <div className="flex flex-col gap-8 m-4 lg:my-0 lg:mx-auto p-12 rounded-xl">
+        <div className="flex flex-col gap-4 m-4 lg:my-0 lg:mx-auto p-12 rounded-xl">
           <h2 className="font-bold text-center text-4xl">HOW IT WORKS</h2>
           <p className="">
-            Time Machine allows you to encrypt your prediction. every week we
-            will add 2 tokens for the next 2 weeks, meaning everyone can predict
-            what will be the price and encrypt prediction to earn points. the
-            closer your prediction the more points you will get.
+            Every 3 days, a new token is revealed. <br /> Your mission: predict
+            the token’s price at the end of the 3-day round but do it now.
           </p>
-          <ul className="text-lg ml-5">
-            <li className="list-disc list-outside">
-              <span className="font-medium">Step 1:</span> Predict what its
-              price will be next week for the given token.
+          <ul className="ml-5 list-decimal list-outside">
+            <li>
+              Predict the price of the current token (for the end of the 3-day
+              round).
             </li>
-            <li className="list-disc list-outside">
-              <span className="font-medium">Step 2:</span> Enter you prediction
-              and encrypt it.
+            <li>Encrypt your prediction, no one can see it, even us.</li>
+            <li>
+              Wait for the round to end. MPC validators will collaborate to
+              decrypt and post scores onchain.
             </li>
-            <li className="list-disc list-outside">
-              <span className="font-medium">Step 3:</span> Wait till it got
-              decrypted and earn points.
+            <li>
+              Repeat across all 4 rounds. (4 tokens · 3 days each · 2 weeks)
             </li>
           </ul>
           <p>
+            Time Matters: The earlier you encrypt your prediction, the more you
+            earn.
+            <br />
+            <br />
             <span className="font-medium">
               Get boosters on your predictions to get more points
             </span>
-            <p>Predict on day one: 1.1x</p>
-            <p>Predict on day two: 1.05x</p>
-            <p>Predict on day three: 1x</p>
+            <br /> Day 1: 1.5× points <br />
+            Day 2: 1.25× points
+            <br />
+            Day 3: 1.0× points
+            <br /> <br />
+            Share on X: +200 bonus points
+            <br />
+            <br />
+            It’s like options trading. But no copy-trading. No manipulation. No
+            frontrunning.
           </p>
           <p className="">
             Need help? Join our 
-            <a className="font-medium" href="https://discord.gg/fairblock">
+            <a
+              className="font-medium underline"
+              href="https://discord.gg/fairblock"
+            >
               Discord
             </a>
           </p>

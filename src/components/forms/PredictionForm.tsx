@@ -296,15 +296,14 @@ export default function PredictionForm() {
     `BREAKING: Man time travels to 2026, returns with ${activeToken?.symbol ?? ""} price, and encrypts it so no one can copy him.
 Is this legal? Is this alpha? Who knows.
 Try free time travelling before they patch the glitch: https://timemachine.fairblock.network/
+
 Proof → ${proofToken}`
     // `I just encrypted my ${
     //   activeToken?.symbol ?? ""
     // } price prediction on @0xfairblock. ` +
     //   `Proof→${proofToken}  Join the weekly game and earn points!`
   );
-  const tweetUrl = `${SHARE_URL}?text=${tweetText}&url=${encodeURIComponent(
-    "https://timemachine.fairblock.network"
-  )}`;
+  const tweetUrl = `${SHARE_URL}?text=${tweetText}`;
 
   const Modal = () => (
     <div

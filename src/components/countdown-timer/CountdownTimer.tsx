@@ -55,9 +55,9 @@ export default function CountdownTimer() {
   if (!deadlineText) return null;
 
   return (
-    <div className="flex flex-col sm:flex-row items-center sm:gap-2 text-center text-muted-foreground mb-8">
+    <div className="flex flex-col sm:flex-row items-center sm:gap-1 text-center text-lg mb-8">
       <HourglassIcon className="hidden sm:block" width={18} />
-      Your prediction decrypts around&nbsp;
+      Predict the price for
       <span className="font-medium">{deadlineText}</span>
       <HourglassIcon className="hidden sm:block" width={18} />
     </div>

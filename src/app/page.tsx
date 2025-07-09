@@ -34,9 +34,9 @@ export default function Home() {
 
   return (
     <>
-      <Header showModal={showModal} setShowModal={setShowModal} />
-      <div className="flex flex-col justify-center min-h-screen font-sans relative p-4 bg-gradient-to-r from-[#EBEFF7] via-white to-[#EBEFF7] pt-[88px]">
-        <section className="flex flex-col justify-evenly sm:items-center md:flex-row gap-12 md:gap-4">
+      <Header/>
+      <div className="flex flex-col h-screen font-sans relative p-4 bg-gradient-to-r from-[#EBEFF7] via-white to-[#EBEFF7] pt-[80px] md:pt-[95px] overflow-hidden">
+        <section className="flex flex-col justify-evenly sm:items-center md:flex-row gap-4 md:gap-4">
           {/* HERO TEXT & ACTION BUTTON */}
           <div className="flex flex-col gap-4 md:gap-6 lg:gap-8 pl-6 pt-6 sm:pl-0 sm:pt-0 justify-around items-start">
             <h1 className="font-extrabold leading-tight uppercase">
