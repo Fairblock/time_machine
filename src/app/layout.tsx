@@ -16,7 +16,7 @@ export const metadata: Metadata = {
     siteName: 'Time Machine',
     images: [
       {
-        url: '/public/og-image.jpg',
+        url: 'https://drive.google.com/uc?export=view&id=1otvE6P1RHEu3dKMjQCo4yFFeQaYdvjTr',
         width: 1200,
         height: 630,
         alt: 'Time machine',
