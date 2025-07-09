@@ -16,7 +16,7 @@ export const metadata: Metadata = {
     siteName: 'Time Machine',
     images: [
       {
-        url: 'https://drive.google.com/uc?export=view&id=1otvE6P1RHEu3dKMjQCo4yFFeQaYdvjTr',
+        url: 'https://res.cloudinary.com/dgfxugcho/image/upload/v1752080274/og-image_ibkpfd.jpg',
         width: 1200,
         height: 630,
         alt: 'Time machine',
