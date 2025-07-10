@@ -10,7 +10,7 @@ export const metadata: Metadata = {
 
   openGraph: {
     title: 'Time Machine',
-    description: 'Step into the time machine.\nYour prediction is encrypted and lost to time.\nWhen the capsule reopens, truth comes to light.\nAnd rewards those who saw it coming.',
+    description: 'Step into the time machine. Your prediction is encrypted and lost to time. When the capsule reopens, truth comes to light. And rewards those who saw it coming.',
     url: 'https://timemachine.fairblock.network/',
     siteName: 'Time Machine',
     images: [

@@ -33,17 +33,17 @@ export default function Home() {
   }, []);
 
   return (
-    <>
+    <div className="bg-gradient-to-r from-[#EBEFF7] via-white to-[#EBEFF7] h-[100vh] sm:h-auto overflow-hidden">
       <Header/>
-      <div className="flex flex-col h-fit sm:h-screen font-sans relative p-4 bg-gradient-to-r from-[#EBEFF7] via-white to-[#EBEFF7] pt-[80px] md:pt-[95px] md:justify-center overflow-hidden">
+      <div className="flex flex-col sm:h-screen font-sans relative p-6 pt-[80px] md:pt-[95px] md:justify-center overflow-hidden">
         <section className="flex flex-col justify-evenly sm:items-center md:flex-row gap-4 md:gap-4">
           {/* HERO TEXT & ACTION BUTTON */}
-          <div className="flex flex-col gap-3 md:gap-6 lg:gap-8 pl-3 pt-3 sm:pl-0 sm:pt-0 justify-around items-start">
+          <div className="flex flex-col gap-4 md:gap-6 lg:gap-8 pl-6 pt-6 sm:pl-0 sm:pt-0 justify-around items-start">
             <h1 className="font-extrabold leading-tight uppercase">
-              <span className="block bg-gradient-to-b from-black via-neutral-800 to-neutral-100 bg-clip-text text-transparent text-2xl sm:text-4xl md:text-5xl lg:text-6xl xl:text-7xl">
+              <span className="block bg-gradient-to-b from-black via-neutral-800 to-neutral-100 bg-clip-text text-transparent text-4xl md:text-5xl lg:text-6xl xl:text-7xl">
                 Predict Price.
               </span>
-              <span className="block bg-gradient-to-b from-black via-neutral-800 to-neutral-100 bg-clip-text text-transparent text-2xl sm:text-4xl md:text-5xl lg:text-6xl xl:text-7xl">
+              <span className="block bg-gradient-to-b from-black via-neutral-800 to-neutral-100 bg-clip-text text-transparent text-4xl md:text-5xl lg:text-6xl xl:text-7xl">
                 Encrypt It.
               </span>
             </h1>
@@ -81,7 +81,7 @@ export default function Home() {
                 <img
                   src="/capsule.png"
                   alt=""
-                  className="relative top-0 left-1/2 -translate-x-1/2 w-[14rem] sm:w-[22rem] 2xl:w-[24rem]"
+                  className="relative top-0 left-1/2 -translate-x-1/2 h-[50vh] sm:h-auto sm:w-[22rem] 2xl:w-[24rem]"
                 />
 
                 {/* Tokens container */}
@@ -115,6 +115,6 @@ export default function Home() {
           </div>
         </section>
       </div>
-    </>
+    </div>
   );
 }
