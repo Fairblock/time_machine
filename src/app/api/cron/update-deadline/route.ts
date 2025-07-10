@@ -139,7 +139,7 @@ async function purgeParticipantsIfEpochStart(symbol: string) {
     .from("participants")
     .update({
       ...blankPred,
-      tweet_score : ERA_TWEET_BONUS,
+      tweet_points : ERA_TWEET_BONUS,
       total_score : ERA_TWEET_BONUS
     })
     .gte("last_tweet_at", eraStartISO)        // ← only “fresh” tweeters
