@@ -291,6 +291,8 @@ async function updateScoresForLastDeadline() {
       prev.mult   = mult;                       // update “latest”
     }
   }
+  console.log('[scoring] bucket size', bucket.size);
+
   if (!bucket.size) return;                           // nothing valid
 
   const prefix = COL_PREFIX[last.symbol as Token['symbol']];
@@ -303,7 +305,14 @@ async function updateScoresForLastDeadline() {
     [`${prefix}_mult`]  : v.mult,            
   }));
 
-  await supabase.from('participants').upsert(rows,{ onConflict:'address' });
+  const { data, error, status } =
+  await supabase
+    .from('participants')
+    .upsert(rows, { onConflict: 'address' })
+    .select()          // forces DB to return the rows it touched
+    .throwOnError();   // will make Supabase **throw** instead of failing silently
+
+console.log('[db] upsert status', status, 'rows written', data?.length ?? 0);
 }
 
 /* ───────────── deadline-height estimator ───────────── */
