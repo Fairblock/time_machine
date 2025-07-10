@@ -81,11 +81,11 @@ export default function Home() {
                 <img
                   src="/capsule.png"
                   alt=""
-                  className="relative top-0 left-1/2 -translate-x-1/2 w-[22rem] 2xl:w-[24rem]"
+                  className="relative top-0 left-1/2 -translate-x-1/2 w-[15.5rem] sm:w-[22rem] 2xl:w-[24rem]"
                 />
 
                 {/* Tokens container */}
-                <div className="absolute top-[20%] lg:top-[17%] left-1/2 -translate-x-1/2 flex flex-col items-center gap-3">
+                <div className="absolute top-[11%] sm:top-[20%] lg:top-[17%] left-1/2 -translate-x-1/2 flex flex-col items-center gap-3">
                   {TOKENS.map((t) => {
                     const activeNow = t.id === active?.coingecko_id;
                     return (
@@ -95,8 +95,8 @@ export default function Home() {
                         className={[
                           "rounded-full transition-transform duration-200",
                           activeNow
-                            ? "scale-110 w-16 h-16 xl:w-20 xl:h-20"
-                            : "filter grayscale opacity-40 w-8 h-8 lg:w-10 lg:h-10",
+                            ? "scale-110 w-14 h-14 sm:w-16 sm:h-16 xl:w-20 xl:h-20"
+                            : "filter grayscale opacity-40 w-9 h-9 lg:w-10 lg:h-10",
                         ].join(" ")}
                       >
                         <Image
