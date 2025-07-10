@@ -109,12 +109,52 @@ async function pickNextToken(): Promise<Token> {
 }
 
 /* ───────────── maintenance helpers ───────────── */
-async function purgeParticipantsIfEpochStart(symbol: string) {
-  if (symbol === TOKENS[0].symbol) {
-    console.log('🧹  purging participants for new epoch');
-    await supabase.from('participants').delete().neq('address', '');
-  }
+/* ── helpers ─────────────────────────────────────────────── */
+function eraStart(now = new Date()) {
+  // Monday 00:00 UTC of the current two-week epoch
+  const d = new Date(now);
+  d.setUTCHours(0, 0, 0, 0);
+  d.setUTCDate(d.getUTCDate() - ((d.getUTCDay() + 6) % 7)); // back to Mon
+  return d;                // 00:00 UTC Monday
 }
+
+const ERA_TWEET_BONUS = 200;
+
+/* ── call this right after SOL decrypts (== era boundary) ── */
+async function purgeParticipantsIfEpochStart(symbol: string) {
+  if (symbol !== TOKENS[0].symbol) return;   // only at SOL-window end
+
+  const eraStartISO = eraStart().toISOString();
+  console.log("🧹  new era reset — keeping only tweets ≥", eraStartISO);
+
+  /* 1️⃣  Up-date rows that *did* tweet in this era  */
+  const blankPred = {
+    sol_guess:null, sol_delta:null, sol_score:null, sol_mult:null,
+    btc_guess:null, btc_delta:null, btc_score:null, btc_mult:null,
+    arb_guess:null, arb_delta:null, arb_score:null, arb_mult:null,
+    eth_guess:null, eth_delta:null, eth_score:null, eth_mult:null
+  };
+
+  const { error: updErr } = await supabase
+    .from("participants")
+    .update({
+      ...blankPred,
+      tweet_score : ERA_TWEET_BONUS,
+      total_score : ERA_TWEET_BONUS
+    })
+    .gte("last_tweet_at", eraStartISO)        // ← only “fresh” tweeters
+    .throwOnError();
+
+  /* 2️⃣  Delete everyone else                        */
+  const { error: delErr } = await supabase
+    .from("participants")
+    .delete()
+    .or(`last_tweet_at.lt.${eraStartISO},last_tweet_at.is.null`)
+    .throwOnError();                          // ensures you see mistakes
+
+  if (updErr || delErr) throw updErr || delErr;
+}
+
 
 async function wipeProofsTable() {
   await supabase.from('proofs').delete().not('id', 'is', null);
