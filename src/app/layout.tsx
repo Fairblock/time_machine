@@ -1,24 +1,32 @@
-/* ── src/app/layout.tsx ─────────────────────────────── */
-import './globals.css'
-import type { Metadata } from 'next'
-import { Montserrat } from 'next/font/google'
-
-import RootShell from './RootShell'            // ← just created
-
-/* Google font (server-safe) */
-const montserrat = Montserrat({
-  subsets: ['latin'],
-  variable: '--font-mont',
-})
+import ClientLayout from "@/app/ClientLayout";
+import type { Metadata } from "next";
+import "./globals.css";
+import { HowItWorksProvider } from "@/contexts/HowItWorksContext";
+// import Header from '@/components/header/Header';
+// import { useActiveToken } from '@/hooks/useActiveToken';
 
 
-
-export default function Layout({ children }: { children: React.ReactNode }) {
+export default function RootLayout({
+  children,
+}: Readonly<{
+  children: React.ReactNode;
+}>) {
+  // const { data: active } = useActiveToken();
   return (
-    <html lang="en" className={montserrat.variable}>
+    <html lang="en">
+      <head>
+        {/* load Inter from Google */}
+        <link
+          rel="stylesheet"
+          href="https://fonts.googleapis.com/css2?family=Montserrat:ital,wght@0,100..900;1,100..900&display=swap"
+        />
+      </head>
       <body className="font-neue">
-        <RootShell>{children}</RootShell>
+        {/* <Header /> */}
+        <HowItWorksProvider>
+          <ClientLayout>{children}</ClientLayout>
+        </HowItWorksProvider>
       </body>
     </html>
-  )
+  );
 }
