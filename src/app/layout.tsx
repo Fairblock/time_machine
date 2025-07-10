@@ -1,16 +1,17 @@
-/* ── src/app/layout.tsx ───────────────────────────────────────────── */
+/* ── src/app/layout.tsx ─────────────────────────────── */
 import './globals.css'
 import type { Metadata } from 'next'
-
 import { Montserrat } from 'next/font/google'
-import ClientLayout from '@/app/ClientLayout'
-import { HowItWorksProvider } from '@/contexts/HowItWorksContext'
 
+import RootShell from './RootShell'            // ← just created
+
+/* Google font (server-safe) */
 const montserrat = Montserrat({
   subsets: ['latin'],
   variable: '--font-mont',
 })
 
+/* Static metadata */
 export const metadata: Metadata = {
   title: 'Fairblock | Time Machine',
   description:
@@ -27,8 +28,7 @@ export const metadata: Metadata = {
         width: 1200,
         height: 630,
         alt: 'Fairblock Time Machine preview',
-        /** 👇 ADD THIS LINE so the image is fully static */
-        type: 'image/png',
+        type: 'image/png',          // ← **critical**: makes it static
       },
     ],
     locale: 'en_US',
@@ -43,17 +43,11 @@ export const metadata: Metadata = {
   },
 }
 
-export default function RootLayout({
-  children,
-}: {
-  children: React.ReactNode
-}) {
+export default function Layout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en" className={montserrat.variable}>
       <body className="font-neue">
-        <HowItWorksProvider>
-          <ClientLayout>{children}</ClientLayout>
-        </HowItWorksProvider>
+        <RootShell>{children}</RootShell>
       </body>
     </html>
   )
