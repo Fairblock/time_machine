@@ -1,12 +1,18 @@
-// src/app/layout.tsx  (patched)
+/* ── src/app/layout.tsx ───────────────────────────────────────────── */
 import './globals.css'
 import type { Metadata } from 'next'
+
+import { Montserrat } from 'next/font/google'
 import ClientLayout from '@/app/ClientLayout'
 import { HowItWorksProvider } from '@/contexts/HowItWorksContext'
-// If you really want Google Fonts, use next/font/google (better perf)
-// import { Montserrat } from 'next/font/google'
-// const montserrat = Montserrat({ subsets: ['latin'], variable: '--font-mont' })
 
+/* ── fonts ───────────────────────────────────────────────────────── */
+const montserrat = Montserrat({
+  subsets: ['latin'],
+  variable: '--font-mont',          // optional CSS variable
+})
+
+/* ── site-wide metadata (static, crawlable) ──────────────────────── */
 export const metadata: Metadata = {
   title: 'Fairblock | Time Machine',
   description:
@@ -35,22 +41,16 @@ export const metadata: Metadata = {
       'Replay encrypted transactions and witness deterministic on-chain decryption.',
     images: ['https://timemachine.fairblock.network/og.png'],
   },
-  // If you didn’t switch to next/font/google and still need the link tag,
-  // you can inject it via “other”:
-  other: {
-    'link-font-montserrat':
-      '<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Montserrat:ital,wght@0,100..900;1,100..900&display=swap" />',
-  },
 }
 
+/* ── root layout ─────────────────────────────────────────────────── */
 export default function RootLayout({
   children,
 }: {
   children: React.ReactNode
 }) {
   return (
-    <html lang="en">
-      {/* className={montserrat.variable}  ← if you use next/font/google */}
+    <html lang="en" className={montserrat.variable}>
       <body className="font-neue">
         <HowItWorksProvider>
           <ClientLayout>{children}</ClientLayout>
