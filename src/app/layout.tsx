@@ -1,58 +1,61 @@
-import ClientLayout from "@/app/ClientLayout";
-import type { Metadata } from "next";
-import "./globals.css";
-import { HowItWorksProvider } from "@/contexts/HowItWorksContext";
-// import Header from '@/components/header/Header';
-// import { useActiveToken } from '@/hooks/useActiveToken';
+// src/app/layout.tsx  (patched)
+import './globals.css'
+import type { Metadata } from 'next'
+import ClientLayout from '@/app/ClientLayout'
+import { HowItWorksProvider } from '@/contexts/HowItWorksContext'
+// If you really want Google Fonts, use next/font/google (better perf)
+// import { Montserrat } from 'next/font/google'
+// const montserrat = Montserrat({ subsets: ['latin'], variable: '--font-mont' })
 
 export const metadata: Metadata = {
-  title:        'Time Machine',
-  description:  'Step into the time machine.',
+  title: 'Fairblock | Time Machine',
+  description:
+    'Replay encrypted transactions and witness deterministic on-chain decryption.',
   openGraph: {
-    title:       'Time Machine',
-    description: 'Step into the time machine.',
-    url:         'https://timemachine.fairblock.network/',
-    siteName:    'Fairblock',
+    title: 'Fairblock | Time Machine',
+    description:
+      'Replay encrypted transactions and witness deterministic on-chain decryption.',
+    url: 'https://timemachine.fairblock.network/',
+    siteName: 'Fairblock',
     images: [
       {
-        url:   'https://timemachine.fairblock.network/og.png',
+        url: 'https://timemachine.fairblock.network/og.png',
         width: 1200,
         height: 630,
-        alt:  'Time Machine',
+        alt: 'Fairblock Time Machine preview',
       },
     ],
     locale: 'en_US',
-    type:   'website',
+    type: 'website',
   },
   twitter: {
-    card:        'summary_large_image',
-    title:       'Time Machine',
-    description: 'Step into the time machine.',
-    images:      ['https://timemachine.fairblock.network/og.png'],
+    card: 'summary_large_image',
+    title: 'Fairblock | Time Machine',
+    description:
+      'Replay encrypted transactions and witness deterministic on-chain decryption.',
+    images: ['https://timemachine.fairblock.network/og.png'],
+  },
+  // If you didn’t switch to next/font/google and still need the link tag,
+  // you can inject it via “other”:
+  other: {
+    'link-font-montserrat':
+      '<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Montserrat:ital,wght@0,100..900;1,100..900&display=swap" />',
   },
 }
 
 export default function RootLayout({
   children,
-}: Readonly<{
-  children: React.ReactNode;
-}>) {
-  // const { data: active } = useActiveToken();
+}: {
+  children: React.ReactNode
+}) {
   return (
     <html lang="en">
-      <head>
-        {/* load Inter from Google */}
-        <link
-          rel="stylesheet"
-          href="https://fonts.googleapis.com/css2?family=Montserrat:ital,wght@0,100..900;1,100..900&display=swap"
-        />
-      </head>
+      {/* className={montserrat.variable}  ← if you use next/font/google */}
       <body className="font-neue">
-        {/* <Header /> */}
         <HowItWorksProvider>
           <ClientLayout>{children}</ClientLayout>
         </HowItWorksProvider>
       </body>
     </html>
-  );
+  )
 }
