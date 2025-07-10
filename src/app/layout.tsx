@@ -6,13 +6,11 @@ import { Montserrat } from 'next/font/google'
 import ClientLayout from '@/app/ClientLayout'
 import { HowItWorksProvider } from '@/contexts/HowItWorksContext'
 
-/* ── fonts ───────────────────────────────────────────────────────── */
 const montserrat = Montserrat({
   subsets: ['latin'],
-  variable: '--font-mont',          // optional CSS variable
+  variable: '--font-mont',
 })
 
-/* ── site-wide metadata (static, crawlable) ──────────────────────── */
 export const metadata: Metadata = {
   title: 'Fairblock | Time Machine',
   description:
@@ -29,6 +27,8 @@ export const metadata: Metadata = {
         width: 1200,
         height: 630,
         alt: 'Fairblock Time Machine preview',
+        /** 👇 ADD THIS LINE so the image is fully static */
+        type: 'image/png',
       },
     ],
     locale: 'en_US',
@@ -43,7 +43,6 @@ export const metadata: Metadata = {
   },
 }
 
-/* ── root layout ─────────────────────────────────────────────────── */
 export default function RootLayout({
   children,
 }: {
