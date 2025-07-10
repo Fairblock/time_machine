@@ -69,12 +69,14 @@ export async function POST(req: Request) {
     await supabase.from('participants').update({
       total_score : (participant.total_score  ?? 0) + 200,
       tweet_points: (participant.tweet_points ?? 0) + 200,
+      last_tweet_at : new Date().toISOString(),
     }).eq('address', wallet);
   } else {
     await supabase.from('participants').insert({
       address      : wallet,
       total_score  : 200,
       tweet_points : 200,
+      last_tweet_at : new Date().toISOString(),
     });
   }
 

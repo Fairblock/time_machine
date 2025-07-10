@@ -38,7 +38,22 @@ function nextOpenDate(
   date.setUTCDate(date.getUTCDate() + delta);
   return date;
 }
+function fmtTimeUntil(future: Date, now: Date = new Date()) {
+  const diffMs   = Math.max(0, future.getTime() - now.getTime());
+  const DAY_MS   = 86_400_000;
+  const HOUR_MS  = 3_600_000;
 
+  const days     = Math.floor(diffMs / DAY_MS);
+  const hours    = Math.floor((diffMs % DAY_MS) / HOUR_MS);
+
+  if (days > 1) return `${days} days`;
+  if (days === 1) {
+    return hours
+      ? `1 day and ${hours} hour${hours === 1 ? "" : "s"}`
+      : "1 day";
+  }
+  return `${hours || 0} hour${hours === 1 ? "" : "s"}`;
+}
 export default function Prediction() {
   const [showCampaignBanner, setShowCampaignBanner] = useState(true);
   const { data: token, isLoading } = useActiveToken();
@@ -51,14 +66,10 @@ export default function Prediction() {
   const closedToday = todayDow === 0;           // no token on Sundays
 
   /* 3️⃣ heading helpers */
-  const idx = ROTATION.indexOf(token!.symbol as (typeof ROTATION)[number]);
-  const nextSymbol = ROTATION[(idx + 1) % ROTATION.length];
-  const daysToNext = Math.max(
-    0,
-    differenceInDays(nextOpenDate(nextSymbol), new Date()),
-  );
-  const nextHeading = `Next token: ${nextSymbol} in ${daysToNext} day${daysToNext === 1 ? "" : "s"}`;
-
+  const idx         = ROTATION.indexOf(token!.symbol as (typeof ROTATION)[number]);
+  const nextSymbol  = ROTATION[(idx + 1) % ROTATION.length];
+  const timeToNext  = fmtTimeUntil(nextOpenDate(nextSymbol));
+  const nextHeading = `Next token: ${nextSymbol} in ${timeToNext}`;
   /* 4️⃣ image src */
   const iconSrc = `/${token!.symbol.toLowerCase()}.png`;
 
