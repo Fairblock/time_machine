@@ -11,7 +11,7 @@ export async function generateMetadata(): Promise<Metadata> {
   return {
     title,
     description: 'Time Machine',
-    metadataBase: new URL('https://example.com'),   // absolute URLs mandatory
+    metadataBase: new URL('https://timemachine.fairblock.network'),   // absolute URLs mandatory
     openGraph: {
       title,
       description: 'Time Machine',
