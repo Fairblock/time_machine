@@ -220,8 +220,8 @@ export default function CapsulesPage() {
         const lastToken =
           last?.lastDeadline?.symbol ?? last?.lastDeadline?.token ?? "—";
 
-        if (!nextH || !lastH) throw new Error("deadline heights missing");
-
+        if (!nextH) throw new Error("deadline height missing");
+       
         /* 1️⃣ encrypted capsules */
         const encryptedCaps: Capsule[] = [];
         const now = await getCurrentBlockHeight();
@@ -266,10 +266,11 @@ export default function CapsulesPage() {
           if (txs.length < PER_PAGE) break;
           page += 1;
         }
-
+        let revealedCaps: Capsule[] = [];
+        if (lastH){
         /* 2️⃣ revealed capsules */
         const revealedTxs = await fetchRevealedTxs([lastH]);
-        const revealedCaps: Capsule[] = revealedTxs.map(
+        revealedCaps = revealedTxs.map(
           (tx): Capsule => ({
             creator: tx.creator,
             target: lastH,
@@ -278,6 +279,8 @@ export default function CapsulesPage() {
             price: tx.price,
           })
         );
+      }
+    
 
         if (!cancelled) {
           const merged = [...encryptedCaps, ...revealedCaps];
