@@ -13,6 +13,14 @@ const montserrat = Montserrat({
 })
 
 
+
+export const metadata: Metadata = {
+  metadataBase: new URL(
+    process.env.NEXT_PUBLIC_SITE_URL ?? 'https://timemachine.fairblock.network'
+  ),
+  title: 'Fairblock Time-Machine',
+  description: 'Confidential sealed-bid auctions on Arbitrum.',
+};
 export default function RootLayout({
   children,
 }: {
