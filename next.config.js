@@ -1,5 +1,8 @@
 // next.config.js
 /** @type {import('next').NextConfig} */
+const config = {
+  htmlLimitedBots: /Discordbot|Twitterbot|facebookexternalhit/i, // add any others you need
+}
 module.exports = {
   transpilePackages: ['fairblock-fairyring-client-ts'],
   images: {
