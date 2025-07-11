@@ -19,7 +19,7 @@ const ddmmyyyy = (d: Date) =>
   `${String(d.getUTCDate()).padStart(2, '0')}-${String(d.getUTCMonth() + 1).padStart(2, '0')}-${d.getUTCFullYear()}`;
 
 /* ── helpers ────────────────────────────────────────────────────────────── */
-async function lastSolDeadlineDate(): Promise<string | null> {
+async function lastSolDeadlineDate (): Promise<string | null> {
   const { data, error } = await supabase
     .from('deadlines')
     .select('deadline_date')
@@ -27,9 +27,9 @@ async function lastSolDeadlineDate(): Promise<string | null> {
     .lt('deadline_date', new Date().toISOString())
     .order('deadline_date', { ascending: false })
     .limit(1)
-    .single();
+    .maybeSingle();          // ← returns { data: null } instead of throwing
 
-  if (error) throw error;
+  if (error) throw error;    // genuine DB/network errors only
   return data?.deadline_date ?? null;
 }
 
