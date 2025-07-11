@@ -50,6 +50,7 @@
     "@types/node": "^20",
     "@types/react": "^18.3.20",
     "@types/react-dom": "^18.3.6",
+    "@vercel/og": "^0.7.2",
     "@vitest/coverage-istanbul": "^3.2.3",
     "@vitest/ui": "^3.2.3",
     "autoprefixer": "^10.4.21",
