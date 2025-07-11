@@ -80,43 +80,74 @@ export default function Prediction() {
 
       {/* wrapper */}
       <div className="relative flex flex-col font-sans bg-gradient-to-r from-[#EBEFF7] via-white to-[#EBEFF7] pt-[80px] min-h-screen">
-
         {/* side images (≥ lg) */}
         <div
           className="absolute left-0 hidden lg:block pointer-events-none select-none"
-          style={{ height: EDGE_HEIGHT, top: `calc(50% - ${EDGE_HEIGHT}/2)`, width: "35vw", maxWidth: "520px" }}
+          style={{
+            height: EDGE_HEIGHT,
+            top: `calc(50% - ${EDGE_HEIGHT}/2)`,
+            width: "35vw",
+            maxWidth: "520px",
+          }}
         >
-          <Image src="/Left.png" alt="" fill priority className="object-cover filter grayscale opacity-40" />
+          <Image
+            src="/Left.png"
+            alt=""
+            fill
+            priority
+            className="object-cover filter grayscale opacity-40"
+          />
         </div>
         <div
           className="absolute right-0 hidden lg:block pointer-events-none select-none"
-          style={{ height: EDGE_HEIGHT, top: `calc(50% - ${EDGE_HEIGHT}/2)`, width: "35vw", maxWidth: "520px" }}
+          style={{
+            height: EDGE_HEIGHT,
+            top: `calc(50% - ${EDGE_HEIGHT}/2)`,
+            width: "35vw",
+            maxWidth: "520px",
+          }}
         >
-          <Image src="/Right.png" alt="" fill priority className="object-cover filter grayscale opacity-40" />
+          <Image
+            src="/Right.png"
+            alt=""
+            fill
+            priority
+            className="object-cover filter grayscale opacity-40"
+          />
         </div>
 
         {/* campaign-reset floating banner (unchanged) */}
         {showCampaignBanner && (
           <div className="fixed top-24 right-4 sm:right-8 lg:right-16 z-30 max-w-xs w-[90%] sm:w-80 rounded-xl shadow-lg ring-1 ring-gray-300/60 bg-white/85 backdrop-blur px-5 py-3 text-xs sm:text-sm text-gray-800 flex items-center">
             <span className="leading-snug">
-              The campaign has not yet started; all points will be reset before official launch.
+              The campaign has not yet started; all points will be reset before
+              official launch.
             </span>
-            <button onClick={() => setShowCampaignBanner(false)} aria-label="Close"
-              className="ml-3 shrink-0 rounded-full hover:bg-gray-400/10 p-1 transition">
+            <button
+              onClick={() => setShowCampaignBanner(false)}
+              aria-label="Close"
+              className="ml-3 shrink-0 rounded-full hover:bg-gray-400/10 p-1 transition"
+            >
               <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-                <path d="M4 4L12 12M12 4L4 12" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+                <path
+                  d="M4 4L12 12M12 4L4 12"
+                  stroke="currentColor"
+                  strokeWidth="1.8"
+                  strokeLinecap="round"
+                />
               </svg>
             </button>
           </div>
         )}
 
         {/* === MAIN ================================================= */}
-        <main className={[
-          "flex-1 flex flex-col items-center justify-center gap-4 sm:gap-5 lg:gap-6",
-          "px-6 sm:px-8 md:px-10 lg:px-12 py-6",
-          closedToday && "filter blur-sm pointer-events-none select-none"  // ← blur & disable
-        ].join(" ")}>
-
+        <main
+          className={[
+            "flex-1 flex flex-col items-center justify-center gap-4 sm:gap-5 lg:gap-6",
+            "px-6 sm:px-8 md:px-10 lg:px-12 py-6",
+            closedToday && "filter blur-sm pointer-events-none select-none", // ← blur & disable
+          ].join(" ")}
+        >
           {/* next-token ribbon */}
           <h3 className="font-medium border border-black mt-4 px-5 py-2 rounded-2xl text-center text-sm uppercase">
             {nextHeading}
@@ -131,10 +162,19 @@ export default function Prediction() {
           <div className="w-full max-w-4xl bg-white/90 backdrop-blur rounded-xl shadow p-3 sm:p-4 md:p-5 lg:p-6 space-y-4">
             <div className="flex items-center justify-between">
               <div className="flex items-center space-x-2">
-                <Image src={iconSrc} alt={token!.symbol} width={40} height={40} />
-                <span className="text-base sm:text-lg font-semibold">{token!.symbol}</span>
+                <Image
+                  src={iconSrc}
+                  alt={token!.symbol}
+                  width={40}
+                  height={40}
+                />
+                <span className="text-base sm:text-lg font-semibold">
+                  {token!.symbol}
+                </span>
               </div>
-              <span className="text-gray-600 text-xs sm:text-sm">Current Price Chart</span>
+              <span className="text-gray-600 text-xs sm:text-sm">
+                Current Price Chart
+              </span>
             </div>
             <div className="w-full h-[34vh] md:h-[38vh] lg:h-[42vh]">
               <TokenChart />
@@ -142,21 +182,25 @@ export default function Prediction() {
           </div>
 
           {/* form & countdown */}
-          <PredictionForm label={`Your ${token!.symbol} prediction in USD`} placeholder="Eg: $168" buttonText="Encrypt Now" />
+          <PredictionForm
+            label={`Your ${token!.symbol} prediction in USD`}
+            placeholder="Eg: $168"
+            buttonText="Encrypt Now"
+          />
           <CountdownTimer />
         </main>
 
-       {/* Sunday overlay banner */}
-      {closedToday && (
-        <div className="fixed inset-0 z-30 pointer-events-none flex items-center justify-center">
-          <div className="pointer-events-auto bg-white/90 backdrop-blur-lg shadow-xl ring-1 ring-gray-300 rounded-2xl px-8 py-6 text-center max-w-md mx-auto">
-            <p className="text-lg font-semibold text-gray-900 mb-2">
-              Prediction window is closed.
-            </p>
-            <p className="text-sm text-gray-700">It will open on Monday.</p>
+        {/* Sunday overlay banner */}
+        {closedToday && (
+          <div className="bg-white/60 fixed inset-0 pointer-events-auto flex items-center justify-center z-50">
+            <div className="pointer-events-auto bg-white backdrop-blur-lg shadow-xl ring-1 ring-gray-300 rounded-2xl px-8 py-6 text-center max-w-md mx-auto">
+              <p className="text-lg font-semibold text-gray-900 mb-2">
+                Prediction window is closed.
+              </p>
+              <p className="text-sm text-gray-700">It will open on Monday.</p>
+            </div>
           </div>
-        </div>
-      )}
+        )}
       </div>
     </>
   );
