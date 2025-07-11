@@ -18,8 +18,8 @@ export const metadata: Metadata = {
   metadataBase: new URL(
     process.env.NEXT_PUBLIC_SITE_URL ?? 'https://timemachine.fairblock.network'
   ),
-  title: 'Fairblock Time-Machine',
-  description: 'Confidential sealed-bid auctions on Arbitrum.',
+  title: 'Time-Machine',
+  description: 'Time Machine',
 };
 export default function RootLayout({
   children,
