@@ -375,9 +375,6 @@ Proof → ${proofToken}`
           onSubmit={handleSubmit}
           className="w-full max-w-md mx-auto flex flex-col items-center space-y-4"
         >
-          <label htmlFor="prediction" className="text-lg font-medium">
-            Your prediction in USD
-          </label>
           <Input
             id="prediction"
             type="text"
@@ -411,6 +408,8 @@ Proof → ${proofToken}`
                 : "Connect Wallet"}
             </span>
           </Button>
+
+
         </form>
       )}
 

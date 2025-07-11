@@ -20,11 +20,11 @@ export default function CountdownTimer() {
   useEffect(() => {
     if (!token) return;
 
-    const now       = new Date();
-    const targetDow = DECRYPT_DOW[token.symbol] ?? 3;      // default Wed
+    const now = new Date();
+    const targetDow = DECRYPT_DOW[token.symbol] ?? 3; // default Wed
 
     /* candidate = today at 23:59 UTC */
-    const deadline  = new Date(now);
+    const deadline = new Date(now);
     deadline.setUTCHours(23, 59, 0, 0);
 
     /* days until the target weekday (0-6) */
@@ -38,15 +38,15 @@ export default function CountdownTimer() {
     }
 
     /* beautify: “Wednesday at 11 : 59 PM UTC” */
-    const weekday   = deadline.toLocaleDateString("en-US", {
+    const weekday = deadline.toLocaleDateString("en-US", {
       weekday: "long",
       timeZone: "UTC",
     });
-    const h  = deadline.getUTCHours();
-    const m  = deadline.getUTCMinutes();
+    const h = deadline.getUTCHours();
+    const m = deadline.getUTCMinutes();
     const ap = h >= 12 ? "PM" : "AM";
     const h12 = ((h + 11) % 12) + 1;
-    const mm  = m.toString().padStart(2, "0");
+    const mm = m.toString().padStart(2, "0");
     const time = m === 0 ? `${h12} ${ap}` : `${h12}:${mm} ${ap}`;
 
     setDeadlineText(`${weekday} at ${time} UTC`);
@@ -55,11 +55,9 @@ export default function CountdownTimer() {
   if (!deadlineText) return null;
 
   return (
-    <div className="flex flex-col sm:flex-row items-center sm:gap-1 text-center text-lg mb-8">
-      <HourglassIcon className="hidden sm:block" width={18} />
-      Predict the price for
+    <div className="flex flex-col sm:flex-row items-center sm:gap-1 text-center text-lg">
+      Predict <span className="font-medium">{token.symbol}</span> price for
       <span className="font-medium">{deadlineText}</span>
-      <HourglassIcon className="hidden sm:block" width={18} />
     </div>
   );
 }

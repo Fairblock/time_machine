@@ -22,11 +22,12 @@ const HowItWorksModal = ({
           <CircleX size={22} />
         </button>
 
-        <div className="flex flex-col gap-4 m-4 lg:my-0 lg:mx-auto p-12 rounded-xl">
+        <div className="flex flex-col gap-2 m-4 lg:my-0 lg:mx-auto p-12 rounded-xl">
           <h2 className="font-bold text-center text-4xl">HOW IT WORKS</h2>
           <p className="">
-            Every 3 days, a new token is revealed. <br /> Your mission: predict
-            the token’s price at the end of the 3-day round but do it now.
+            Every 3 days, a new token is revealed. <br />{" "}
+            <span className="font-semibold">Your mission:</span> predict the
+            token’s price at the end of the 3-day round but do it now.
           </p>
           <ul className="ml-5 list-decimal list-outside">
             <li>
@@ -43,11 +44,11 @@ const HowItWorksModal = ({
             </li>
           </ul>
           <p>
-            Time Matters: The earlier you encrypt your prediction, the more you
-            earn.
+            <span className="font-semibold">Time Matters:</span> The earlier you
+            encrypt your prediction, the more you earn.
             <br />
             <br />
-            <span className="font-medium">
+            <span className="font-semibold">
               Get boosters on your predictions to get more points
             </span>
             <br /> Day 1: 1.5× points <br />
@@ -58,13 +59,18 @@ const HowItWorksModal = ({
             Share on X: +200 bonus points
             <br />
             <br />
-            It’s like options trading. But no copy-trading. No manipulation. No
-            frontrunning.
+            It’s like options or Polymarket. Just simpler, with asymmetric
+            payoffs. No greeks. No frontrunning. No manipulation.
           </p>
           <p className="">
+            Refer to the complete {" "}
+            <a href="https://fairblock.notion.site/Guide-to-Fairblock-Time-Machine-226ee984fb4e80a48c72cfd928b979c2">
+              <span className="font-semibold underline">guide</span>
+            </a>{" "}
+            <br />
             Need help? Join our 
             <a
-              className="font-medium underline"
+              className="font-semibold underline"
               href="https://discord.gg/fairblock"
             >
               Discord

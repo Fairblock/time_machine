@@ -61,7 +61,7 @@ export default function Home() {
             <button
               // href="/prediction"
               onClick={() => setShowModal(true)}
-              className="bg-neutral-900 hover:bg-neutral-800 font-medium inline-block px-5 py-[6px] rounded-xl shadow text-white text-sm sm:text-base md:text-lg transition-colors"
+              className="bg-neutral-900 hover:bg-neutral-800 cursor-pointer font-medium inline-block px-5 py-[6px] rounded-xl shadow text-white text-sm sm:text-base md:text-lg transition-colors"
             >
               Predict now
             </button>

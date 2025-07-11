@@ -7,7 +7,7 @@ import TokenChart from "@/components/charts/TokenChart";
 import CountdownTimer from "@/components/countdown-timer/CountdownTimer";
 import PredictionForm from "@/components/forms/PredictionForm";
 import { useActiveToken } from "@/hooks/useActiveToken";
-import { differenceInDays } from "date-fns";
+import { useHowItWorksContext } from "@/contexts/HowItWorksContext";
 
 /* Height for decorative side images (≥ lg) */
 const EDGE_HEIGHT = "70vh";
@@ -72,6 +72,8 @@ export default function Prediction() {
   const nextHeading = `Next token: ${nextSymbol} in ${timeToNext}`;
   /* 4️⃣ image src */
   const iconSrc = `/${token!.symbol.toLowerCase()}.png`;
+
+  const { setShowModal } = useHowItWorksContext();
 
   /* ── JSX ─────────────────────────────────────────────────────── */
   return (
@@ -181,13 +183,15 @@ export default function Prediction() {
             </div>
           </div>
 
+          <CountdownTimer />
           {/* form & countdown */}
           <PredictionForm
             label={`Your ${token!.symbol} prediction in USD`}
-            placeholder="Eg: $168"
+            placeholder="E.g. $168"
             buttonText="Encrypt Now"
           />
-          <CountdownTimer />
+
+          <p className="cursor-pointer font-medium underline mb-4" onClick={() => setShowModal(true)}>How it Works</p>
         </main>
 
         {/* Sunday overlay banner */}
@@ -197,7 +201,7 @@ export default function Prediction() {
               <p className="text-lg font-semibold text-gray-900 mb-2">
                 Prediction window is closed.
               </p>
-              <p className="text-sm text-gray-700">It will open on Monday.</p>
+              <p className="text-sm text-gray-700">Week 1 is wrapped! Next token prediction opens Monday. <br /> Enjoy your Sunday and touch some grass.</p>
             </div>
           </div>
         )}
