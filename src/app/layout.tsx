@@ -1,38 +1,30 @@
-/* ── src/app/layout.tsx ─────────────────────────────────────────── */
-import './globals.css'
-import type { Metadata } from 'next'
+import ClientLayout from "@/app/ClientLayout";
+import "./globals.css";
+import { HowItWorksProvider } from "@/contexts/HowItWorksContext";
+// import Header from '@/components/header/Header';
+// import { useActiveToken } from '@/hooks/useActiveToken';
 
-import { Montserrat } from 'next/font/google'
-import ClientLayout from '@/app/ClientLayout'
-import { HowItWorksProvider } from '@/contexts/HowItWorksContext'
-
-/* Google font — server-side, no manual <link> needed */
-const montserrat = Montserrat({
-  subsets: ['latin'],
-  variable: '--font-mont',            // gives you a CSS var if you want it
-})
-
-
-
-export const metadata: Metadata = {
-  metadataBase: new URL(
-    process.env.NEXT_PUBLIC_SITE_URL ?? 'https://timemachine.fairblock.network'
-  ),
-  title: 'Time-Machine',
-  description: 'Time Machine',
-};
 export default function RootLayout({
   children,
-}: {
-  children: React.ReactNode
-}) {
+}: Readonly<{
+  children: React.ReactNode;
+}>) {
+  // const { data: active } = useActiveToken();
   return (
-    <html lang="en" className={montserrat.variable}>
+    <html lang="en">
+      <head>
+        {/* load Inter from Google */}
+        <link
+          rel="stylesheet"
+          href="https://fonts.googleapis.com/css2?family=Montserrat:ital,wght@0,100..900;1,100..900&display=swap"
+        />
+      </head>
       <body className="font-neue">
+        {/* <Header /> */}
         <HowItWorksProvider>
           <ClientLayout>{children}</ClientLayout>
         </HowItWorksProvider>
       </body>
     </html>
-  )
+  );
 }
