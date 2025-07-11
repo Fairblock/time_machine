@@ -210,7 +210,8 @@ export default function CapsulesPage() {
       try {
         const next = await fetch("/api/deadline/next").then((r) => r.json());
         const last = await fetch("/api/deadline/last").then((r) => r.json());
-
+        console.log("next deadline:", next);
+        console.log("last deadline:", last);
         const nextH = Number(next?.nextDeadline?.target_block);
         const nextToken =
           next?.nextDeadline?.symbol ?? next?.nextDeadline?.token ?? "—";
