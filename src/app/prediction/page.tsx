@@ -187,7 +187,6 @@ export default function Prediction() {
           {/* form & countdown */}
           <PredictionForm
             label={`Your ${token!.symbol} prediction in USD`}
-            placeholder="E.g. $168"
             buttonText="Encrypt Now"
           />
 

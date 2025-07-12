@@ -55,8 +55,8 @@ export default function CountdownTimer() {
   if (!deadlineText) return null;
 
   return (
-    <div className="flex flex-col sm:flex-row items-center sm:gap-1 text-center text-lg">
-      Predict <span className="font-medium">{token.symbol}</span> price for
+    <div className="text-center text-lg">
+      Predict <span className="font-medium">{token.symbol}</span> price for{" "}
       <span className="font-medium">{deadlineText}</span>
     </div>
   );

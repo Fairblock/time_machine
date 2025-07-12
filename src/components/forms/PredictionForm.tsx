@@ -382,7 +382,7 @@ Proof → ${proofToken}`
             inputMode="decimal"
             value={prediction}
             onChange={(e) => setPrediction(e.target.value)}
-            placeholder="Eg: 168.50"
+            placeholder="E.g. 168.50"
             className="w-full"
             min={0}
           />
