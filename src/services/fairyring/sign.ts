@@ -1,29 +1,37 @@
 import type { EncodeObject, OfflineSigner } from "@cosmjs/proto-signing";
-import { type StdFee, SigningStargateClient } from "@cosmjs/stargate";
+
 import { TxRaw } from "fairblock-fairyring-client-ts/cosmos.tx.v1beta1/module";
 import { timelockEncrypt } from "ts-ibe";
 import { WalletType } from "graz";
-
+import { type StdFee, SigningStargateClient, GasPrice } from "@cosmjs/stargate";
 import { FAIRYRING_ENV } from "@/constant/env";
 
 async function getWalletSigner(
   wallet: WalletType,
   chainID: string
 ): Promise<OfflineSigner> {
-  if (wallet === WalletType.KEPLR) {
+  const isWcKeplr = wallet === WalletType.WC_KEPLR_MOBILE;
+  const isWcLeap  = wallet === WalletType.WC_LEAP_MOBILE;
+
+  if (wallet === WalletType.KEPLR || isWcKeplr) {
     if (!window.keplr) throw new Error("Keplr extension not found");
     await window.keplr.enable(chainID);
-    return window.keplr.getOfflineSignerAuto(chainID) as unknown as OfflineSigner;
+    return (isWcKeplr
+      ? window.keplr.getOfflineSignerOnlyAmino(chainID)
+      : window.keplr.getOfflineSignerAuto(chainID)) as unknown as OfflineSigner;
   }
 
-  if (wallet === WalletType.LEAP) {
+  if (wallet === WalletType.LEAP || isWcLeap) {
     if (!window.leap) throw new Error("Leap extension not found");
     await window.leap.enable(chainID);
-    return window.leap.getOfflineSigner(chainID);
+    return isWcLeap
+      ? window.leap.getOfflineSignerOnlyAmino(chainID)
+      : window.leap.getOfflineSigner(chainID);
   }
 
   throw new Error(`Unsupported wallet: ${wallet}`);
 }
+
 
 export const signOfflineWithCustomNonce = async (
   signerAddress: string,
@@ -47,7 +55,8 @@ export const signOfflineWithCustomNonce = async (
 
   const client        = await SigningStargateClient.connectWithSigner(
     endpoint,
-    offlineSigner
+    offlineSigner,
+    { gasPrice: GasPrice.fromString("0.025ufairy") }
   );
   const { accountNumber } = await client.getSequence(signerAddress);
 
