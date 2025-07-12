@@ -49,31 +49,49 @@ function Header() {
 
   /* ───────── connect helpers ────────────────────────────────────── */
   async function connectKeplr() {
-    setAttempted(WalletType.KEPLR);
+    const mobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+    const hasExt = typeof window !== "undefined" && (window as any).keplr;
+    const type = mobile && !hasExt ? WalletType.WC_KEPLR_MOBILE : WalletType.KEPLR;
   
-    /* —— detect missing extension —— */
-    if (typeof window === "undefined" || !(window as any).keplr) {
-      alert(
-        "Keplr extension not detected.\nInstall/enable it and refresh the page."
-      );
+    setAttempted(type);
+  
+    try {
+      await connect({
+        walletType: type,
+        chainId: PUBLIC_ENVIRONMENT.NEXT_PUBLIC_CHAIN_ID!,
+      });
+    } catch {
+      await suggestAndConnect({ chainInfo: fairyring, walletType: type });
+    }
+  
+    setShowWallet(false);
+  }
+  
+  async function connectLeap() {
+    const mobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+    const hasExt = typeof window !== "undefined" && (window as any).leap;
+    const type = mobile && !hasExt ? WalletType.WC_LEAP_MOBILE : WalletType.LEAP;
+  
+    setAttempted(type);
+  
+    if (!hasExt && type === WalletType.LEAP) {
+      alert("Leap extension not detected.\nInstall/enable it and refresh the page.");
       return;
     }
   
     try {
       await connect({
-        walletType: WalletType.KEPLR,
+        walletType: type,
         chainId: PUBLIC_ENVIRONMENT.NEXT_PUBLIC_CHAIN_ID!,
       });
     } catch {
-      /* falls back to suggest-and-connect if chain not added */
-      await suggestAndConnect({
-        chainInfo: fairyring,
-        walletType: WalletType.KEPLR,
-      });
+      await suggestAndConnect({ chainInfo: fairyring, walletType: type });
     }
   
     setShowWallet(false);
   }
+  
+
   async function waitForLeap(ms = 2000): Promise<void> {
     const start = Date.now();
     while (Date.now() - start < ms) {
@@ -82,31 +100,7 @@ function Header() {
     }
     throw new Error("Leap extension not detected");
   }
-  async function connectLeap() {
-    setAttempted(WalletType.LEAP);
 
-    try {
-      await waitForLeap(); // show message if leap missing
-    } catch {
-      alert(
-        "Leap extension not detected.\nInstall/enable it and refresh the page."
-      );
-      return;
-    }
-    try {
-      await connect({
-        walletType: WalletType.LEAP,
-        chainId: PUBLIC_ENVIRONMENT.NEXT_PUBLIC_CHAIN_ID!,
-      });
-    } catch (e) {
-      /* falls back to suggest‑and‑connect if chain not added */
-      await suggestAndConnect({
-        chainInfo: fairyring,
-        walletType: WalletType.LEAP,
-      });
-    }
-    setShowWallet(false);
-  }
 
   /* retry with suggestChain if wallet needs the chain registered */
   useEffect(() => {
