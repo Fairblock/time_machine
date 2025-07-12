@@ -70,12 +70,16 @@ function Header() {
   async function connectLeap() {
     const mobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
     const hasExt = typeof window !== "undefined" && (window as any).leap;
-    const type = mobile && !hasExt ? WalletType.WC_LEAP_MOBILE : WalletType.LEAP;
+    const type = mobile && !hasExt
+      ? WalletType.WC_LEAP_MOBILE
+      : WalletType.LEAP;
   
     setAttempted(type);
   
-    if (!hasExt && type === WalletType.LEAP) {
-      alert("Leap extension not detected.\nInstall/enable it and refresh the page.");
+    if (!mobile && !hasExt) {
+      alert(
+        "Leap extension not detected.\nInstall/enable it and refresh the page."
+      );
       return;
     }
   
@@ -85,11 +89,15 @@ function Header() {
         chainId: PUBLIC_ENVIRONMENT.NEXT_PUBLIC_CHAIN_ID!,
       });
     } catch {
-      await suggestAndConnect({ chainInfo: fairyring, walletType: type });
+      await suggestAndConnect({
+        chainInfo: fairyring,
+        walletType: type,
+      });
     }
   
     setShowWallet(false);
   }
+  
   
 
   async function waitForLeap(ms = 2000): Promise<void> {
