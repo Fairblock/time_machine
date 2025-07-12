@@ -55,7 +55,7 @@ function fmtTimeUntil(future: Date, now: Date = new Date()) {
   return `${hours || 0} hour${hours === 1 ? "" : "s"}`;
 }
 export default function Prediction() {
-  const [showCampaignBanner, setShowCampaignBanner] = useState(true);
+  const [showCampaignBanner, setShowCampaignBanner] = useState(false);
   const { data: token, isLoading } = useActiveToken();
 
   /* 1️⃣ loading state */
