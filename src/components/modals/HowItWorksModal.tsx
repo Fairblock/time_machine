@@ -22,8 +22,8 @@ const HowItWorksModal = ({
           <CircleX size={22} />
         </button>
 
-        <div className="flex flex-col gap-2 m-4 lg:my-0 lg:mx-auto p-12 rounded-xl">
-          <h2 className="font-bold text-center text-4xl">HOW IT WORKS</h2>
+        <div className="flex flex-col gap-2 m-4 lg:my-0 lg:mx-auto p-10 rounded-xl">
+          <h2 className="font-bold mb-2 text-center text-4xl">HOW IT WORKS</h2>
           <p className="">
             Every 3 days, a new token is revealed. <br />{" "}
             <span className="font-semibold">Your mission:</span> predict the
@@ -77,7 +77,7 @@ const HowItWorksModal = ({
             </a>
           </p>
           <Link
-            className="bg-black font-medium mx-auto px-6 py-2 rounded-xl text-white text-lg w-fit"
+            className="bg-black font-medium mx-auto mt-4 px-6 py-2 rounded-xl text-white text-lg w-fit"
             href={"/prediction"}
             onClick={() => setShowModal(false)}
           >
