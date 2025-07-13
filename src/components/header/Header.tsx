@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Copy, Menu, X as CloseIcon, LogOut } from "lucide-react";
+import { Copy, Menu, X as CloseIcon, LogOut, Monitor } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { fairyring } from "@/constant/chains";
@@ -50,7 +50,7 @@ function Header() {
   /* ───────── connect helpers ────────────────────────────────────── */
   async function connectKeplr() {
     setAttempted(WalletType.KEPLR);
-  
+
     /* —— detect missing extension —— */
     if (typeof window === "undefined" || !(window as any).keplr) {
       alert(
@@ -58,7 +58,7 @@ function Header() {
       );
       return;
     }
-  
+
     try {
       await connect({
         walletType: WalletType.KEPLR,
@@ -71,7 +71,7 @@ function Header() {
         walletType: WalletType.KEPLR,
       });
     }
-  
+
     setShowWallet(false);
   }
   async function waitForLeap(ms = 2000): Promise<void> {
@@ -348,7 +348,7 @@ function Header() {
         >
           <div
             onClick={(e) => e.stopPropagation()}
-            className="w-[90%] sm:w-[420px] bg-white rounded-lg px-8 py-10 text-center space-y-8"
+            className="hidden lg:block w-[90%] sm:w-[420px] bg-white rounded-lg px-8 py-10 text-center space-y-8"
           >
             <h2 className="text-3xl font-extrabold uppercase">
               Connect Wallet
@@ -395,6 +395,16 @@ function Header() {
               >
                 Connect
               </Button>
+            </div>
+          </div>
+
+          <div className="lg:hidden w-[90%] sm:w-[420px] bg-white rounded-lg px-8 py-10 text-center space-y-8">
+            <div className="flex flex-col gap-8 justify-between items-center">
+              <h3 className="font-medium text-xl">Please switch to desktop.</h3>
+              <div className="border border-neutral-900 p-6 rounded-lg">
+                <Monitor className="text-3xl" />
+              </div>
+              <h5 className="font-medium text-xl">Mobile app support coming soon.</h5>
             </div>
           </div>
         </div>
