@@ -13,15 +13,22 @@ export default function ClientLayout({
 }) {
   return (
     <QueryClientProvider client={queryClient}>
-      <GrazProvider
+         <GrazProvider
+        /* —— provider‑level props —— */
         grazOptions={{
-          chains: [fairyring, stargaze],
-          defaultWallet: WalletType.KEPLR,
-          autoReconnect: false,
-          onReconnectFailed: () => console.error('reconnect failed'),
+          /* <<< REQUIRED >>> */
+          chains: [fairyring],             // ← add this
+
           walletConnect: {
             options: {
-              projectId: 'cbfcaf564ee9293b0d9d25bbdac11ea3', // hard-coded
+              projectId: "cbfcaf564ee9293b0d9d25bbdac11ea3",
+              relayUrl: "wss://relay.walletconnect.com",
+              metadata: {
+                name: "Time Machine",
+                description: "Encrypt‑to‑reveal prediction dApp",
+                url: "https://timemachine.fairblock.network",
+                icons: ["https://timemachine.fairblock.network/logo.png"],
+              },
             },
           },
         }}
