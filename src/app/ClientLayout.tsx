@@ -50,7 +50,7 @@ export default function ClientLayout({
       <GrazProvider
         grazOptions={{
           // Order matters: put a *native* chain first, then your custom chain
-          chains: [stargaze, fairyring],                   
+          chains: [cosmoshub, fairyring],                   
 
           walletConnect: {
             options: {
