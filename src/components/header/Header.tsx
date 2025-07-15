@@ -73,42 +73,34 @@ function Header() {
 
   /* -- Leap -- */
  /* -- Leap -- */
-async function connectLeap() {
+ async function connectLeap() {
   const mobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
-  const hasExt = typeof window !== "undefined" && (window as any).leap;
-  const type =
-    mobile && !hasExt ? WalletType.WC_LEAP_MOBILE : WalletType.LEAP;
+  const hasExt = typeof window !== 'undefined' && (window as any).leap;
+  const type = mobile && !hasExt ? WalletType.WC_LEAP_MOBILE : WalletType.LEAP;
 
-  if (mobile && !hasExt) purgeWC();          // clear stale Keplr pairing
+  if (mobile && !hasExt) purgeWC();
 
   setAttempted(type);
 
-  /* desktop with no extension → bail early */
   if (!mobile && !hasExt) {
-    alert("Leap extension not detected.\nInstall/enable it and refresh.");
+    alert('Leap extension not detected.\nInstall/enable it and refresh.');
     return;
   }
 
   try {
-    /* ① try Fairyring directly — works on desktop extension
-       and on mobile *if* Leap already knows the chain           */
+    // 1. open session on Cosmos Hub (native)
+    await connect({ walletType: type, chainId: 'cosmoshub-4' });
+    // 2. add Fairyring
+    await window.leap.experimentalSuggestChain(fairyring);
+    // 3. switch to Fairyring
     await connect({ walletType: type, chainId: fairyring.chainId });
   } catch {
-    try {
-      /* ② fallback (mobile): start on a native chain, add Fairyring,
-           then reconnect on Fairyring                              */
-      await connect({ walletType: type, chainId: "cosmoshub-4" });
-      await window.leap.experimentalSuggestChain(fairyring);
-      await connect({ walletType: type, chainId: fairyring.chainId });
-    } catch {
-      /* ③ last resort — suggestChain & connect in one shot */
-      await suggestAndConnect({ chainInfo: fairyring, walletType: type });
-    }
+    // final fallback (handles “user rejected”)
+    await suggestAndConnect({ chainInfo: fairyring, walletType: type });
   }
 
   setShowWallet(false);
 }
-
   
 
   /* retry via suggest‑and‑connect if first attempt failed */
