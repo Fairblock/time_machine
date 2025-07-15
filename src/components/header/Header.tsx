@@ -69,20 +69,24 @@ function Header() {
   }
 
   async function connectLeap() {
+    // ── reset any previous WC wallet choice ──
+    localStorage.removeItem("WALLETCONNECT_DEEPLINK_CHOICE");
+    localStorage.removeItem("walletconnect");          // optional: clears stale pairings
+  
     const mobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
     const hasExt = typeof window !== "undefined" && (window as any).leap;
     const type =
       mobile && !hasExt ? WalletType.WC_LEAP_MOBILE : WalletType.LEAP;
-
+  
     setAttempted(type);
-
+  
     if (!mobile && !hasExt) {
       alert(
         "Leap extension not detected.\nInstall/enable it and refresh the page."
       );
       return;
     }
-
+  
     try {
       await connect({
         walletType: type,
@@ -94,9 +98,10 @@ function Header() {
         walletType: type,
       });
     }
-
+  
     setShowWallet(false);
   }
+  
 
   /* retry with suggestChain if wallet needs the chain registered */
   useEffect(() => {
