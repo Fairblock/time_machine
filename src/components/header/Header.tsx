@@ -74,37 +74,41 @@ function Header() {
   }
 
 
+/* ------------------------------------------------------------------ */
+/*                 FINAL mobile‑safe Leap connect helper               */
+/* ------------------------------------------------------------------ */
 async function connectLeap() {
   const mobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
   const hasExt = typeof window !== "undefined" && (window as any).leap;
   const type =
     mobile && !hasExt ? WalletType.WC_LEAP_MOBILE : WalletType.LEAP;
 
-  if (mobile && !hasExt) purgeWC();
+  if (mobile && !hasExt) purgeWC();       // wipe Chrome/Safari’s Keplr cache
   setAttempted(type);
 
+  /* ─── desktop user but no extension ─── */
   if (!mobile && !hasExt) {
     alert("Leap extension not detected.");
     return;
   }
 
-  try {
-    /* 1️⃣  open WC session on CosmosHub (always supported) */
-    await connect({ walletType: type, chainId: "cosmoshub-4" });
+  /* ---------------- 1. first pairing on CosmosHub ---------------- */
+  await connect({ walletType: type, chainId: "cosmoshub-4" });
 
-    /* 2️⃣  suggest + enable Fairyring (⚠ enable needs *string*) */
-    await window.leap.experimentalSuggestChain(fairyring);          // docs :contentReference[oaicite:3]{index=3}
-    await window.leap.enable(fairyring.chainId);                    // docs :contentReference[oaicite:4]{index=4}
-    await window.leap.getKey(fairyring.chainId);                    // forces account fetch :contentReference[oaicite:5]{index=5}
+  /* ---------------- 2. add + enable Fairyring -------------------- */
+  await window.leap.experimentalSuggestChain(fairyring);   // adds chain
+  await window.leap.enable(fairyring.chainId);             // mobiles need this
+  await window.leap.getKey(fairyring.chainId);             // forces account fetch
 
-    /* 3️⃣  switch the pairing to Fairyring */
-    await connect({ walletType: type, chainId: fairyring.chainId });
-  } catch {
-    await suggestAndConnect({ chainInfo: fairyring, walletType: type });
-  }
+  /* ---------------- 3. close the CosmosHub pairing --------------- */
+  await disconnect();   // graz’s disconnect ➜ keeps WC open but clears signer
 
-  /* 4️⃣  refresh Graz so the header updates */
-  window.dispatchEvent(new Event("graz:refresh"));                  // pattern :contentReference[oaicite:6]{index=6}
+  /* ---------------- 4. new pairing on Fairyring ------------------ */
+  await connect({ walletType: type, chainId: fairyring.chainId });
+
+  /* ---------------- 5. let all useAccount() hooks update --------- */
+  window.dispatchEvent(new Event("graz:refresh"));
+
   setShowWallet(false);
 }
 
