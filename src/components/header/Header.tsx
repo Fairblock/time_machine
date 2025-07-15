@@ -73,44 +73,41 @@ function Header() {
     setShowWallet(false);
   }
 
-  /* ---------- 100 % working Leap helper ---------- */
-/* ------------------------------------------------- Leap connect */
+
 async function connectLeap() {
   const mobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
   const hasExt = typeof window !== "undefined" && (window as any).leap;
   const type =
     mobile && !hasExt ? WalletType.WC_LEAP_MOBILE : WalletType.LEAP;
 
-  if (mobile && !hasExt) purgeWC();          // clear stale Keplr deep‑link
-
+  if (mobile && !hasExt) purgeWC();
   setAttempted(type);
 
-  /* desktop, no extension */
   if (!mobile && !hasExt) {
-    alert("Leap extension not detected.\nInstall/enable it and refresh.");
+    alert("Leap extension not detected.");
     return;
   }
 
   try {
-    /* ① open WC session on native Cosmos Hub */
+    /* 1️⃣  open WC session on CosmosHub (always supported) */
     await connect({ walletType: type, chainId: "cosmoshub-4" });
 
-    /* ② register + enable Fairyring */
-    await window.leap.experimentalSuggestChain(fairyring);
-    await window.leap.enable([fairyring.chainId]);   // ← enable *array* required on mobile
+    /* 2️⃣  suggest + enable Fairyring (⚠ enable needs *string*) */
+    await window.leap.experimentalSuggestChain(fairyring);          // docs :contentReference[oaicite:3]{index=3}
+    await window.leap.enable(fairyring.chainId);                    // docs :contentReference[oaicite:4]{index=4}
+    await window.leap.getKey(fairyring.chainId);                    // forces account fetch :contentReference[oaicite:5]{index=5}
 
-    /* ③ switch that same pairing to Fairyring */
+    /* 3️⃣  switch the pairing to Fairyring */
     await connect({ walletType: type, chainId: fairyring.chainId });
   } catch {
-    /* fallback – one‑shot suggestChain & connect */
     await suggestAndConnect({ chainInfo: fairyring, walletType: type });
   }
 
-  /* ④ make Graz re‑read the signer so the header updates */
-  window.dispatchEvent(new Event("graz:refresh"));
-
+  /* 4️⃣  refresh Graz so the header updates */
+  window.dispatchEvent(new Event("graz:refresh"));                  // pattern :contentReference[oaicite:6]{index=6}
   setShowWallet(false);
 }
+
 
 
 
