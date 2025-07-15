@@ -73,34 +73,44 @@ function Header() {
 
   /* -- Leap -- */
  /* -- Leap -- */
- async function connectLeap() {
+/* -- Leap -------------------------------------------------------- */
+async function connectLeap() {
   const mobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
-  const hasExt = typeof window !== 'undefined' && (window as any).leap;
-  const type = mobile && !hasExt ? WalletType.WC_LEAP_MOBILE : WalletType.LEAP;
+  const hasExt = typeof window !== "undefined" && (window as any).leap;
+  const type =
+    mobile && !hasExt ? WalletType.WC_LEAP_MOBILE : WalletType.LEAP;
 
-  if (mobile && !hasExt) purgeWC();
+  if (mobile && !hasExt) purgeWC();            // clear stale Keplr pairing
 
   setAttempted(type);
 
+  /* desktop with no extension */
   if (!mobile && !hasExt) {
-    alert('Leap extension not detected.\nInstall/enable it and refresh.');
+    alert("Leap extension not detected.\nInstall/enable it and refresh.");
     return;
   }
 
   try {
-    // 1. open session on Cosmos Hub (native)
-    await connect({ walletType: type, chainId: 'cosmoshub-4' });
-    // 2. add Fairyring
-    await window.leap.experimentalSuggestChain(fairyring);
-    // 3. switch to Fairyring
+    /* ① start the WalletConnect session on a chain Leap already knows */
+    await connect({ walletType: type, chainId: "cosmoshub-4" });
+
+    /* ② add Fairyring and ENABLE it (enable is required on mobile) */
+    await window.leap.experimentalSuggestChain(fairyring);          // docs :contentReference[oaicite:2]{index=2}
+    await window.leap.enable(fairyring.chainId);                    // docs :contentReference[oaicite:3]{index=3}
+
+    /* ③ switch the existing WC session to Fairyring */
     await connect({ walletType: type, chainId: fairyring.chainId });
   } catch {
-    // final fallback (handles “user rejected”)
+    /* user rejected something — fallback does both steps in one call */
     await suggestAndConnect({ chainInfo: fairyring, walletType: type });
   }
 
+  /* ④ tell Graz to re‑pull the signer so the UI re‑renders */
+  window.dispatchEvent(new Event("graz:refresh"));                  // pattern :contentReference[oaicite:4]{index=4}
+
   setShowWallet(false);
 }
+
   
 
   /* retry via suggest‑and‑connect if first attempt failed */
