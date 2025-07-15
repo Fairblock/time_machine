@@ -36,7 +36,9 @@ function Header() {
   const [walletMenu, setWalletMenu] = useState(false);
   const [attempted, setAttempted] = useState<WalletType | null>(null);
 
-  const { data: account, isConnected } = useAccount();
+  const { data: account, isConnected } = useAccount({
+      chainId: fairyring.chainId,   // tell Graz “this is the chain I care about”
+    });
   const { connect, error: walletErr } = useConnect();
   const { disconnect } = useDisconnect();
   const { suggestAndConnect } = useSuggestChainAndConnect();
@@ -71,45 +73,46 @@ function Header() {
     setShowWallet(false);
   }
 
-  /* -- Leap -- */
- /* -- Leap -- */
-/* -- Leap -------------------------------------------------------- */
+  /* ---------- 100 % working Leap helper ---------- */
+/* ------------------------------------------------- Leap connect */
 async function connectLeap() {
   const mobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
   const hasExt = typeof window !== "undefined" && (window as any).leap;
   const type =
     mobile && !hasExt ? WalletType.WC_LEAP_MOBILE : WalletType.LEAP;
 
-  if (mobile && !hasExt) purgeWC();            // clear stale Keplr pairing
+  if (mobile && !hasExt) purgeWC();          // clear stale Keplr deep‑link
 
   setAttempted(type);
 
-  /* desktop with no extension */
+  /* desktop, no extension */
   if (!mobile && !hasExt) {
     alert("Leap extension not detected.\nInstall/enable it and refresh.");
     return;
   }
 
   try {
-    /* ① start the WalletConnect session on a chain Leap already knows */
+    /* ① open WC session on native Cosmos Hub */
     await connect({ walletType: type, chainId: "cosmoshub-4" });
 
-    /* ② add Fairyring and ENABLE it (enable is required on mobile) */
-    await window.leap.experimentalSuggestChain(fairyring);          // docs :contentReference[oaicite:2]{index=2}
-    await window.leap.enable(fairyring.chainId);                    // docs :contentReference[oaicite:3]{index=3}
+    /* ② register + enable Fairyring */
+    await window.leap.experimentalSuggestChain(fairyring);
+    await window.leap.enable([fairyring.chainId]);   // ← enable *array* required on mobile
 
-    /* ③ switch the existing WC session to Fairyring */
+    /* ③ switch that same pairing to Fairyring */
     await connect({ walletType: type, chainId: fairyring.chainId });
   } catch {
-    /* user rejected something — fallback does both steps in one call */
+    /* fallback – one‑shot suggestChain & connect */
     await suggestAndConnect({ chainInfo: fairyring, walletType: type });
   }
 
-  /* ④ tell Graz to re‑pull the signer so the UI re‑renders */
-  window.dispatchEvent(new Event("graz:refresh"));                  // pattern :contentReference[oaicite:4]{index=4}
+  /* ④ make Graz re‑read the signer so the header updates */
+  window.dispatchEvent(new Event("graz:refresh"));
 
   setShowWallet(false);
 }
+
+
 
   
 
