@@ -5,7 +5,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Copy, Menu, X as CloseIcon, LogOut } from "lucide-react";
-
+import { WALLET_TYPES } from "graz"; 
 import { Button } from "@/components/ui/button";
 import { fairyring } from "@/constant/chains";
 import {
@@ -78,25 +78,31 @@ function Header() {
     setShowWallet(false);
   }
 
+  function purgeWalletConnectCache() {
+    Object.keys(localStorage).forEach((k) => {
+      if (
+        k === "WALLETCONNECT_DEEPLINK_CHOICE" ||      // last chosen wallet
+        k.startsWith("wc@2:")                         // pairings + sessions
+      ) localStorage.removeItem(k);
+    });
+  }
+  
   async function connectLeap() {
     const mobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
     const hasExt = typeof window !== "undefined" && (window as any).leap;
     const type =
       mobile && !hasExt ? WalletType.WC_LEAP_MOBILE : WalletType.LEAP;
-
-    /* —— ONLY if we’re *forced* into WC mobile, wipe any cached “Keplr” choice —— */
-    if (mobile && !hasExt) clearWalletConnectDeepLink();
-
+  
+    /* ✨ only nuke cache when we *must* deep‑link to the mobile app */
+    if (mobile && !hasExt) purgeWalletConnectCache();
+  
     setAttempted(type);
-
-    /* desktop users w/o extension */
+  
     if (!mobile && !hasExt) {
-      alert(
-        "Leap extension not detected.\nInstall/enable it and refresh the page."
-      );
+      alert("Leap extension not detected.\nInstall/enable it and refresh.");
       return;
     }
-
+  
     try {
       await connect({
         walletType: type,
@@ -105,7 +111,7 @@ function Header() {
     } catch {
       await suggestAndConnect({ chainInfo: fairyring, walletType: type });
     }
-
+  
     setShowWallet(false);
   }
 
