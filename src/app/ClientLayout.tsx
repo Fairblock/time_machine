@@ -2,8 +2,42 @@
 
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { GrazProvider } from 'graz';
-import { fairyring } from '@/constant/chains';
-
+import { fairyring, stargaze } from '@/constant/chains';
+import type { ChainInfo } from '@keplr-wallet/types';
+const cosmoshub: ChainInfo = {
+  chainId: 'cosmoshub-4',
+  chainName: 'Cosmos Hub',
+  rpc: 'https://rpc.cosmoshub.strange.love',
+  rest: 'https://api.cosmoshub.strange.love',
+  bip44: { coinType: 118 },
+  bech32Config: {
+    bech32PrefixAccAddr: 'cosmos',
+    bech32PrefixAccPub: 'cosmospub',
+    bech32PrefixValAddr: 'cosmosvaloper',
+    bech32PrefixValPub: 'cosmosvaloperpub',
+    bech32PrefixConsAddr: 'cosmosvalcons',
+    bech32PrefixConsPub: 'cosmosvalconspub',
+  },
+  stakeCurrency: {
+    coinDenom: 'ATOM',
+    coinMinimalDenom: 'uatom',
+    coinDecimals: 6,
+    coinGeckoId: 'cosmos',
+  },
+  currencies: [
+    { coinDenom: 'ATOM', coinMinimalDenom: 'uatom', coinDecimals: 6, coinGeckoId: 'cosmos' },
+  ],
+  feeCurrencies: [
+    {
+      coinDenom: 'ATOM',
+      coinMinimalDenom: 'uatom',
+      coinDecimals: 6,
+      coinGeckoId: 'cosmos',
+      gasPriceStep: { low: 0.01, average: 0.025, high: 0.03 },
+    },
+  ],
+  features: ['stargate', 'ibc-transfer'],
+};
 const queryClient = new QueryClient();
 
 export default function ClientLayout({
@@ -15,38 +49,37 @@ export default function ClientLayout({
     <QueryClientProvider client={queryClient}>
       <GrazProvider
         grazOptions={{
-          chains: [fairyring],                                    // ✔ required :contentReference[oaicite:3]{index=3}
+          // Order matters: put a *native* chain first, then your custom chain
+          chains: [stargaze, fairyring],                   
 
           walletConnect: {
-            /* ---------- Sign Client options ---------- */
             options: {
-              projectId: 'cbfcaf564ee9293b0d9d25bbdac11ea3',      // ✔ required :contentReference[oaicite:4]{index=4}
+              projectId: 'cbfcaf564ee9293b0d9d25bbdac11ea3',
               relayUrl: 'wss://relay.walletconnect.com',
               metadata: {
-                name: 'Fairblock Time Machine',
+                name: 'Fairblock Time Machine',
                 description: 'Encrypt‑to‑reveal prediction dApp',
                 url: 'https://timemachine.fairblock.network',
                 icons: ['https://timemachine.fairblock.network/logo.png'],
               },
             },
 
-            /* ---------- Modal tweaks (deep‑link to Leap, hide Keplr) ---------- */
+            /* deep‑link tweaks so Chrome/Safari open Leap, not Keplr */
             walletConnectModal: {
               explorerRecommendedWalletIds: [
-                '2f8996872bc49ccab4ffd2b818b182faa2e47c7174c1185d29baa7e2a33d64', // Leap ID :contentReference[oaicite:5]{index=5}
+                '2f8996872bc49ccab4ffd2b818b182faa2e47c7174c1185d29baa7e2a33d64', // Leap ID 
               ],
               explorerExcludedWalletIds: [
-                'c57ca95b47569778a828d19178114f4db188b89b763c899ba0be274e97267d96', // Keplr ID :contentReference[oaicite:6]{index=6}
+                'c57ca95b47569778a828d19178114f4db188b89b763c899ba0be274e97267d96', // Keplr ID 
               ],
-              /* mobileWallets → leapcosmos:// deep‑link */
               mobileWallets: [
                 {
                   id: 'leap',
                   name: 'Leap Wallet',
-                  links: { native: 'leapcosmos', universal: 'leapcosmos' },
+                  links: { native: 'leapcosmos', universal: 'leapcosmos' },  
                 },
               ],
-            } as any, // escape‑hatch: modal keys aren’t in Graz types yet :contentReference[oaicite:7]{index=7}
+            } as any, // modal keys not yet in Graz types
           },
         }}
       >
