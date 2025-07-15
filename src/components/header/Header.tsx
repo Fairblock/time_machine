@@ -5,7 +5,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Copy, Menu, X as CloseIcon, LogOut } from "lucide-react";
-import { WALLET_TYPES } from "graz"; 
+
 import { Button } from "@/components/ui/button";
 import { fairyring } from "@/constant/chains";
 import {
@@ -19,45 +19,42 @@ import { PUBLIC_ENVIRONMENT } from "@/constant/env";
 import HowItWorksModal from "../modals/HowItWorksModal";
 import { useHowItWorksContext } from "@/contexts/HowItWorksContext";
 
-/* ───────── helper: prune ONLY WC v2 deep‑link + pairings ───────── */
-function clearWalletConnectDeepLink() {
-  Object.keys(localStorage).forEach((key) => {
+/* ---- wipe WC v2 deep‑link + pairings (Chrome remembers Keplr) ---- */
+function purgeWC() {
+  Object.keys(localStorage).forEach((k) => {
     if (
-      key === "WALLETCONNECT_DEEPLINK_CHOICE" || // last‑used wallet
-      key.startsWith("wc@2:")                    // v2 sessions / pairings
-    ) {
-      localStorage.removeItem(key);
-    }
+      k === "WALLETCONNECT_DEEPLINK_CHOICE" || // last wallet
+      k.startsWith("wc@2:")                    // sessions / pairings
+    ) localStorage.removeItem(k);
   });
 }
 
 function Header() {
-  /* ───────── wallet state ───────────────────────────────────────── */
+  /* wallet state */
   const [showWallet, setShowWallet] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
-  const [attempted, setAttempted] = useState<WalletType | null>(null);
   const [walletMenu, setWalletMenu] = useState(false);
+  const [attempted, setAttempted] = useState<WalletType | null>(null);
 
   const { data: account, isConnected } = useAccount();
   const { connect, error: walletErr } = useConnect();
   const { disconnect } = useDisconnect();
   const { suggestAndConnect } = useSuggestChainAndConnect();
   const { showModal, setShowModal } = useHowItWorksContext();
-
   const pathname = usePathname();
 
-  const truncated = account?.bech32Address
+  const truncated = account
     ? `${account.bech32Address.slice(0, 6)}…${account.bech32Address.slice(-4)}`
     : "";
 
-  /* === listen for global open‑wallet events === */
+  /* global “open‑wallet‑modal” event */
   useEffect(() => {
-    const handleOpen = () => setShowWallet(true);
-    window.addEventListener("open-wallet-modal", handleOpen);
-    return () => window.removeEventListener("open-wallet-modal", handleOpen);
+    const open = () => setShowWallet(true);
+    window.addEventListener("open-wallet-modal", open);
+    return () => window.removeEventListener("open-wallet-modal", open);
   }, []);
 
-  /* ───────── connect helpers ────────────────────────────────────── */
+  /* -- Keplr -- */
   async function connectKeplr() {
     const mobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
     const hasExt = typeof window !== "undefined" && (window as any).keplr;
@@ -67,55 +64,48 @@ function Header() {
     setAttempted(type);
 
     try {
-      await connect({
-        walletType: type,
-        chainId: PUBLIC_ENVIRONMENT.NEXT_PUBLIC_CHAIN_ID!,
-      });
+      await connect({ walletType: type, chainId: fairyring.chainId });
     } catch {
       await suggestAndConnect({ chainInfo: fairyring, walletType: type });
     }
-
     setShowWallet(false);
   }
 
-  function purgeWalletConnectCache() {
-    Object.keys(localStorage).forEach((k) => {
-      if (
-        k === "WALLETCONNECT_DEEPLINK_CHOICE" ||      // last chosen wallet
-        k.startsWith("wc@2:")                         // pairings + sessions
-      ) localStorage.removeItem(k);
-    });
-  }
-  
+  /* -- Leap -- */
   async function connectLeap() {
     const mobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
     const hasExt = typeof window !== "undefined" && (window as any).leap;
     const type =
       mobile && !hasExt ? WalletType.WC_LEAP_MOBILE : WalletType.LEAP;
-  
-    /* ✨ only nuke cache when we *must* deep‑link to the mobile app */
-    if (mobile && !hasExt) purgeWalletConnectCache();
-  
+
+    if (mobile && !hasExt) purgeWC(); // force modal instead of cached Keplr
+
     setAttempted(type);
-  
+
     if (!mobile && !hasExt) {
       alert("Leap extension not detected.\nInstall/enable it and refresh.");
       return;
     }
-  
+
     try {
-      await connect({
-        walletType: type,
-        chainId: PUBLIC_ENVIRONMENT.NEXT_PUBLIC_CHAIN_ID!,
-      });
+      if (mobile && !hasExt) {
+        /* 1️⃣  handshake on a built‑in chain */
+        await connect({ walletType: type, chainId: "cosmoshub-4" });
+        /* 2️⃣  register Fairyring */
+        await window.leap.experimentalSuggestChain(fairyring);
+        /* 3️⃣  switch */
+        await connect({ walletType: type, chainId: fairyring.chainId });
+      } else {
+        /* desktop / extension path */
+        await connect({ walletType: type, chainId: fairyring.chainId });
+      }
     } catch {
       await suggestAndConnect({ chainInfo: fairyring, walletType: type });
     }
-  
     setShowWallet(false);
   }
 
-  /* retry with suggestChain if wallet needs the chain registered */
+  /* retry via suggest‑and‑connect if first attempt failed */
   useEffect(() => {
     if (walletErr && attempted) {
       suggestAndConnect({ chainInfo: fairyring, walletType: attempted });
