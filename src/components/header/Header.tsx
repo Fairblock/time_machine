@@ -19,8 +19,20 @@ import { PUBLIC_ENVIRONMENT } from "@/constant/env";
 import HowItWorksModal from "../modals/HowItWorksModal";
 import { useHowItWorksContext } from "@/contexts/HowItWorksContext";
 
+/* ───────── helper: prune ONLY WC v2 deep‑link + pairings ───────── */
+function clearWalletConnectDeepLink() {
+  Object.keys(localStorage).forEach((key) => {
+    if (
+      key === "WALLETCONNECT_DEEPLINK_CHOICE" || // last‑used wallet
+      key.startsWith("wc@2:")                    // v2 sessions / pairings
+    ) {
+      localStorage.removeItem(key);
+    }
+  });
+}
+
 function Header() {
-  /* ───────── wallet helpers ─────────────────────────────────────── */
+  /* ───────── wallet state ───────────────────────────────────────── */
   const [showWallet, setShowWallet] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [attempted, setAttempted] = useState<WalletType | null>(null);
@@ -40,9 +52,7 @@ function Header() {
 
   /* === listen for global open‑wallet events === */
   useEffect(() => {
-    function handleOpen() {
-      setShowWallet(true);
-    }
+    const handleOpen = () => setShowWallet(true);
     window.addEventListener("open-wallet-modal", handleOpen);
     return () => window.removeEventListener("open-wallet-modal", handleOpen);
   }, []);
@@ -69,39 +79,35 @@ function Header() {
   }
 
   async function connectLeap() {
-    // ── reset any previous WC wallet choice ──
-    localStorage.removeItem("WALLETCONNECT_DEEPLINK_CHOICE");
-    localStorage.removeItem("walletconnect");          // optional: clears stale pairings
-  
     const mobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
     const hasExt = typeof window !== "undefined" && (window as any).leap;
     const type =
       mobile && !hasExt ? WalletType.WC_LEAP_MOBILE : WalletType.LEAP;
-  
+
+    /* —— ONLY if we’re *forced* into WC mobile, wipe any cached “Keplr” choice —— */
+    if (mobile && !hasExt) clearWalletConnectDeepLink();
+
     setAttempted(type);
-  
+
+    /* desktop users w/o extension */
     if (!mobile && !hasExt) {
       alert(
         "Leap extension not detected.\nInstall/enable it and refresh the page."
       );
       return;
     }
-  
+
     try {
       await connect({
         walletType: type,
         chainId: PUBLIC_ENVIRONMENT.NEXT_PUBLIC_CHAIN_ID!,
       });
     } catch {
-      await suggestAndConnect({
-        chainInfo: fairyring,
-        walletType: type,
-      });
+      await suggestAndConnect({ chainInfo: fairyring, walletType: type });
     }
-  
+
     setShowWallet(false);
   }
-  
 
   /* retry with suggestChain if wallet needs the chain registered */
   useEffect(() => {
@@ -267,7 +273,7 @@ function Header() {
                 setMobileOpen(false);
                 setShowModal(true);
               }}
-              className={`text-gray-900 whitespace-nowrap cursor-pointer`}
+              className="text-gray-900 whitespace-nowrap cursor-pointer"
             >
               How it works
             </button>
