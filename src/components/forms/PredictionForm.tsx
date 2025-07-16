@@ -16,7 +16,7 @@ import {
   signOfflineWithCustomNonce,
 } from "@/services/fairyring/sign";
 import { Amount } from "@/types/fairyring";
-import { useAccount } from "graz";
+import { useAccount, WalletType } from "graz";  /* ← added WalletType */
 import { Lock, Loader2, CircleX } from "lucide-react";
 import { TxRaw, TxBody } from "cosmjs-types/cosmos/tx/v1beta1/tx";
 import { MsgSubmitEncryptedTx } from "@/types/fairyring/codec/pep/tx";
@@ -49,8 +49,8 @@ export default function PredictionForm() {
   /* hooks */
   const { data: activeToken } = useActiveToken();
   const client = useClient();
-  const { data: account } = useAccount();
-  const { walletType } = useAccount();
+  /* ↓ consolidate wallet hook usage so walletType stays in sync */
+  const { data: account, walletType, isConnected } = useAccount();
   const address = account?.bech32Address;
   const { data: pubkey } = useKeysharePubKey();
 
@@ -127,11 +127,17 @@ export default function PredictionForm() {
   /* ─ submit encrypted tx ─ */
   async function submitOnChain(pred: number) {
     /* ——— wallet not connected → open connect banner and exit ——— */
-    if (!address) {
+    if (!address || !isConnected) {
       window.dispatchEvent(new Event("open-wallet-modal"));
       return;
     }
     if (targetHeight == null) return;
+
+    /* guard: client modules may still be null immediately after WC connect (mobile) */
+    if (!client?.FairyringPep?.query || !client?.FairyringPep?.tx || !client?.CosmosBankV1Beta1?.tx) {
+      setFormError("Wallet still initializing. Please try again in a moment.");
+      return;
+    }
 
     /* clear any previous error for this new attempt */
     setIsSending(true);
@@ -146,8 +152,8 @@ export default function PredictionForm() {
       const {
         data: { encrypted_tx_array },
       } = await client.FairyringPep.query.queryEncryptedTxAll();
-      encrypted_tx_array?.forEach((txs) =>
-        txs.encrypted_txs?.forEach((tx) => tx.creator === address && sent++)
+      encrypted_tx_array?.forEach((txs: any) =>
+        txs.encrypted_txs?.forEach((tx: any) => tx.creator === address && sent++)
       );
       const nonce = pep_nonce?.nonce ? +pep_nonce.nonce + sent : sent;
 
@@ -174,7 +180,7 @@ export default function PredictionForm() {
             tx: { body: { messages: [sendMsg], memo }, signatures: [] },
           });
           if (res?.gasInfo?.gasUsed) {
-            estimatedGas = Math.ceil(Number(res.gasInfo.gasUsed) * 1.3); // +30 % buffer
+            estimatedGas = Math.ceil(Number(res.gasInfo?.gasUsed) * 1.3); // +30 % buffer
           }
         }
       } catch (e) {
@@ -193,8 +199,10 @@ export default function PredictionForm() {
         },
         memo,
         nonce,
-        walletType!
+        /* main fix: don't assert !; fallback to WC_KEPLR_MOBILE so mobile works */
+        walletType ?? WalletType.WC_KEPLR_MOBILE
       );
+
       let key = (pubkey as any).active_pubkey?.public_key;
       /* encrypt & size‑aware gas for MsgSubmitEncryptedTx */
       if (targetHeight > Number((pubkey as any).active_pubkey?.expiry)) {
@@ -211,7 +219,6 @@ export default function PredictionForm() {
       );
 
       /* 3️⃣  broadcast */
-
       const txResult = await client.FairyringPep.tx.sendMsgSubmitEncryptedTx({
         value: {
           creator: address,
@@ -408,8 +415,6 @@ Proof → ${proofToken}`
                 : "Connect Wallet"}
             </span>
           </Button>
-
-
         </form>
       )}
 

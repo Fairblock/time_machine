@@ -5,292 +5,113 @@ import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Copy, Menu, X as CloseIcon, LogOut, ChevronRight } from "lucide-react";
-import { newWcSession } from "@/lib/wc";
+
 import { Button } from "@/components/ui/button";
 import { fairyring } from "@/constant/chains";
+
 import {
   useAccount,
   useConnect,
   useDisconnect,
-  useSuggestChain,
   useSuggestChainAndConnect,
   WalletType,
 } from "graz";
-import type { ChainInfo } from '@keplr-wallet/types';
+
 import { wcModal } from "@/lib/wcModal";
 import HowItWorksModal from "../modals/HowItWorksModal";
 import { useHowItWorksContext } from "@/contexts/HowItWorksContext";
-import SignClient from "@walletconnect/sign-client";
-const HUB_CAIP = "cosmos:cosmoshub-4";
-const FAIRYRING_CAIP = "cosmos:fairyring-testnet-3";
+
 function Header() {
-  /* ───────── state ───────── */
+  /* ───────── local state ───────── */
   const [showWallet, setShowWallet] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [walletMenu, setWalletMenu] = useState(false);
-  const { suggestAsync } = useSuggestChain();  
-  const { data: account, isConnected } = useAccount();
+
+  /* ───────── wallet hooks ──────── */
+  const {
+    data: account,
+    isConnected,
+    walletType: connectedWalletType,
+  } = useAccount();
   const { connect } = useConnect();
   const { disconnect } = useDisconnect();
   const { suggestAndConnect } = useSuggestChainAndConnect();
-  const { showModal, setShowModal } = useHowItWorksContext();
-  const pathname = usePathname();
-  const [showAddChainContinue, setShowAddChainContinue] = useState(false);
 
+  /* ───────── app context ───────── */
+  const pathname = usePathname();
+  const { showModal, setShowModal } = useHowItWorksContext();
+
+  /* ───────── utilities ─────────── */
   const truncated = account?.bech32Address
     ? `${account.bech32Address.slice(0, 6)}…${account.bech32Address.slice(-4)}`
     : "";
 
   const isMobile = /Android|iPhone|iPad|iPod/i.test(
-    typeof navigator !== "undefined" ? navigator.userAgent : ""
+    typeof navigator !== "undefined" ? navigator.userAgent : "",
   );
 
-  /* ───────── helpers ───────── */
-// A hub chain that Leap recognises out‑of‑the‑box
-const HUB_CHAIN = "cosmos:cosmoshub-4";
-const FAIRYRING_ID = "fairyring-testnet-3";
-const HUB_CHAIN_ID = "cosmoshub-4";
-async function isChainSupportedMobileWC(walletType: WalletType, chainId: string) {
-  try {
-    await connect({ chainId, walletType });
-    return true;
-  } catch {
-    return false;
-  }
-}
+  /* ───────── Keplr (WalletConnect) helper ───────── */
+  async function connectKeplrMobile() {
+    const walletType = WalletType.WC_KEPLR_MOBILE;
 
- function leapAddChainLink({
-  chainId,
-  chainName,
-  rpc,
-  rest,
-  denom,
-  decimals,
-}: {
-  chainId: string;
-  chainName: string;
-  rpc: string;
-  rest: string;
-  denom: string;
-  decimals: number;
-}) {
-  const params = new URLSearchParams({
-    chainId,
-    chainName,
-    rpc,
-    rest,
-    denom,
-    decimals: String(decimals),
-  });
-  return `leapcosmos://add-chain?${params.toString()}`;
-}
-function buildLeapAddChainUrl(chain: ChainInfo): string {
-  // Param names are illustrative; adjust if Leap docs show different keys.
-  const p = new URLSearchParams({
-    chainId: chain.chainId,
-    chainName: chain.chainName,
-    rpc: chain.rpc,
-    rest: chain.rest,
-    denom: fairyring.stakeCurrency.coinMinimalDenom,
-    decimals: String(fairyring.stakeCurrency.coinDecimals),
-  });
-  return `leapcosmos://add-chain?${p.toString()}`;
-}
-function logStep(label: string, data?: any) {
-  // prefix so you can filter quickly in remote devtools
-  console.log(`[LEAP-WC] ${label}`, data ?? "");
-}
-async function mobileLeapFlow() {
-  try {
-    // Step 1: connect to Leap via WalletConnect (CosmosHub)
-    await connect({
-      chainId: HUB_CHAIN_ID,
-      walletType: WalletType.WC_LEAP_MOBILE,
-    });
-
-    // Step 2: deep-link user to Leap Add-Chain screen for FairyRing
-    const addUrl = buildLeapAddChainUrl(fairyring);
-    window.location.href = addUrl;
-
-    // When they come back we’ll show Continue to finalize FairyRing
-    setShowAddChainContinue(true);
-  } catch (err) {
-    console.error("Leap WC bootstrap failed", err);
-    alert("Could not establish WalletConnect session with Leap (CosmosHub). See console.");
-  }
-}
-
-async function startFairyRingSessionAndConnect() {
-  // Create a fresh WC SignClient requesting FairyRing
-  const signClient = await SignClient.init({
-    projectId: "cbfcaf564ee9293b0d9d25bbdac11ea3",
-  });
-
-  const { uri, approval } = await signClient.connect({
-    requiredNamespaces: {
-      cosmos: {
-        chains: [FAIRYRING_CAIP],
-        methods: ["cosmos_signDirect", "cosmos_signAmino"],
-        events: ["accountsChanged"],
-      },
-    },
-  });
-
-  // Show the WC modal so Leap sees the pairing request
-  if (uri) {
+    /* ① open WC modal – Fairyring only */
     await wcModal.openModal({
-      uri,
-      standaloneChains: [FAIRYRING_CAIP],
-    });
-  }
-
-  // Wait for user to approve in Leap
-  await approval();
-
-  // Now tell Graz to connect on FairyRing over WC
-  await connect({
-    chainId: FAIRYRING_ID,
-    walletType: WalletType.WC_LEAP_MOBILE,
-    autoReconnect: true,
-  });
-}
-
-
-
-async function mobileKeplrFlow() {
-  try {
-    await wcModal.openModal({
-      standaloneChains: ["cosmos:cosmoshub-4"],
       requiredNamespaces: {
         cosmos: {
-          chains: ["cosmos:cosmoshub-4"],
+          chains: ["cosmos:fairyring-testnet-3"],
           methods: ["cosmos_signDirect", "cosmos_signAmino"],
           events: ["accountsChanged"],
         },
       },
     });
 
-    await connect({
-      chainId: HUB_CHAIN_ID,
-      walletType: WalletType.WC_KEPLR_MOBILE,
-    });
-
-    await suggestAsync({
-      chainInfo: fairyring,
-      walletType: WalletType.WC_KEPLR_MOBILE,
-    });
-
-    await connect({
-      chainId: fairyring.chainId,
-      walletType: WalletType.WC_KEPLR_MOBILE,
-      autoReconnect: true,
-    });
-
-    setShowWallet(false);
-  } catch (err) {
-    console.error("Keplr mobile flow error", err);
-    alert(
-      err instanceof Error
-        ? `Keplr error: ${err.message}`
-        : "Keplr connection failed. Check console."
-    );
-  } finally {
-    wcModal.closeModal();
-  }
-}
-
-/* Desktop handlers (extensions) */
-async function connectLeap() {
-  if (isMobile) return mobileLeapFlow();
-  await suggestAndConnect({ chainInfo: fairyring, walletType: WalletType.LEAP });
-}
-
-
-
-/* open‑wallet custom event */
-useEffect(() => {
-  const opener = () => setShowWallet(true);
-  window.addEventListener("open-wallet-modal", opener);
-  return () => window.removeEventListener("open-wallet-modal", opener);
-}, []);
-async function openLeapOnFairyRing(walletType: WalletType.WC_LEAP_MOBILE) {
-  /* -- 1. Pair on Cosmos Hub -- */
-  const hub = await newWcSession(["cosmos:cosmoshub-4"]);
-  if (hub.uri) await wcModal.openModal({ uri: hub.uri, standaloneChains: ["cosmos:cosmoshub-4"] });
-  await hub.approval();                         // user taps “Connect” in Leap
-
-  /* -- 2. Ask Leap to add FairyRing -- */
-  await (window as any).leap.experimentalSuggestChain(fairyring);   // explicit per Leap docs 
-
-  /* -- 3. Close old modal & start a *new* session on FairyRing -- */
-  wcModal.closeModal();
-  const fairy = await newWcSession(["cosmos:fairyring-testnet-3"]);
-  if (fairy.uri) await wcModal.openModal({ uri: fairy.uri, standaloneChains: ["cosmos:fairyring-testnet-3"] });
-  await fairy.approval();                       // user taps “Connect” again
-
-  /* -- 4. Tell Graz to use the new session -- */
-  await connect({ chainId: fairyring.chainId, walletType, autoReconnect: true });
-}
-async function openWcAddFairyRing(walletType: WalletType.WC_LEAP_MOBILE | WalletType.WC_KEPLR_MOBILE) {
-  /* 1. Open Web3Modal with a VALID proposal (Hub only) */
-  await wcModal.openModal({
-    requiredNamespaces: {
-      cosmos: {
-        chains: [HUB_CHAIN],
-        methods: ["cosmos_signDirect", "cosmos_signAmino"],   // Leap supports both :contentReference[oaicite:5]{index=5}
-        events: ["accountsChanged"],
-      },
-    },
-  });
-
-  /* 2. Run suggest‑chain + connect on FairyRing */
-  await suggestAndConnect({
-    chainInfo: fairyring,            // fires experimentalSuggestChain :contentReference[oaicite:6]{index=6}
-    walletType,                      // WC_LEAP_MOBILE or WC_KEPLR_MOBILE
-  });
-
-  /* 3. Switch the active session to FairyRing */
-  await connect({
-    chainId: fairyring.chainId,      // "fairyring-testnet-3"
-    walletType,
-    autoReconnect: true,             // resume on page reload
-  });
-}
-  /** Opens Web3Modal first, then connects via Graz (WC mobile types). */
-  async function openWcAndConnectMobile(
-    walletType: WalletType.WC_LEAP_MOBILE | WalletType.WC_KEPLR_MOBILE
-  ) {
-    // 1️⃣ show the blue WC sheet (returns void)
-    await wcModal.openModal({ standaloneChains: ["cosmos:fairyring-testnet-3"] });
-
-    // 2️⃣ try plain connect; if the chain isn't in Leap/Keplr yet, fall back to suggest‑chain
+    /* ② try direct connect (chain already approved?) */
     try {
       await connect({
         chainId: fairyring.chainId,
         walletType,
+        autoReconnect: true,
       });
     } catch {
+      /* ③ if unknown → suggest + connect */
       await suggestAndConnect({
         chainInfo: fairyring,
         walletType,
+        autoReconnect: true,
       });
     }
   }
 
-  
+  /* ───────── public connect handlers ───────── */
   async function connectKeplr() {
-    if (isMobile) return openWcAddFairyRing(WalletType.WC_KEPLR_MOBILE);
-    await suggestAndConnect({ chainInfo: fairyring, walletType: WalletType.KEPLR });
+    if (isMobile) {
+      await connectKeplrMobile();
+    } else {
+      await suggestAndConnect({
+        chainInfo: fairyring,
+        walletType: WalletType.KEPLR, // desktop extension
+      });
+    }
+    setShowWallet(false);
   }
 
-  /* global “open‑wallet” event */
+  /* Stub: Leap desktop extension only (mobile flow not implemented here) */
+  async function connectLeap() {
+    await suggestAndConnect({
+      chainInfo: fairyring,
+      walletType: WalletType.LEAP,
+    });
+    setShowWallet(false);
+  }
+
+  /* ───────── global “open-wallet” event ───────── */
   useEffect(() => {
     const opener = () => setShowWallet(true);
     window.addEventListener("open-wallet-modal", opener);
     return () => window.removeEventListener("open-wallet-modal", opener);
   }, []);
 
-  /* ───────── JSX ────────────────────────────────────────────────── */
+  /* ───────── JSX ───────── */
   return (
     <>
       {/* ===== TOP BAR ===== */}
@@ -446,7 +267,7 @@ async function openWcAddFairyRing(walletType: WalletType.WC_LEAP_MOBILE | Wallet
                 setMobileOpen(false);
                 setShowModal(true);
               }}
-              className={`text-gray-900 whitespace-nowrap cursor-pointer`}
+              className="text-gray-900 whitespace-nowrap cursor-pointer"
             >
               How it works
             </button>
@@ -525,12 +346,12 @@ async function openWcAddFairyRing(walletType: WalletType.WC_LEAP_MOBILE | Wallet
             onClick={(e) => e.stopPropagation()}
             className="hidden lg:block w-[90%] sm:w-[420px] bg-white rounded-lg px-8 py-10 text-center space-y-8"
           >
-            <h2 className="text-3xl font-extrabold uppercase">Connect Wallet</h2>
+            <h2 className="text-3xl font-extrabold uppercase">
+              Connect Wallet
+            </h2>
             <p className="text-gray-700 text-sm">
               By connecting your wallet, you agree to our <br />
-              <span className="font-semibold underline">
-                Terms of Service
-              </span>{" "}
+              <span className="font-semibold underline">Terms of Service</span>{" "}
               and{" "}
               <span className="font-semibold underline">Privacy Policy</span>.
             </p>
@@ -555,7 +376,7 @@ async function openWcAddFairyRing(walletType: WalletType.WC_LEAP_MOBILE | Wallet
               </Button>
             </div>
 
-            {/* Leap */}
+            {/* Leap (desktop extension only) */}
             <div className="flex items-center justify-between">
               <div className="flex items-center space-x-3">
                 <Image src="/leap.png" alt="Leap icon" width={32} height={32} />
@@ -572,67 +393,46 @@ async function openWcAddFairyRing(walletType: WalletType.WC_LEAP_MOBILE | Wallet
           </div>
 
           {/* ---- MOBILE VIEW ---- */}
-         {/* ---- MOBILE VIEW ---- */}
-{/* ---- MOBILE VIEW ---- */}
-<div
-  onClick={(e) => e.stopPropagation()}
-  className="lg:hidden w-[90%] sm:w-[420px] bg-white rounded-lg px-8 py-10 text-center space-y-6"
->
-  <h2 className="text-2xl font-bold mb-4">Connect Wallet</h2>
+          <div
+            onClick={(e) => e.stopPropagation()}
+            className="lg:hidden w-[90%] sm:w-[420px] bg-white rounded-lg px-8 py-10 text-center space-y-6"
+          >
+            <h2 className="text-2xl font-bold mb-4">Connect Wallet</h2>
 
-  {showAddChainContinue ? (
-    <div className="w-full border rounded-lg bg-gray-50 p-4 text-left">
-      <p className="mb-4 text-sm text-gray-700">
-        Return from Leap after approving the FairyRing chain, then tap continue.
-      </p>
-      <Button
-        className="w-full"
-        onClick={async () => {
-          try {
-            await startFairyRingSessionAndConnect();
-            setShowAddChainContinue(false);
-            setShowWallet(false);
-          } catch (err) {
-            console.error("FairyRing WC connect failed", err);
-            alert("FairyRing connection declined or not added in Leap. Please add and retry.");
-          } finally {
-            wcModal.closeModal();
-          }
-        }}
-      >
-        Continue
-      </Button>
-    </div>
-  ) : (
-    <>
-      {/* Leap (WalletConnect) */}
-      <button
-        onClick={mobileLeapFlow}
-        className="w-full flex items-center justify-between border rounded-lg px-4 py-3 mb-4 hover:bg-gray-50"
-      >
-        <span className="flex items-center space-x-3">
-          <Image src="/leap.png" alt="Leap Wallet" width={28} height={28} />
-          <span className="font-medium">Leap&nbsp;(WalletConnect)</span>
-        </span>
-        <ChevronRight size={16} />
-      </button>
+            {/* Keplr (WalletConnect) */}
+            <button
+              onClick={connectKeplr}
+              className="w-full flex items-center justify-between border rounded-lg px-4 py-3 hover:bg-gray-50"
+            >
+              <span className="flex items-center space-x-3">
+                <Image
+                  src="/keplr.png"
+                  alt="Keplr Wallet"
+                  width={28}
+                  height={28}
+                />
+                <span className="font-medium">Keplr&nbsp;(WalletConnect)</span>
+              </span>
+              <ChevronRight size={16} />
+            </button>
 
-      {/* Keplr (WalletConnect) */}
-      <button
-        onClick={connectKeplr}
-        className="w-full flex items-center justify-between border rounded-lg px-4 py-3 hover:bg-gray-50"
-      >
-        <span className="flex items-center space-x-3">
-          <Image src="/keplr.png" alt="Keplr Wallet" width={28} height={28} />
-          <span className="font-medium">Keplr&nbsp;(WalletConnect)</span>
-        </span>
-        <ChevronRight size={16} />
-      </button>
-    </>
-  )}
-</div>
-
-
+            {/* Leap placeholder (disabled on mobile) */}
+            <button
+              disabled
+              className="w-full cursor-not-allowed flex items-center justify-between border rounded-lg px-4 py-3 opacity-50"
+            >
+              <span className="flex items-center space-x-3">
+                <Image
+                  src="/leap.png"
+                  alt="Leap Wallet"
+                  width={28}
+                  height={28}
+                />
+                <span className="font-medium">Leap&nbsp;(coming soon)</span>
+              </span>
+              <ChevronRight size={16} />
+            </button>
+          </div>
         </div>
       )}
 

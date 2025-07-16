@@ -17,7 +17,7 @@ export default function ClientLayout({
       <GrazProvider
        grazOptions={{
         // ➋ register BOTH chains so Graz can sign on either
-        chains: [cosmoshub, fairyring],
+        chains: [fairyring],
         walletConnect: {
           options: {
             projectId: "cbfcaf564ee9293b0d9d25bbdac11ea3",
