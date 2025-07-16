@@ -16,12 +16,13 @@ import {
   signOfflineWithCustomNonce,
 } from "@/services/fairyring/sign";
 import { Amount } from "@/types/fairyring";
-import { useAccount, WalletType } from "graz";  /* ← added WalletType */
+import { useAccount, WalletType, useOfflineSigners } from "graz"; // <<< added WalletType + useOfflineSigners
 import { Lock, Loader2, CircleX } from "lucide-react";
 import { TxRaw, TxBody } from "cosmjs-types/cosmos/tx/v1beta1/tx";
 import { MsgSubmitEncryptedTx } from "@/types/fairyring/codec/pep/tx";
 import { Buffer } from "buffer";
 import { useActiveToken } from "@/hooks/useActiveToken";
+import { SigningStargateClient, GasPrice, StdFee } from "@cosmjs/stargate"; // <<< added
 
 /* ───────── constants ────────────────────────────────────────────── */
 const MEMO = "price-predict";
@@ -49,8 +50,8 @@ export default function PredictionForm() {
   /* hooks */
   const { data: activeToken } = useActiveToken();
   const client = useClient();
-  /* ↓ consolidate wallet hook usage so walletType stays in sync */
-  const { data: account, walletType, isConnected } = useAccount();
+  const { data: account, walletType, isConnected } = useAccount(); // <<< consolidated; added isConnected
+  const { data: offlineSignersData } = useOfflineSigners(); // <<< added (auto signer from Graz WC/extension)
   const address = account?.bech32Address;
   const { data: pubkey } = useKeysharePubKey();
 
@@ -133,12 +134,6 @@ export default function PredictionForm() {
     }
     if (targetHeight == null) return;
 
-    /* guard: client modules may still be null immediately after WC connect (mobile) */
-    if (!client?.FairyringPep?.query || !client?.FairyringPep?.tx || !client?.CosmosBankV1Beta1?.tx) {
-      setFormError("Wallet still initializing. Please try again in a moment.");
-      return;
-    }
-
     /* clear any previous error for this new attempt */
     setIsSending(true);
     setFormError(null);
@@ -152,8 +147,8 @@ export default function PredictionForm() {
       const {
         data: { encrypted_tx_array },
       } = await client.FairyringPep.query.queryEncryptedTxAll();
-      encrypted_tx_array?.forEach((txs: any) =>
-        txs.encrypted_txs?.forEach((tx: any) => tx.creator === address && sent++)
+      encrypted_tx_array?.forEach((txs) =>
+        txs.encrypted_txs?.forEach((tx) => tx.creator === address && sent++)
       );
       const nonce = pep_nonce?.nonce ? +pep_nonce.nonce + sent : sent;
 
@@ -180,7 +175,7 @@ export default function PredictionForm() {
             tx: { body: { messages: [sendMsg], memo }, signatures: [] },
           });
           if (res?.gasInfo?.gasUsed) {
-            estimatedGas = Math.ceil(Number(res.gasInfo?.gasUsed) * 1.3); // +30 % buffer
+            estimatedGas = Math.ceil(Number(res.gasInfo.gasUsed) * 1.3); // +30 % buffer
           }
         }
       } catch (e) {
@@ -188,20 +183,49 @@ export default function PredictionForm() {
       }
 
       /* 2️⃣  sign MsgSend with estimated gas */
-      const signed = await signOfflineWithCustomNonce(
-        address,
-        FAIRYRING_ENV.rpcURL,
-        FAIRYRING_ENV.chainID,
-        [sendMsg],
-        {
+      // --- minimal mobile fix: use Graz signer when WC Keplr mobile is active ---
+      const isWcKeplr = walletType === WalletType.WC_KEPLR_MOBILE; // <<< added
+      let signed: Buffer;                                          // <<< added
+      if (isWcKeplr && offlineSignersData?.offlineSignerAuto) {    // <<< added
+        const offlineSigner = offlineSignersData.offlineSignerAuto as any; // <<< added
+        const accounts = await offlineSigner.getAccounts();        // <<< added
+        const match = accounts.find((a: any) => a.address === address); // <<< added
+        if (!match) throw new Error("active WC Keplr account mismatch"); // <<< added
+        const fee: StdFee = {                                      // <<< added
           amount: [{ denom: "ufairy", amount: "0" }],
           gas: String(estimatedGas),
-        },
-        memo,
-        nonce,
-        /* main fix: don't assert !; fallback to WC_KEPLR_MOBILE so mobile works */
-        walletType ?? WalletType.WC_KEPLR_MOBILE
-      );
+        };
+        const stargate = await SigningStargateClient.connectWithSigner(       // <<< added
+          FAIRYRING_ENV.rpcURL,
+          offlineSigner,
+          { gasPrice: GasPrice.fromString("0.025ufairy") },
+        );
+        const { accountNumber } = await stargate.getSequence(address);        // <<< added
+        const signedTx = await stargate.sign(                                 // <<< added
+          address,
+          [sendMsg],
+          fee,
+          memo,
+          { accountNumber, sequence: nonce, chainId: FAIRYRING_ENV.chainID },
+        );
+        signed = Buffer.from(TxRaw.encode(signedTx).finish());                // <<< added
+      } else {
+        // desktop or non-WC fallback: use existing helper (unchanged path)
+        signed = await signOfflineWithCustomNonce(                            // <<< changed var name
+          address,
+          FAIRYRING_ENV.rpcURL,
+          FAIRYRING_ENV.chainID,
+          [sendMsg],
+          {
+            amount: [{ denom: "ufairy", amount: "0" }],
+            gas: String(estimatedGas),
+          },
+          memo,
+          nonce,
+          walletType!,
+        );
+      }
+      // --- end minimal mobile fix ---
 
       let key = (pubkey as any).active_pubkey?.public_key;
       /* encrypt & size‑aware gas for MsgSubmitEncryptedTx */
@@ -219,6 +243,7 @@ export default function PredictionForm() {
       );
 
       /* 3️⃣  broadcast */
+
       const txResult = await client.FairyringPep.tx.sendMsgSubmitEncryptedTx({
         value: {
           creator: address,
@@ -415,6 +440,8 @@ Proof → ${proofToken}`
                 : "Connect Wallet"}
             </span>
           </Button>
+
+
         </form>
       )}
 
