@@ -24,14 +24,12 @@ import { useHowItWorksContext } from "@/contexts/HowItWorksContext";
 /* ------------------------------------------------------------------ */
 /* Defensive close for lingering Web3Modal overlay on mobile returns. */
 function forceCloseWcModal() {
-  // Ask modal to close
   try {
     wcModal.closeModal();
   } catch {
     /* ignore */
   }
 
-  // Remove any modal host nodes (covers both #w3m-modal + <w3m-modal>)
   const hosts = Array.from(
     document.querySelectorAll<HTMLElement>("#w3m-modal, w3m-modal"),
   );
@@ -44,7 +42,6 @@ function forceCloseWcModal() {
     }
   });
 
-  // Defensive: nuke stray overlays/backdrops just in case
   const stray = document.querySelectorAll<HTMLElement>(
     "[class*='w3m-overlay'],[data-w3m-overlay],[class*='w3m-modal']",
   );
@@ -53,11 +50,30 @@ function forceCloseWcModal() {
     el.style.pointerEvents = "none";
   });
 
-  // Body unlock
   const body = document?.body;
   if (body) {
     body.style.removeProperty("overflow");
     body.classList.remove("w3m-modal-open", "w3m-open");
+  }
+}
+/* ------------------------------------------------------------------ */
+/* Purge persisted WalletConnect v2 pairings so user can pick a new    */
+/* account in Keplr on the next connect.                               */
+function clearWcSessions() {
+  try {
+    const ls = window.localStorage;
+    const keys = Object.keys(ls);
+    for (const k of keys) {
+      if (
+        k.startsWith("wc@") ||
+        k.startsWith("walletconnect") ||
+        k === "WALLETCONNECT_DEEPLINK_CHOICE"
+      ) {
+        ls.removeItem(k);
+      }
+    }
+  } catch {
+    /* ignore */
   }
 }
 /* ------------------------------------------------------------------ */
@@ -94,6 +110,9 @@ function Header() {
   /* ───────── Keplr (WalletConnect) helper ───────── */
   async function connectKeplrMobile() {
     const walletType = WalletType.WC_KEPLR_MOBILE;
+
+    /* clear old pairings so Keplr opens and lets user pick account */
+    clearWcSessions();
 
     await wcModal.openModal({
       requiredNamespaces: {
@@ -276,6 +295,8 @@ function Header() {
                       className="flex items-center w-full px-4 py-2 text-sm text-red-600 hover:bg-gray-50"
                       onClick={async () => {
                         await disconnect();
+                        /* also purge WC pairings so next connect is clean */
+                        clearWcSessions();
                         setWalletMenu(false);
                         window.location.reload();
                       }}
@@ -380,6 +401,7 @@ function Header() {
                     className="w-full"
                     onClick={async () => {
                       await disconnect();
+                      clearWcSessions(); // purge pairings
                       setMobileOpen(false);
                       window.location.reload();
                     }}
