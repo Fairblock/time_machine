@@ -6,5 +6,5 @@ export const wcModal = new Web3Modal({
   themeVariables: { "--w3m-z-index": "10000" },   // correct prefix 
 
   // show ONLY wallets that can handle Cosmos Hub (Leap, Keplr, Cosmostation…)
-  standaloneChains: ["cosmos:cosmoshub-4"]        // a chain Leap ships with :contentReference[oaicite:3]{index=3}
+  standaloneChains: ["cosmoshub-4"]        // a chain Leap ships with :contentReference[oaicite:3]{index=3}
 });

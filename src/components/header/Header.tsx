@@ -42,7 +42,7 @@ function Header() {
 
   /* ───────── helpers ───────── */
 // A hub chain that Leap recognises out‑of‑the‑box
-const HUB_CHAIN = "cosmos:cosmoshub-4";
+const HUB_CHAIN = "cosmoshub-4";
 
 async function openWcAddFairyRing(walletType: WalletType.WC_LEAP_MOBILE | WalletType.WC_KEPLR_MOBILE) {
   /* 1. Open Web3Modal with a VALID proposal (Hub only) */
