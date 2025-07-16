@@ -57,8 +57,8 @@ export default function ClientLayout({
             metadata: {
               name: "Fairblock Predictions",
               description: "Encrypted price‑prediction dApp on FairyRing",
-              url: "https://prediction.fairblock.network",
-              icons: ["https://prediction.fairblock.network/icon.png"],
+              url: "https://timemachine.fairblock.network",
+              icons: ["https://timemachine.fairblock.network/icon.png"],
             },
           },
         },
