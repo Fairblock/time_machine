@@ -48,39 +48,40 @@ export default function ClientLayout({
   return (
     <QueryClientProvider client={queryClient}>
       <GrazProvider
-    grazOptions={{
-      chains: [fairyring],
-      walletConnect: {
-        options: {
-          projectId: 'cbfcaf564ee9293b0d9d25bbdac11ea3',
-          relayUrl: 'wss://relay.walletconnect.com',
-          metadata: {
-            name: 'Fairblock Time Machine',
-            description: 'Encrypt-to-reveal prediction dApp',
-            url: 'https://timemachine.fairblock.network',
-            icons: ['https://timemachine.fairblock.network/logo.png'],
-          },
-        },
-        walletConnectModal: {
-          explorerRecommendedWalletIds: [
-            '2f8996872bc49ccab4ffd2b818b182faa2e47c7174c1185d29baa7e2a33d64', // Leap
-          ],
-          explorerExcludedWalletIds: [
-            'c57ca95b47569778a828d19178114f4db188b89b763c899ba0be274e97267d96', // Keplr
-          ],
-          mobileWallets: [
-            {
-              id: 'leap',
-              name: 'Leap Wallet',
-              links: { 
-                native: 'leapcosmos://wc', 
-                universal: 'https://leapwallet.io/wc'
+        grazOptions={{
+          // Order matters: put a *native* chain first, then your custom chain
+          chains: [cosmoshub, fairyring],                   
+
+          walletConnect: {
+            options: {
+              projectId: 'cbfcaf564ee9293b0d9d25bbdac11ea3',
+              relayUrl: 'wss://relay.walletconnect.com',
+              metadata: {
+                name: 'Fairblock Time Machine',
+                description: 'Encrypt‑to‑reveal prediction dApp',
+                url: 'https://timemachine.fairblock.network',
+                icons: ['https://timemachine.fairblock.network/logo.png'],
               },
             },
-          ],
-        } as any, // Type assertion to bypass type checking
-      },
-    }}
+
+            /* deep‑link tweaks so Chrome/Safari open Leap, not Keplr */
+            walletConnectModal: {
+              explorerRecommendedWalletIds: [
+                '2f8996872bc49ccab4ffd2b818b182faa2e47c7174c1185d29baa7e2a33d64', // Leap ID 
+              ],
+              explorerExcludedWalletIds: [
+                'c57ca95b47569778a828d19178114f4db188b89b763c899ba0be274e97267d96', // Keplr ID 
+              ],
+              mobileWallets: [
+                {
+                  id: 'leap',
+                  name: 'Leap Wallet',
+                  links: { native: 'leapcosmos', universal: 'leapcosmos' },  
+                },
+              ],
+            } as any, // modal keys not yet in Graz types
+          },
+        }}
       >
         {children}
       </GrazProvider>

@@ -82,70 +82,35 @@ async function connectLeap() {
   const hasExt = typeof window !== "undefined" && (window as any).leap;
   const type = mobile && !hasExt ? WalletType.WC_LEAP_MOBILE : WalletType.LEAP;
 
-  // Clear any stale WalletConnect pairings
-  purgeWC();
+  // Clear stale WalletConnect sessions on mobile
+  if (mobile && !hasExt) purgeWC();
 
   setAttempted(type);
 
+  // Desktop with no extension → prompt installation
+  if (!mobile && !hasExt) {
+    alert("Leap extension not detected.\nInstall/enable it and refresh.");
+    return;
+  }
+
   try {
-    // First try connecting directly to Fairyring
-    await connect({ walletType: type, chainId: fairyring.chainId });
-  } catch (error) {
-    console.log("Direct connection failed, trying fallback:", error);
-    
     if (mobile && !hasExt) {
-      // For mobile web without extension
-      try {
-        // Step 1: Connect to a known chain (Cosmos Hub)
-        await connect({ 
-          walletType: type, 
-          chainId: "cosmoshub-4"
-        });
-
-        // Step 2: After connection, update the session with Fairyring
-        try {
-          // This assumes you have access to the WalletConnect client
-          const client = (window as any).walletConnectClient;
-          if (client) {
-            const session = client.session.values[0];
-            await client.update({
-              topic: session.topic,
-              namespaces: {
-                ...session.namespaces,
-                cosmos: {
-                  ...session.namespaces.cosmos,
-                  chains: [...(session.namespaces.cosmos.chains || []), `cosmos:${fairyring.chainId}`]
-                }
-              }
-            });
-          }
-        } catch (updateError) {
-          console.error("Failed to update session with Fairyring:", updateError);
-        }
-
-        // Step 3: Now connect to Fairyring
-        await connect({ walletType: type, chainId: fairyring.chainId });
-      } catch (fallbackError) {
-        console.log("Fallback failed, trying suggestAndConnect:", fallbackError);
-        // Final fallback
-        await suggestAndConnect({ chainInfo: fairyring, walletType: type });
-      }
+      // 1️⃣ Suggest custom chain to Leap on mobile
+      await window.leap.experimentalSuggestChain(fairyring);
+      // 2️⃣ Connect via deep link using the newly added chain
+      await connect({ walletType: type, chainId: fairyring.chainId });
     } else {
-      // For desktop or mobile with extension
-      try {
-        if (hasExt) {
-          await (window as any).leap.experimentalSuggestChain(fairyring);
-        }
-        await connect({ walletType: type, chainId: fairyring.chainId });
-      } catch (suggestError) {
-        console.log("Suggest chain failed, trying suggestAndConnect:", suggestError);
-        await suggestAndConnect({ chainInfo: fairyring, walletType: type });
-      }
+      // Desktop extension (or mobile with extension) connects directly
+      await connect({ walletType: type, chainId: fairyring.chainId });
     }
+  } catch {
+    // Fallback: WalletConnect modal that suggests & connects in one call
+    await suggestAndConnect({ chainInfo: fairyring, walletType: type });
   }
 
   setShowWallet(false);
 }
+
 
 
   
