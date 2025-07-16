@@ -18,7 +18,8 @@ import {
 import { wcModal } from "@/lib/wcModal";
 import HowItWorksModal from "../modals/HowItWorksModal";
 import { useHowItWorksContext } from "@/contexts/HowItWorksContext";
-
+const HUB_CAIP = "cosmos:cosmoshub-4";
+const FAIRYRING_CAIP = "cosmos:fairyring-testnet-3";
 function Header() {
   /* ───────── state ───────── */
   const [showWallet, setShowWallet] = useState(false);
@@ -44,6 +45,59 @@ function Header() {
 // A hub chain that Leap recognises out‑of‑the‑box
 const HUB_CHAIN = "cosmos:cosmoshub-4";
 
+async function mobileLeapFlow() {
+  // 1. Show blue sheet. (UI only; actual WC pairing triggered by next call.)
+  await wcModal.openModal({
+    requiredNamespaces: {
+      cosmos: {
+        chains: [HUB_CAIP],
+        methods: ["cosmos_signDirect", "cosmos_signAmino"],
+        events: ["accountsChanged"],
+      },
+    },
+    standaloneChains: [HUB_CAIP],
+  });
+
+  // 2. Connect on Hub (establishes WC session + permissions).
+  await suggestAndConnect({
+    chainInfo: {
+      // Minimal inlined Hub ChainInfo; you already have a full one in ClientLayout,
+      // but passing `chainInfo` is harmless (Graz will ignore if known).
+      chainId: "cosmoshub-4",
+    } as any,
+    walletType: WalletType.WC_LEAP_MOBILE,
+  });
+
+  // 3. Suggest FairyRing (triggers Leap's "Add chain?" prompt if missing).
+  await suggestAndConnect({
+    chainInfo: fairyring,
+    walletType: WalletType.WC_LEAP_MOBILE,
+  });
+
+  // 4. Ensure Graz is now pointing at FairyRing (optional safety).
+  await connect({
+    chainId: fairyring.chainId,
+    walletType: WalletType.WC_LEAP_MOBILE,
+    autoReconnect: true,
+  });
+
+  setShowWallet(false);
+}
+
+// desktop handlers (extensions) remain as before
+async function connectLeap() {
+  if (isMobile) return mobileLeapFlow();
+  await suggestAndConnect({ chainInfo: fairyring, walletType: WalletType.LEAP });
+}
+
+
+
+/* open‑wallet custom event */
+useEffect(() => {
+  const opener = () => setShowWallet(true);
+  window.addEventListener("open-wallet-modal", opener);
+  return () => window.removeEventListener("open-wallet-modal", opener);
+}, []);
 async function openLeapOnFairyRing(walletType: WalletType.WC_LEAP_MOBILE) {
   /* -- 1. Pair on Cosmos Hub -- */
   const hub = await newWcSession(["cosmos:cosmoshub-4"]);
@@ -107,10 +161,7 @@ async function openWcAddFairyRing(walletType: WalletType.WC_LEAP_MOBILE | Wallet
       });
     }
   }
-  async function connectLeap() {
-    if (isMobile) return openLeapOnFairyRing(WalletType.WC_LEAP_MOBILE);
-    await suggestAndConnect({ chainInfo: fairyring, walletType: WalletType.LEAP });
-  }
+
   
   async function connectKeplr() {
     if (isMobile) return openWcAddFairyRing(WalletType.WC_KEPLR_MOBILE);
