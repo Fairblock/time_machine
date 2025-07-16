@@ -15,24 +15,23 @@ import {
   useSuggestChainAndConnect,
   WalletType,
 } from "graz";
-import { PUBLIC_ENVIRONMENT } from "@/constant/env";
+import { wcModal } from "@/lib/wcModal";
 import HowItWorksModal from "../modals/HowItWorksModal";
 import { useHowItWorksContext } from "@/contexts/HowItWorksContext";
 
 function Header() {
-  /* ───────── wallet state ────────────────────────────────────────── */
+  /* ───────── state ───────── */
   const [showWallet, setShowWallet] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
-  const [attempted, setAttempted] = useState<WalletType | null>(null);
   const [walletMenu, setWalletMenu] = useState(false);
 
   const { data: account, isConnected } = useAccount();
-  const { connect, error: walletErr } = useConnect();
+  const { connect } = useConnect();
   const { disconnect } = useDisconnect();
   const { suggestAndConnect } = useSuggestChainAndConnect();
   const { showModal, setShowModal } = useHowItWorksContext();
-
   const pathname = usePathname();
+
   const truncated = account?.bech32Address
     ? `${account.bech32Address.slice(0, 6)}…${account.bech32Address.slice(-4)}`
     : "";
@@ -41,50 +40,56 @@ function Header() {
     typeof navigator !== "undefined" ? navigator.userAgent : ""
   );
 
-  /* === global “open‑wallet” event (tablet button elsewhere) === */
+  /* ───────── helpers ───────── */
+
+  /** Opens Web3Modal first, then connects via Graz (WC mobile types). */
+  async function openWcAndConnectMobile(
+    walletType: WalletType.WC_LEAP_MOBILE | WalletType.WC_KEPLR_MOBILE
+  ) {
+    // 1️⃣ show the blue WC sheet (returns void)
+    await wcModal.openModal({ standaloneChains: ["cosmos:fairyring-1"] });
+
+    // 2️⃣ try plain connect; if the chain isn't in Leap/Keplr yet, fall back to suggest‑chain
+    try {
+      await connect({
+        chainId: fairyring.chainId,
+        walletType,
+      });
+    } catch {
+      await suggestAndConnect({
+        chainInfo: fairyring,
+        walletType,
+      });
+    }
+  }
+
+  async function connectLeap() {
+    if (isMobile) {
+      return openWcAndConnectMobile(WalletType.WC_LEAP_MOBILE);
+    }
+    // desktop extension path
+    await suggestAndConnect({
+      chainInfo: fairyring,
+      walletType: WalletType.LEAP,
+    });
+  }
+
+  async function connectKeplr() {
+    if (isMobile) {
+      return openWcAndConnectMobile(WalletType.WC_KEPLR_MOBILE);
+    }
+    await suggestAndConnect({
+      chainInfo: fairyring,
+      walletType: WalletType.KEPLR,
+    });
+  }
+
+  /* global “open‑wallet” event */
   useEffect(() => {
     const opener = () => setShowWallet(true);
     window.addEventListener("open-wallet-modal", opener);
     return () => window.removeEventListener("open-wallet-modal", opener);
   }, []);
-
-  /* ───────── helpers: connect via Keplr / Leap ───────────────────── */
-  async function connectKeplr() {
-    const hasExt = typeof window !== "undefined" && (window as any).keplr;
-    const walletType =
-      isMobile && !hasExt ? WalletType.WC_KEPLR_MOBILE : WalletType.KEPLR;
-
-    setAttempted(walletType);
-
-    await suggestAndConnect({
-      chainInfo: fairyring,
-      walletType,
-    });
-
-    setShowWallet(false);
-  }
-
-  async function connectLeap() {
-    const hasExt = typeof window !== "undefined" && (window as any).leap;
-    const walletType =
-      isMobile && !hasExt ? WalletType.WC_LEAP_MOBILE : WalletType.LEAP;
-
-    setAttempted(walletType);
-
-    await suggestAndConnect({
-      chainInfo: fairyring,
-      walletType,
-    });
-
-    setShowWallet(false);
-  }
-
-  /* retry automatically if wallet needed suggestChain first */
-  useEffect(() => {
-    if (walletErr && attempted) {
-      suggestAndConnect({ chainInfo: fairyring, walletType: attempted });
-    }
-  }, [walletErr, attempted, suggestAndConnect]);
 
   /* ───────── JSX ────────────────────────────────────────────────── */
   return (

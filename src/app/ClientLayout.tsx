@@ -48,23 +48,20 @@ export default function ClientLayout({
   return (
     <QueryClientProvider client={queryClient}>
       <GrazProvider
-          grazOptions={{
-            /* ---------- THIS fixes TS2741 ---------- */
-            chains: [fairyring],                    // ✅ REQUIRED
-            /* ---------- WalletConnect v2 ---------- */
-            walletConnect: {
-              options: {
-                projectId: "cbfcaf564ee9293b0d9d25bbdac11ea3",
-                metadata: {
-                  name: "Fairblock Predictions",
-                  description: "Encrypted price‑prediction dApp on FairyRing",
-                  url: "https://prediction.fairblock.network",
-                  icons: ["https://prediction.fairblock.network/icon.png"],
-                },
-                /* nothing else needed here */
-              },
+       grazOptions={{
+        chains: [fairyring],                           // mandatory :contentReference[oaicite:3]{index=3}
+        walletConnect: {
+          options: {
+            projectId: "cbfcaf564ee9293b0d9d25bbdac11ea3",
+            metadata: {
+              name: "Fairblock Predictions",
+              description: "Encrypted price‑prediction dApp on FairyRing",
+              url: "https://prediction.fairblock.network",
+              icons: ["https://prediction.fairblock.network/icon.png"],
             },
-          }}
+          },
+        },
+      }}
       >
         {children}
       </GrazProvider>
