@@ -80,39 +80,72 @@ function Header() {
 async function connectLeap() {
   const mobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
   const hasExt = typeof window !== "undefined" && (window as any).leap;
-  const type =
-    mobile && !hasExt ? WalletType.WC_LEAP_MOBILE : WalletType.LEAP;
+  const type = mobile && !hasExt ? WalletType.WC_LEAP_MOBILE : WalletType.LEAP;
 
-  if (mobile && !hasExt) purgeWC();       // wipe Chrome/Safari’s Keplr cache
+  // Clear any stale WalletConnect pairings
+  purgeWC();
+
   setAttempted(type);
 
-  /* ─── desktop user but no extension ─── */
-  if (!mobile && !hasExt) {
-    alert("Leap extension not detected.");
-    return;
+  try {
+    // First try connecting directly to Fairyring
+    await connect({ walletType: type, chainId: fairyring.chainId });
+  } catch (error) {
+    console.log("Direct connection failed, trying fallback:", error);
+    
+    if (mobile && !hasExt) {
+      // For mobile web without extension
+      try {
+        // Step 1: Connect to a known chain (Cosmos Hub)
+        await connect({ 
+          walletType: type, 
+          chainId: "cosmoshub-4"
+        });
+
+        // Step 2: After connection, update the session with Fairyring
+        try {
+          // This assumes you have access to the WalletConnect client
+          const client = (window as any).walletConnectClient;
+          if (client) {
+            const session = client.session.values[0];
+            await client.update({
+              topic: session.topic,
+              namespaces: {
+                ...session.namespaces,
+                cosmos: {
+                  ...session.namespaces.cosmos,
+                  chains: [...(session.namespaces.cosmos.chains || []), `cosmos:${fairyring.chainId}`]
+                }
+              }
+            });
+          }
+        } catch (updateError) {
+          console.error("Failed to update session with Fairyring:", updateError);
+        }
+
+        // Step 3: Now connect to Fairyring
+        await connect({ walletType: type, chainId: fairyring.chainId });
+      } catch (fallbackError) {
+        console.log("Fallback failed, trying suggestAndConnect:", fallbackError);
+        // Final fallback
+        await suggestAndConnect({ chainInfo: fairyring, walletType: type });
+      }
+    } else {
+      // For desktop or mobile with extension
+      try {
+        if (hasExt) {
+          await (window as any).leap.experimentalSuggestChain(fairyring);
+        }
+        await connect({ walletType: type, chainId: fairyring.chainId });
+      } catch (suggestError) {
+        console.log("Suggest chain failed, trying suggestAndConnect:", suggestError);
+        await suggestAndConnect({ chainInfo: fairyring, walletType: type });
+      }
+    }
   }
-
-  /* ---------------- 1. first pairing on CosmosHub ---------------- */
-  await connect({ walletType: type, chainId: "cosmoshub-4" });
-
-  /* ---------------- 2. add + enable Fairyring -------------------- */
-  await window.leap.experimentalSuggestChain(fairyring);   // adds chain
-  await window.leap.enable(fairyring.chainId);             // mobiles need this
-  await window.leap.getKey(fairyring.chainId);             // forces account fetch
-
-  /* ---------------- 3. close the CosmosHub pairing --------------- */
-  await disconnect();   // graz’s disconnect ➜ keeps WC open but clears signer
-
-  /* ---------------- 4. new pairing on Fairyring ------------------ */
-  await connect({ walletType: type, chainId: fairyring.chainId });
-
-  /* ---------------- 5. let all useAccount() hooks update --------- */
-  window.dispatchEvent(new Event("graz:refresh"));
 
   setShowWallet(false);
 }
-
-
 
 
   
