@@ -90,7 +90,7 @@ async function openWcAddFairyRing(
     walletType: WalletType.WC_LEAP_MOBILE | WalletType.WC_KEPLR_MOBILE
   ) {
     // 1️⃣ show the blue WC sheet (returns void)
-    await wcModal.openModal({ standaloneChains: ["cosmos:fairyring-1"] });
+    await wcModal.openModal({ standaloneChains: ["cosmos:fairyring-testnet-3"] });
 
     // 2️⃣ try plain connect; if the chain isn't in Leap/Keplr yet, fall back to suggest‑chain
     try {
