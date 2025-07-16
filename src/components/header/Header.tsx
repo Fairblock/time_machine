@@ -21,14 +21,6 @@ import { wcModal } from "@/lib/wcModal";
 import HowItWorksModal from "../modals/HowItWorksModal";
 import { useHowItWorksContext } from "@/contexts/HowItWorksContext";
 
-/* ------------------------------------------------------------------ */
-/* WalletConnect Explorer IDs (replace if your project uses different) */
-const WC_WALLETS = {
-  KEPLR: "6adb6082c909901b9e7189af3a4a0223102cd6f8d5c39e39f3d49acb92b578bb",          
-  LEAP: "3ed8cc046c6211a798dc5ec70f1302b43e07db9639fd287de44a9aa115a21ed6",    
-};
-/* ------------------------------------------------------------------ */
-
 function Header() {
   /* ───────── local state ───────── */
   const [showWallet, setShowWallet] = useState(false);
@@ -70,12 +62,8 @@ function Header() {
           events: ["accountsChanged"],
         },
       },
-      // Restrict the wallet list in the WC sheet:
-      includeWalletIds: [WC_WALLETS.KEPLR, WC_WALLETS.LEAP],
-      recommendedWalletIds: [WC_WALLETS.KEPLR, WC_WALLETS.LEAP],
-      explorer: {
-        allowList: [WC_WALLETS.KEPLR, WC_WALLETS.LEAP],
-      },
+      // NOTE: Explorer filtering happens in wcModal.ts (constructor).
+      standaloneChains: ["cosmos:fairyring-testnet-3"],
     });
 
     try {
@@ -93,7 +81,7 @@ function Header() {
     } finally {
       try {
         wcModal.closeModal();
-      } catch (_) {
+      } catch {
         /* ignore */
       }
     }
@@ -127,7 +115,7 @@ function Header() {
       setShowWallet(false);
       try {
         wcModal.closeModal();
-      } catch (_) {
+      } catch {
         /* ignore */
       }
     }
@@ -378,9 +366,7 @@ function Header() {
             <h2 className="text-3xl font-extrabold uppercase">Connect Wallet</h2>
             <p className="text-gray-700 text-sm">
               By connecting your wallet, you agree to our <br />
-              <span className="font-semibold underline">
-                Terms of Service
-              </span>{" "}
+              <span className="font-semibold underline">Terms of Service</span>{" "}
               and{" "}
               <span className="font-semibold underline">Privacy Policy</span>.
             </p>
@@ -388,12 +374,7 @@ function Header() {
             {/* Keplr */}
             <div className="flex items-center justify-between">
               <div className="flex items-center space-x-3">
-                <Image
-                  src="/keplr.png"
-                  alt="Keplr icon"
-                  width={32}
-                  height={32}
-                />
+                <Image src="/keplr.png" alt="Keplr icon" width={32} height={32} />
                 <span className="text-lg font-medium">Keplr</span>
               </div>
               <Button
@@ -434,12 +415,7 @@ function Header() {
               className="w-full flex items-center justify-between border rounded-lg px-4 py-3 hover:bg-gray-50"
             >
               <span className="flex items-center space-x-3">
-                <Image
-                  src="/keplr.png"
-                  alt="Keplr Wallet"
-                  width={28}
-                  height={28}
-                />
+                <Image src="/keplr.png" alt="Keplr Wallet" width={28} height={28} />
                 <span className="font-medium">Keplr&nbsp;(WalletConnect)</span>
               </span>
               <ChevronRight size={16} />
@@ -451,12 +427,7 @@ function Header() {
               className="w-full cursor-not-allowed flex items-center justify-between border rounded-lg px-4 py-3 opacity-50"
             >
               <span className="flex items-center space-x-3">
-                <Image
-                  src="/leap.png"
-                  alt="Leap Wallet"
-                  width={28}
-                  height={28}
-                />
+                <Image src="/leap.png" alt="Leap Wallet" width={28} height={28} />
                 <span className="font-medium">Leap&nbsp;(coming soon)</span>
               </span>
               <ChevronRight size={16} />
