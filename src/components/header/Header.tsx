@@ -21,6 +21,49 @@ import { wcModal } from "@/lib/wcModal";
 import HowItWorksModal from "../modals/HowItWorksModal";
 import { useHowItWorksContext } from "@/contexts/HowItWorksContext";
 
+/* --- WalletConnect protocol disconnect helpers -------------------- */
+import SignClient from "@walletconnect/sign-client";
+import { getSdkError } from "@walletconnect/utils";
+
+/** Your WalletConnect projectId (keep in sync w/ wcModal.ts) */
+const WC_PROJECT_ID = "cbfcaf564ee9293b0d9d25bbdac11ea3";
+
+/**
+ * Disconnect all active WalletConnect sessions & pairings for this projectId.
+ * This forces the *next* connect attempt to create a brand‑new pairing,
+ * which prompts Keplr to open and lets the user pick/switch accounts.
+ */
+async function killWcSessionsRemote() {
+  try {
+    const client = await SignClient.init({ projectId: WC_PROJECT_ID });
+
+    // Kill active sessions.
+    const sessions = client.session.getAll();
+    for (const s of sessions) {
+      try {
+        await client.disconnect({
+          topic: s.topic,
+          reason: getSdkError("USER_DISCONNECTED"),
+        });
+      } catch {
+        /* ignore */
+      }
+    }
+
+    // Delete stored pairings (prevents silent auto‑reuse).
+    const pairings = client.pairing.getAll();
+    for (const p of pairings) {
+      try {
+        await client.pairing.delete(p.topic, getSdkError("USER_DISCONNECTED"));
+      } catch {
+        /* ignore */
+      }
+    }
+  } catch {
+    /* ignore init errors */
+  }
+}
+
 /* ------------------------------------------------------------------ */
 /* Defensive close for lingering Web3Modal overlay on mobile returns. */
 function forceCloseWcModal() {
@@ -57,8 +100,7 @@ function forceCloseWcModal() {
   }
 }
 /* ------------------------------------------------------------------ */
-/* Purge persisted WalletConnect v2 pairings so user can pick a new    */
-/* account in Keplr on the next connect.                               */
+/* Purge persisted WalletConnect v2 items in localStorage.            */
 function clearWcSessions() {
   try {
     const ls = window.localStorage;
@@ -111,7 +153,8 @@ function Header() {
   async function connectKeplrMobile() {
     const walletType = WalletType.WC_KEPLR_MOBILE;
 
-    /* clear old pairings so Keplr opens and lets user pick account */
+    // Crucial: kill existing remote sessions + local keys so Keplr prompts again.
+    await killWcSessionsRemote();
     clearWcSessions();
 
     await wcModal.openModal({
@@ -122,8 +165,7 @@ function Header() {
           events: ["accountsChanged"],
         },
       },
-      // Explorer filtering handled in wcModal singleton
-      standaloneChains: ["cosmos:fairyring-testnet-3"],
+      standaloneChains: ["cosmos:fairyring-testnet-3"], // Explorer filtering handled in wcModal singleton
     });
 
     try {
@@ -295,7 +337,7 @@ function Header() {
                       className="flex items-center w-full px-4 py-2 text-sm text-red-600 hover:bg-gray-50"
                       onClick={async () => {
                         await disconnect();
-                        /* also purge WC pairings so next connect is clean */
+                        await killWcSessionsRemote();
                         clearWcSessions();
                         setWalletMenu(false);
                         window.location.reload();
@@ -401,7 +443,8 @@ function Header() {
                     className="w-full"
                     onClick={async () => {
                       await disconnect();
-                      clearWcSessions(); // purge pairings
+                      await killWcSessionsRemote();
+                      clearWcSessions();
                       setMobileOpen(false);
                       window.location.reload();
                     }}
