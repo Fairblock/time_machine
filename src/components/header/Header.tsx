@@ -153,7 +153,6 @@ function Header() {
   async function connectKeplrMobile() {
     const walletType = WalletType.WC_KEPLR_MOBILE;
 
-    // Crucial: kill existing remote sessions + local keys so Keplr prompts again.
     await killWcSessionsRemote();
     clearWcSessions();
 
@@ -165,7 +164,7 @@ function Header() {
           events: ["accountsChanged"],
         },
       },
-      standaloneChains: ["cosmos:fairyring-testnet-3"], // Explorer filtering handled in wcModal singleton
+      standaloneChains: ["cosmos:fairyring-testnet-3"],
     });
 
     try {
@@ -181,37 +180,76 @@ function Header() {
         autoReconnect: true,
       });
     } finally {
-      forceCloseWcModal(); // ensure overlay really goes away
+      forceCloseWcModal();
+    }
+  }
+
+  /* ───────── Leap (WalletConnect) helper ───────── */
+  async function connectLeapMobile() {
+    const walletType = WalletType.WC_LEAP_MOBILE;
+
+    await killWcSessionsRemote();
+    clearWcSessions();
+
+    await wcModal.openModal({
+      requiredNamespaces: {
+        cosmos: {
+          chains: ["cosmos:fairyring-testnet-3"],
+          methods: ["cosmos_signDirect", "cosmos_signAmino"],
+          events: ["accountsChanged"],
+        },
+      },
+      standaloneChains: ["cosmos:fairyring-testnet-3"],
+      explorerRecommendedWalletIds: ["io.leapwallet"],
+    });
+
+    try {
+      await connect({
+        chainId: fairyring.chainId,
+        walletType,
+        autoReconnect: true,
+      });
+    } catch {
+      await suggestAndConnect({
+        chainInfo: fairyring,
+        walletType,
+        autoReconnect: true,
+      });
+    } finally {
+      forceCloseWcModal();
     }
   }
 
   /* ───────── public connect handlers ───────── */
   async function connectKeplr() {
-    setShowWallet(false); // user leaving to connect
+    setShowWallet(false);
     if (isMobile) {
       await connectKeplrMobile();
     } else {
       await suggestAndConnect({
         chainInfo: fairyring,
-        walletType: WalletType.KEPLR, // desktop extension
+        walletType: WalletType.KEPLR,
       });
     }
   }
 
-  /* Placeholder Leap desktop connect (no mobile flow yet) */
   async function connectLeap() {
     setShowWallet(false);
-    await suggestAndConnect({
-      chainInfo: fairyring,
-      walletType: WalletType.LEAP,
-    });
+    if (isMobile) {
+      await connectLeapMobile();
+    } else {
+      await suggestAndConnect({
+        chainInfo: fairyring,
+        walletType: WalletType.LEAP,
+      });
+    }
   }
 
   /* ───────── auto-close banner + WC sheet when connected ───────── */
   useEffect(() => {
     if (isConnected && account?.bech32Address) {
       setShowWallet(false);
-      forceCloseWcModal(); // defensive close
+      forceCloseWcModal();
     }
   }, [isConnected, account?.bech32Address]);
 
@@ -537,14 +575,14 @@ function Header() {
               <ChevronRight size={16} />
             </button>
 
-            {/* Leap placeholder (disabled on mobile) */}
+            {/* Leap (WalletConnect) */}
             <button
-              disabled
-              className="w-full cursor-not-allowed flex items-center justify-between border rounded-lg px-4 py-3 opacity-50"
+              onClick={connectLeap}
+              className="w-full flex items-center justify-between border rounded-lg px-4 py-3 hover:bg-gray-50"
             >
               <span className="flex items-center space-x-3">
                 <Image src="/leap.png" alt="Leap Wallet" width={28} height={28} />
-                <span className="font-medium">Leap&nbsp;(coming soon)</span>
+                <span className="font-medium">Leap&nbsp;(WalletConnect)</span>
               </span>
               <ChevronRight size={16} />
             </button>
