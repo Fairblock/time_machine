@@ -16,6 +16,7 @@ import {
   useSuggestChainAndConnect,
   WalletType,
 } from "graz";
+import type { ChainInfo } from '@keplr-wallet/types';
 import { wcModal } from "@/lib/wcModal";
 import HowItWorksModal from "../modals/HowItWorksModal";
 import { useHowItWorksContext } from "@/contexts/HowItWorksContext";
@@ -82,32 +83,47 @@ async function isChainSupportedMobileWC(walletType: WalletType, chainId: string)
   });
   return `leapcosmos://add-chain?${params.toString()}`;
 }
-
-
+function buildLeapAddChainUrl(chain: ChainInfo): string {
+  // Param names are illustrative; adjust if Leap docs show different keys.
+  const p = new URLSearchParams({
+    chainId: chain.chainId,
+    chainName: chain.chainName,
+    rpc: chain.rpc,
+    rest: chain.rest,
+    denom: fairyring.stakeCurrency.coinMinimalDenom,
+    decimals: String(fairyring.stakeCurrency.coinDecimals),
+  });
+  return `leapcosmos://add-chain?${p.toString()}`;
+}
+function logStep(label: string, data?: any) {
+  // prefix so you can filter quickly in remote devtools
+  console.log(`[LEAP-WC] ${label}`, data ?? "");
+}
 async function mobileLeapFlow() {
   try {
-    // 1. Pair on CosmosHub via Graz (this will internally open WC / deep-link)
+    logStep("mobileLeapFlow:start");
+
+    // 1. connect on CosmosHub (bootstrap)
+    logStep("connect CosmosHub over WC");
     await connect({
       chainId: "cosmoshub-4",
       walletType: WalletType.WC_LEAP_MOBILE,
     });
+    logStep("connect CosmosHub:success");
 
-    // 2. Deep-link user into Leap's Add-Chain screen (manual add)
-    const link = leapAddChainLink({
-      chainId: fairyring.chainId,
-      chainName: fairyring.chainName,
-      rpc: fairyring.rpc,
-      rest: fairyring.rest,
-      denom: fairyring.stakeCurrency.coinMinimalDenom,
-      decimals: fairyring.stakeCurrency.coinDecimals,
-    });
-    window.location.href = link; // user leaves browser, adds FairyRing
+    // 2. deep-link user into Leap Add-Chain (manual until WC suggest supported)
+    const addUrl = buildLeapAddChainUrl(fairyring); // see helper below
+    logStep("deep-link AddChain", addUrl);
+    window.location.href = addUrl;
+
+    // show Continue UI when user returns
     setShowAddChainContinue(true);
   } catch (err) {
-    console.error("Leap WC bootstrap failed", err);
-    alert("Could not establish WalletConnect session with Leap (CosmosHub).");
+    logStep("connect CosmosHub:error", err);
+    alert("Could not establish WalletConnect session with Leap. See console.");
   }
 }
+
 
 
 async function mobileKeplrFlow() {
