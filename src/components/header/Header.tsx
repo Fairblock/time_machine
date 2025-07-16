@@ -21,6 +21,14 @@ import { wcModal } from "@/lib/wcModal";
 import HowItWorksModal from "../modals/HowItWorksModal";
 import { useHowItWorksContext } from "@/contexts/HowItWorksContext";
 
+/* ------------------------------------------------------------------ */
+/* WalletConnect Explorer IDs (replace if your project uses different) */
+const WC_WALLETS = {
+  KEPLR: "6adb6082c909901b9e7189af3a4a0223102cd6f8d5c39e39f3d49acb92b578bb",          
+  LEAP: "3ed8cc046c6211a798dc5ec70f1302b43e07db9639fd287de44a9aa115a21ed6",    
+};
+/* ------------------------------------------------------------------ */
+
 function Header() {
   /* ───────── local state ───────── */
   const [showWallet, setShowWallet] = useState(false);
@@ -54,7 +62,6 @@ function Header() {
   async function connectKeplrMobile() {
     const walletType = WalletType.WC_KEPLR_MOBILE;
 
-    /* ① open WC modal – Fairyring only */
     await wcModal.openModal({
       requiredNamespaces: {
         cosmos: {
@@ -63,9 +70,14 @@ function Header() {
           events: ["accountsChanged"],
         },
       },
+      // Restrict the wallet list in the WC sheet:
+      includeWalletIds: [WC_WALLETS.KEPLR, WC_WALLETS.LEAP],
+      recommendedWalletIds: [WC_WALLETS.KEPLR, WC_WALLETS.LEAP],
+      explorer: {
+        allowList: [WC_WALLETS.KEPLR, WC_WALLETS.LEAP],
+      },
     });
 
-    /* ② try direct connect (chain already approved?) */
     try {
       await connect({
         chainId: fairyring.chainId,
@@ -73,19 +85,23 @@ function Header() {
         autoReconnect: true,
       });
     } catch {
-      /* ③ if unknown → suggest + connect */
       await suggestAndConnect({
         chainInfo: fairyring,
         walletType,
         autoReconnect: true,
       });
+    } finally {
+      try {
+        wcModal.closeModal();
+      } catch (_) {
+        /* ignore */
+      }
     }
   }
 
   /* ───────── public connect handlers ───────── */
   async function connectKeplr() {
-    // close banner right away (user is leaving to Keplr)
-    setShowWallet(false);
+    setShowWallet(false); // user leaving to connect
     if (isMobile) {
       await connectKeplrMobile();
     } else {
@@ -96,7 +112,7 @@ function Header() {
     }
   }
 
-  /* Stub: Leap desktop extension only (mobile flow not implemented here) */
+  /* Placeholder Leap desktop connect (no mobile flow yet) */
   async function connectLeap() {
     setShowWallet(false);
     await suggestAndConnect({
@@ -105,10 +121,15 @@ function Header() {
     });
   }
 
-  /* ───────── auto-close banner when connected ───────── */
+  /* ───────── auto-close banner + WC sheet when connected ───────── */
   useEffect(() => {
     if (isConnected && account?.bech32Address) {
       setShowWallet(false);
+      try {
+        wcModal.closeModal();
+      } catch (_) {
+        /* ignore */
+      }
     }
   }, [isConnected, account?.bech32Address]);
 
@@ -344,7 +365,7 @@ function Header() {
       )}
 
       {/* ===== WALLET MODAL (desktop + mobile) ===== */}
-      {showWallet && !isConnected && (   /* ← don't show modal when already connected */
+      {showWallet && !isConnected && (
         <div
           className="fixed inset-0 z-50 flex items-center justify-center bg-black/40"
           onClick={() => setShowWallet(false)}
