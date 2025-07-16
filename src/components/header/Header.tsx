@@ -12,6 +12,7 @@ import {
   useAccount,
   useConnect,
   useDisconnect,
+  useSuggestChain,
   useSuggestChainAndConnect,
   WalletType,
 } from "graz";
@@ -25,7 +26,7 @@ function Header() {
   const [showWallet, setShowWallet] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [walletMenu, setWalletMenu] = useState(false);
-
+  const { suggestAsync } = useSuggestChain();  
   const { data: account, isConnected } = useAccount();
   const { connect } = useConnect();
   const { disconnect } = useDisconnect();
@@ -45,43 +46,96 @@ function Header() {
 // A hub chain that Leap recognises out‑of‑the‑box
 const HUB_CHAIN = "cosmos:cosmoshub-4";
 
+const HUB_CHAIN_ID = "cosmoshub-4";
 async function mobileLeapFlow() {
-  // 1. Show blue sheet. (UI only; actual WC pairing triggered by next call.)
-  await wcModal.openModal({
-    requiredNamespaces: {
-      cosmos: {
-        chains: [HUB_CAIP],
-        methods: ["cosmos_signDirect", "cosmos_signAmino"],
-        events: ["accountsChanged"],
+  try {
+    // 1. UI: blue WC sheet listing Leap (Hub)
+    await wcModal.openModal({
+      standaloneChains: ["cosmos:cosmoshub-4"], // UI hint
+      requiredNamespaces: {
+        cosmos: {
+          chains: ["cosmos:cosmoshub-4"],
+          methods: ["cosmos_signDirect", "cosmos_signAmino"],
+          events: ["accountsChanged"],
+        },
       },
-    },
-    standaloneChains: [HUB_CAIP],
-  });
+    });
 
-  // 2. Connect on Hub (establishes WC session + permissions).
-  await suggestAndConnect({
-    chainInfo: {
-      // Minimal inlined Hub ChainInfo; you already have a full one in ClientLayout,
-      // but passing `chainInfo` is harmless (Graz will ignore if known).
-      chainId: "cosmoshub-4",
-    } as any,
-    walletType: WalletType.WC_LEAP_MOBILE,
-  });
+    // 2. connect on Hub
+    await connect({
+      chainId: HUB_CHAIN_ID,
+      walletType: WalletType.WC_LEAP_MOBILE,
+    });
 
-  // 3. Suggest FairyRing (triggers Leap's "Add chain?" prompt if missing).
-  await (window as any).leap.experimentalSuggestChain(fairyring);
+    // 3. suggest FairyRing (mobile safe; goes through WC session)
+    await suggestAsync({
+      chainInfo: fairyring,
+      walletType: WalletType.WC_LEAP_MOBILE,
+    });
 
-  // 4. Ensure Graz is now pointing at FairyRing (optional safety).
-  await connect({
-    chainId: fairyring.chainId,
-    walletType: WalletType.WC_LEAP_MOBILE,
-    autoReconnect: true,
-  });
+    // 4. connect FairyRing
+    await connect({
+      chainId: fairyring.chainId, // "fairyring-testnet-3"
+      walletType: WalletType.WC_LEAP_MOBILE,
+      autoReconnect: true,
+    });
 
-  setShowWallet(false);
+    setShowWallet(false);
+  } catch (err) {
+    console.error("Leap mobile flow error", err);
+    alert(
+      err instanceof Error
+        ? `Leap error: ${err.message}`
+        : "Leap connection failed. Check console."
+    );
+  } finally {
+    wcModal.closeModal(); // just in case
+  }
 }
 
-// desktop handlers (extensions) remain as before
+async function mobileKeplrFlow() {
+  try {
+    await wcModal.openModal({
+      standaloneChains: ["cosmos:cosmoshub-4"],
+      requiredNamespaces: {
+        cosmos: {
+          chains: ["cosmos:cosmoshub-4"],
+          methods: ["cosmos_signDirect", "cosmos_signAmino"],
+          events: ["accountsChanged"],
+        },
+      },
+    });
+
+    await connect({
+      chainId: HUB_CHAIN_ID,
+      walletType: WalletType.WC_KEPLR_MOBILE,
+    });
+
+    await suggestAsync({
+      chainInfo: fairyring,
+      walletType: WalletType.WC_KEPLR_MOBILE,
+    });
+
+    await connect({
+      chainId: fairyring.chainId,
+      walletType: WalletType.WC_KEPLR_MOBILE,
+      autoReconnect: true,
+    });
+
+    setShowWallet(false);
+  } catch (err) {
+    console.error("Keplr mobile flow error", err);
+    alert(
+      err instanceof Error
+        ? `Keplr error: ${err.message}`
+        : "Keplr connection failed. Check console."
+    );
+  } finally {
+    wcModal.closeModal();
+  }
+}
+
+/* Desktop handlers (extensions) */
 async function connectLeap() {
   if (isMobile) return mobileLeapFlow();
   await suggestAndConnect({ chainInfo: fairyring, walletType: WalletType.LEAP });
