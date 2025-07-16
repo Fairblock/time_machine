@@ -84,6 +84,8 @@ function Header() {
 
   /* ───────── public connect handlers ───────── */
   async function connectKeplr() {
+    // close banner right away (user is leaving to Keplr)
+    setShowWallet(false);
     if (isMobile) {
       await connectKeplrMobile();
     } else {
@@ -92,17 +94,23 @@ function Header() {
         walletType: WalletType.KEPLR, // desktop extension
       });
     }
-    setShowWallet(false);
   }
 
   /* Stub: Leap desktop extension only (mobile flow not implemented here) */
   async function connectLeap() {
+    setShowWallet(false);
     await suggestAndConnect({
       chainInfo: fairyring,
       walletType: WalletType.LEAP,
     });
-    setShowWallet(false);
   }
+
+  /* ───────── auto-close banner when connected ───────── */
+  useEffect(() => {
+    if (isConnected && account?.bech32Address) {
+      setShowWallet(false);
+    }
+  }, [isConnected, account?.bech32Address]);
 
   /* ───────── global “open-wallet” event ───────── */
   useEffect(() => {
@@ -336,7 +344,7 @@ function Header() {
       )}
 
       {/* ===== WALLET MODAL (desktop + mobile) ===== */}
-      {showWallet && (
+      {showWallet && !isConnected && (   /* ← don't show modal when already connected */
         <div
           className="fixed inset-0 z-50 flex items-center justify-center bg-black/40"
           onClick={() => setShowWallet(false)}
@@ -346,12 +354,12 @@ function Header() {
             onClick={(e) => e.stopPropagation()}
             className="hidden lg:block w-[90%] sm:w-[420px] bg-white rounded-lg px-8 py-10 text-center space-y-8"
           >
-            <h2 className="text-3xl font-extrabold uppercase">
-              Connect Wallet
-            </h2>
+            <h2 className="text-3xl font-extrabold uppercase">Connect Wallet</h2>
             <p className="text-gray-700 text-sm">
               By connecting your wallet, you agree to our <br />
-              <span className="font-semibold underline">Terms of Service</span>{" "}
+              <span className="font-semibold underline">
+                Terms of Service
+              </span>{" "}
               and{" "}
               <span className="font-semibold underline">Privacy Policy</span>.
             </p>
@@ -376,7 +384,7 @@ function Header() {
               </Button>
             </div>
 
-            {/* Leap (desktop extension only) */}
+            {/* Leap */}
             <div className="flex items-center justify-between">
               <div className="flex items-center space-x-3">
                 <Image src="/leap.png" alt="Leap icon" width={32} height={32} />
