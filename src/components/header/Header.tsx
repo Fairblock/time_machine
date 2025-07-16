@@ -33,6 +33,7 @@ function Header() {
   const { suggestAndConnect } = useSuggestChainAndConnect();
   const { showModal, setShowModal } = useHowItWorksContext();
   const pathname = usePathname();
+  const [showAddChainContinue, setShowAddChainContinue] = useState(false);
 
   const truncated = account?.bech32Address
     ? `${account.bech32Address.slice(0, 6)}…${account.bech32Address.slice(-4)}`
@@ -45,52 +46,93 @@ function Header() {
   /* ───────── helpers ───────── */
 // A hub chain that Leap recognises out‑of‑the‑box
 const HUB_CHAIN = "cosmos:cosmoshub-4";
-
+const FAIRYRING_ID = "fairyring-testnet-3";
 const HUB_CHAIN_ID = "cosmoshub-4";
-async function mobileLeapFlow() {
+async function isChainSupportedMobileWC(walletType: WalletType, chainId: string) {
   try {
-    // 1. UI: blue WC sheet listing Leap (Hub)
-    await wcModal.openModal({
-      standaloneChains: ["cosmos:cosmoshub-4"], // UI hint
-      requiredNamespaces: {
-        cosmos: {
-          chains: ["cosmos:cosmoshub-4"],
-          methods: ["cosmos_signDirect", "cosmos_signAmino"],
-          events: ["accountsChanged"],
-        },
-      },
-    });
-
-    // 2. connect on Hub
-    await connect({
-      chainId: HUB_CHAIN_ID,
-      walletType: WalletType.WC_LEAP_MOBILE,
-    });
-
-    // 3. suggest FairyRing (mobile safe; goes through WC session)
-    await suggestAsync({
-      chainInfo: fairyring,
-      walletType: WalletType.WC_LEAP_MOBILE,
-    });
-
-    // 4. connect FairyRing
-    await connect({
-      chainId: fairyring.chainId, // "fairyring-testnet-3"
-      walletType: WalletType.WC_LEAP_MOBILE,
-      autoReconnect: true,
-    });
-
-    setShowWallet(false);
-  } catch (err) {
-    console.error("Leap mobile flow error", err);
-    alert(
-      err instanceof Error
-        ? `Leap error: ${err.message}`
-        : "Leap connection failed. Check console."
-    );
-  } finally {
-    wcModal.closeModal(); // just in case
+    await connect({ chainId, walletType });
+    return true;
+  } catch {
+    return false;
   }
+}
+
+ function leapAddChainLink({
+  chainId,
+  chainName,
+  rpc,
+  rest,
+  denom,
+  decimals,
+}: {
+  chainId: string;
+  chainName: string;
+  rpc: string;
+  rest: string;
+  denom: string;
+  decimals: number;
+}) {
+  const params = new URLSearchParams({
+    chainId,
+    chainName,
+    rpc,
+    rest,
+    denom,
+    decimals: String(decimals),
+  });
+  return `leapcosmos://add-chain?${params.toString()}`;
+}
+
+async function mobileLeapFlow() {
+  // Step 1: show WC modal (Hub)
+  await wcModal.openModal({
+    standaloneChains: ["cosmos:cosmoshub-4"],
+    requiredNamespaces: {
+      cosmos: {
+        chains: ["cosmos:cosmoshub-4"],
+        methods: ["cosmos_signDirect", "cosmos_signAmino"],
+        events: ["accountsChanged"],
+      },
+    },
+  });
+
+  // Step 2: connect on Hub
+  await connect({
+    chainId: "cosmoshub-4",
+    walletType: WalletType.WC_LEAP_MOBILE,
+  });
+
+  // Step 3: see if Leap now reports FairyRing support
+  const fairySupported = await isChainSupportedMobileWC(
+    WalletType.WC_LEAP_MOBILE,
+    FAIRYRING_ID,
+  );
+
+  if (!fairySupported) {
+    // Prompt user to add chain in Leap (deeplink)
+    const link = leapAddChainLink({
+      chainId: fairyring.chainId,
+      chainName: fairyring.chainName,
+      rpc: fairyring.rpc,
+      rest: fairyring.rest,
+      denom: fairyring.stakeCurrency.coinMinimalDenom,
+      decimals: fairyring.stakeCurrency.coinDecimals,
+    });
+    // open Leap to add chain
+    window.location.href = link;
+    setShowAddChainContinue(true);
+    // you might show an instruction modal telling user to come back & tap "Continue"
+    return;
+  }
+
+  // Step 4: if supported, connect directly on FairyRing
+  await connect({
+    chainId: FAIRYRING_ID,
+    walletType: WalletType.WC_LEAP_MOBILE,
+    autoReconnect: true,
+  });
+
+  setShowWallet(false);
 }
 
 async function mobileKeplrFlow() {
@@ -508,46 +550,66 @@ async function openWcAddFairyRing(walletType: WalletType.WC_LEAP_MOBILE | Wallet
           </div>
 
           {/* ---- MOBILE VIEW ---- */}
-          <div
-            onClick={(e) => e.stopPropagation()}
-            className="lg:hidden w-[90%] sm:w-[420px] bg-white rounded-lg px-8 py-10 text-center space-y-6"
-          >
-            <h2 className="text-2xl font-bold mb-4">Connect Wallet</h2>
+         {/* ---- MOBILE VIEW ---- */}
+<div
+  onClick={(e) => e.stopPropagation()}
+  className="lg:hidden w-[90%] sm:w-[420px] bg-white rounded-lg px-8 py-10 text-center space-y-6"
+>
+  <h2 className="text-2xl font-bold mb-4">Connect Wallet</h2>
 
-            {/* Leap (WalletConnect) */}
-            <button
-              onClick={connectLeap}
-              className="w-full flex items-center justify-between border rounded-lg px-4 py-3 mb-4 hover:bg-gray-50"
-            >
-              <span className="flex items-center space-x-3">
-                <Image
-                  src="/leap.png"
-                  alt="Leap Wallet"
-                  width={28}
-                  height={28}
-                />
-                <span className="font-medium">Leap&nbsp;(WalletConnect)</span>
-              </span>
-              <ChevronRight size={16} />
-            </button>
+  {showAddChainContinue ? (
+    <div className="w-full border rounded-lg bg-gray-50 p-4 text-left">
+      <p className="mb-4 text-sm text-gray-700">
+        Return from Leap after approving the FairyRing chain, then tap continue.
+      </p>
+      <Button
+        className="w-full"
+        onClick={async () => {
+          try {
+            await connect({
+              chainId: FAIRYRING_ID,                // "fairyring-testnet-3"
+              walletType: WalletType.WC_LEAP_MOBILE,
+              autoReconnect: true,
+            });
+            setShowAddChainContinue(false);
+            setShowWallet(false);
+          } catch (err) {
+            alert("FairyRing still not added in Leap. Please add and try again.");
+          }
+        }}
+      >
+        Continue
+      </Button>
+    </div>
+  ) : (
+    <>
+      {/* Leap (WalletConnect) */}
+      <button
+        onClick={connectLeap}  // triggers your mobileLeapFlow which deep-links + sets showAddChainContinue
+        className="w-full flex items-center justify-between border rounded-lg px-4 py-3 mb-4 hover:bg-gray-50"
+      >
+        <span className="flex items-center space-x-3">
+          <Image src="/leap.png" alt="Leap Wallet" width={28} height={28} />
+          <span className="font-medium">Leap&nbsp;(WalletConnect)</span>
+        </span>
+        <ChevronRight size={16} />
+      </button>
 
-            {/* Keplr (WalletConnect) */}
-            <button
-              onClick={connectKeplr}
-              className="w-full flex items-center justify-between border rounded-lg px-4 py-3 hover:bg-gray-50"
-            >
-              <span className="flex items-center space-x-3">
-                <Image
-                  src="/keplr.png"
-                  alt="Keplr Wallet"
-                  width={28}
-                  height={28}
-                />
-                <span className="font-medium">Keplr&nbsp;(WalletConnect)</span>
-              </span>
-              <ChevronRight size={16} />
-            </button>
-          </div>
+      {/* Keplr (WalletConnect) */}
+      <button
+        onClick={connectKeplr}
+        className="w-full flex items-center justify-between border rounded-lg px-4 py-3 hover:bg-gray-50"
+      >
+        <span className="flex items-center space-x-3">
+          <Image src="/keplr.png" alt="Keplr Wallet" width={28} height={28} />
+          <span className="font-medium">Keplr&nbsp;(WalletConnect)</span>
+        </span>
+        <ChevronRight size={16} />
+      </button>
+    </>
+  )}
+</div>
+
         </div>
       )}
 
