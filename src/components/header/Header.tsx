@@ -24,22 +24,40 @@ import { useHowItWorksContext } from "@/contexts/HowItWorksContext";
 /* ------------------------------------------------------------------ */
 /* Defensive close for lingering Web3Modal overlay on mobile returns. */
 function forceCloseWcModal() {
+  // Ask modal to close
   try {
     wcModal.closeModal();
   } catch {
     /* ignore */
   }
-  const overlay = document.querySelector<HTMLElement>("#w3m-modal");
-  if (overlay) overlay.style.display = "none";
-  const backdrop = document.querySelector<HTMLElement>(
-    "[class*='w3m-overlay'],[data-w3m-overlay]",
+
+  // Remove any modal host nodes (covers both #w3m-modal + <w3m-modal>)
+  const hosts = Array.from(
+    document.querySelectorAll<HTMLElement>("#w3m-modal, w3m-modal"),
   );
-  if (backdrop) {
-    backdrop.style.opacity = "0";
-    backdrop.style.pointerEvents = "none";
-  }
-  if (document?.body?.style?.overflow === "hidden") {
-    document.body.style.overflow = "";
+  hosts.forEach((el) => {
+    el.style.display = "none";
+    try {
+      el.remove();
+    } catch {
+      /* ignore */
+    }
+  });
+
+  // Defensive: nuke stray overlays/backdrops just in case
+  const stray = document.querySelectorAll<HTMLElement>(
+    "[class*='w3m-overlay'],[data-w3m-overlay],[class*='w3m-modal']",
+  );
+  stray.forEach((el) => {
+    el.style.opacity = "0";
+    el.style.pointerEvents = "none";
+  });
+
+  // Body unlock
+  const body = document?.body;
+  if (body) {
+    body.style.removeProperty("overflow");
+    body.classList.remove("w3m-modal-open", "w3m-open");
   }
 }
 /* ------------------------------------------------------------------ */
@@ -85,7 +103,7 @@ function Header() {
           events: ["accountsChanged"],
         },
       },
-      // NOTE: Explorer filtering happens in wcModal.ts (constructor).
+      // Explorer filtering handled in wcModal singleton
       standaloneChains: ["cosmos:fairyring-testnet-3"],
     });
 
@@ -132,9 +150,27 @@ function Header() {
   useEffect(() => {
     if (isConnected && account?.bech32Address) {
       setShowWallet(false);
-      forceCloseWcModal(); // defensive: close lingering WC sheet/backdrop
+      forceCloseWcModal(); // defensive close
     }
   }, [isConnected, account?.bech32Address]);
+
+  /* ───────── close lingering WC modal when returning from background ───────── */
+  useEffect(() => {
+    const onVis = () => {
+      if (document.visibilityState === "visible" && isConnected) {
+        forceCloseWcModal();
+      }
+    };
+    const onFocus = () => {
+      if (isConnected) forceCloseWcModal();
+    };
+    document.addEventListener("visibilitychange", onVis);
+    window.addEventListener("focus", onFocus);
+    return () => {
+      document.removeEventListener("visibilitychange", onVis);
+      window.removeEventListener("focus", onFocus);
+    };
+  }, [isConnected]);
 
   /* ───────── global “open-wallet” event ───────── */
   useEffect(() => {
