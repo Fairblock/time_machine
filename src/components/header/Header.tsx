@@ -21,6 +21,29 @@ import { wcModal } from "@/lib/wcModal";
 import HowItWorksModal from "../modals/HowItWorksModal";
 import { useHowItWorksContext } from "@/contexts/HowItWorksContext";
 
+/* ------------------------------------------------------------------ */
+/* Defensive close for lingering Web3Modal overlay on mobile returns. */
+function forceCloseWcModal() {
+  try {
+    wcModal.closeModal();
+  } catch {
+    /* ignore */
+  }
+  const overlay = document.querySelector<HTMLElement>("#w3m-modal");
+  if (overlay) overlay.style.display = "none";
+  const backdrop = document.querySelector<HTMLElement>(
+    "[class*='w3m-overlay'],[data-w3m-overlay]",
+  );
+  if (backdrop) {
+    backdrop.style.opacity = "0";
+    backdrop.style.pointerEvents = "none";
+  }
+  if (document?.body?.style?.overflow === "hidden") {
+    document.body.style.overflow = "";
+  }
+}
+/* ------------------------------------------------------------------ */
+
 function Header() {
   /* ───────── local state ───────── */
   const [showWallet, setShowWallet] = useState(false);
@@ -79,11 +102,7 @@ function Header() {
         autoReconnect: true,
       });
     } finally {
-      try {
-        wcModal.closeModal();
-      } catch {
-        /* ignore */
-      }
+      forceCloseWcModal(); // ensure overlay really goes away
     }
   }
 
@@ -113,11 +132,7 @@ function Header() {
   useEffect(() => {
     if (isConnected && account?.bech32Address) {
       setShowWallet(false);
-      try {
-        wcModal.closeModal();
-      } catch {
-        /* ignore */
-      }
+      forceCloseWcModal(); // defensive: close lingering WC sheet/backdrop
     }
   }, [isConnected, account?.bech32Address]);
 
