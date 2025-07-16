@@ -41,7 +41,34 @@ function Header() {
   );
 
   /* ───────── helpers ───────── */
+// A hub chain that Leap recognises out‑of‑the‑box
+const HUB_CHAIN = "cosmos:cosmoshub-4";
 
+async function openWcAddFairyRing(walletType: WalletType.WC_LEAP_MOBILE | WalletType.WC_KEPLR_MOBILE) {
+  /* 1. Open Web3Modal with a VALID proposal (Hub only) */
+  await wcModal.openModal({
+    requiredNamespaces: {
+      cosmos: {
+        chains: [HUB_CHAIN],
+        methods: ["cosmos_signDirect", "cosmos_signAmino"],   // Leap supports both :contentReference[oaicite:5]{index=5}
+        events: ["accountsChanged"],
+      },
+    },
+  });
+
+  /* 2. Run suggest‑chain + connect on FairyRing */
+  await suggestAndConnect({
+    chainInfo: fairyring,            // fires experimentalSuggestChain :contentReference[oaicite:6]{index=6}
+    walletType,                      // WC_LEAP_MOBILE or WC_KEPLR_MOBILE
+  });
+
+  /* 3. Switch the active session to FairyRing */
+  await connect({
+    chainId: fairyring.chainId,      // "fairyring-testnet-3"
+    walletType,
+    autoReconnect: true,             // resume on page reload
+  });
+}
   /** Opens Web3Modal first, then connects via Graz (WC mobile types). */
   async function openWcAndConnectMobile(
     walletType: WalletType.WC_LEAP_MOBILE | WalletType.WC_KEPLR_MOBILE
@@ -64,24 +91,13 @@ function Header() {
   }
 
   async function connectLeap() {
-    if (isMobile) {
-      return openWcAndConnectMobile(WalletType.WC_LEAP_MOBILE);
-    }
-    // desktop extension path
-    await suggestAndConnect({
-      chainInfo: fairyring,
-      walletType: WalletType.LEAP,
-    });
+    if (isMobile) return openWcAddFairyRing(WalletType.WC_LEAP_MOBILE);
+    await suggestAndConnect({ chainInfo: fairyring, walletType: WalletType.LEAP });
   }
-
+  
   async function connectKeplr() {
-    if (isMobile) {
-      return openWcAndConnectMobile(WalletType.WC_KEPLR_MOBILE);
-    }
-    await suggestAndConnect({
-      chainInfo: fairyring,
-      walletType: WalletType.KEPLR,
-    });
+    if (isMobile) return openWcAddFairyRing(WalletType.WC_KEPLR_MOBILE);
+    await suggestAndConnect({ chainInfo: fairyring, walletType: WalletType.KEPLR });
   }
 
   /* global “open‑wallet” event */

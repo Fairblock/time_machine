@@ -49,7 +49,8 @@ export default function ClientLayout({
     <QueryClientProvider client={queryClient}>
       <GrazProvider
        grazOptions={{
-        chains: [fairyring],                           // mandatory :contentReference[oaicite:3]{index=3}
+        // ➋ register BOTH chains so Graz can sign on either
+        chains: [cosmoshub, fairyring],
         walletConnect: {
           options: {
             projectId: "cbfcaf564ee9293b0d9d25bbdac11ea3",
