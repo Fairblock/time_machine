@@ -5,7 +5,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Copy, Menu, X as CloseIcon, LogOut, ChevronRight } from "lucide-react";
-
+import { initSignClient } from "@/lib/wc";
 import { Button } from "@/components/ui/button";
 import { fairyring } from "@/constant/chains";
 import {
@@ -44,31 +44,47 @@ function Header() {
 // A hub chain that Leap recognises out‑of‑the‑box
 const HUB_CHAIN = "cosmoshub-4";
 
-async function openWcAddFairyRing(walletType: WalletType.WC_LEAP_MOBILE | WalletType.WC_KEPLR_MOBILE) {
-  /* 1. Open Web3Modal with a VALID proposal (Hub only) */
-  await wcModal.openModal({
+
+
+
+async function openWcAddFairyRing(
+  walletType: WalletType.WC_LEAP_MOBILE | WalletType.WC_KEPLR_MOBILE
+) {
+  /* --- 1.  Create WC session on Cosmos Hub --- */
+  const signClient = await initSignClient();
+
+  const { uri, approval } = await signClient.connect({
     requiredNamespaces: {
       cosmos: {
-        chains: [HUB_CHAIN],
-        methods: ["cosmos_signDirect", "cosmos_signAmino"],   // Leap supports both :contentReference[oaicite:5]{index=5}
+        chains: ["cosmos:cosmoshub-4"],                // ✅ wallet already knows it
+        methods: ["cosmos_signDirect", "cosmos_signAmino"],
         events: ["accountsChanged"],
       },
     },
   });
 
-  /* 2. Run suggest‑chain + connect on FairyRing */
-  await suggestAndConnect({
-    chainInfo: fairyring,            // fires experimentalSuggestChain :contentReference[oaicite:6]{index=6}
-    walletType,                      // WC_LEAP_MOBILE or WC_KEPLR_MOBILE
-  });
+  // show the blue sheet / deep‑link
+  if (uri) {
+    await wcModal.openModal({
+      uri,
+      standaloneChains: ["cosmos:cosmoshub-4"],
+    });
+  }
 
-  /* 3. Switch the active session to FairyRing */
+  // wait until user approves in Leap
+  await approval();
+
+  /* --- 2.  Suggest & connect on FairyRing --- */
+  await suggestAndConnect({ chainInfo: fairyring, walletType });
+
+  /* --- 3.  Switch the session to FairyRing --- */
   await connect({
-    chainId: fairyring.chainId,      // "fairyring-testnet-3"
+    chainId: fairyring.chainId,                        // "fairyring-testnet-3"
     walletType,
-    autoReconnect: true,             // resume on page reload
+    autoReconnect: true,
   });
 }
+
   /** Opens Web3Modal first, then connects via Graz (WC mobile types). */
   async function openWcAndConnectMobile(
     walletType: WalletType.WC_LEAP_MOBILE | WalletType.WC_KEPLR_MOBILE
