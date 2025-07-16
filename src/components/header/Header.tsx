@@ -69,10 +69,7 @@ async function mobileLeapFlow() {
   });
 
   // 3. Suggest FairyRing (triggers Leap's "Add chain?" prompt if missing).
-  await suggestAndConnect({
-    chainInfo: fairyring,
-    walletType: WalletType.WC_LEAP_MOBILE,
-  });
+  await (window as any).leap.experimentalSuggestChain(fairyring);
 
   // 4. Ensure Graz is now pointing at FairyRing (optional safety).
   await connect({
