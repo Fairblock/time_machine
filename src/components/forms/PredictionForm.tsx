@@ -361,14 +361,14 @@ Proof → ${proofToken}`
 
   /* ─ render ─ */
   return (
-    <div className="relative">
+    <div className="relative min-w-64">
       {formError && (
         <div className="text-red-600 text-center mb-4">{formError}</div>
       )}
 
       {submitted ? (
-        <div className="text-black text-lg text-center">
-          Prediction encrypted!
+        <div className="bg-[#686363] cursor-not-allowed flex gap-3 items-center justify-center py-2 rounded-xl text-white text-sm text-center">
+          <img className="relative -top-[1px] w-4" src="/prediction-locked.png" alt="" /> Prediction Encrypted!
         </div>
       ) : (
         <form
@@ -414,11 +414,10 @@ Proof → ${proofToken}`
       )}
 
       {(isChecking || isSending) && (
-        <div className="absolute inset-0 z-10 grid place-items-center bg-[#E8ECEF] w-full h-10 top-10">
-          <Loader2 className="h-8 w-8 animate-spin text-gray-600" />
+        <div className="absolute cursor-not-allowed inset-0 z-10 flex gap-2 items-center justify-center border border-neutral-200 bg-[#686363] w-full h-10 rounded-xl top-12 text-white text-sm">
+          <Loader2 className="h-5 w-5 animate-spin" /> {isSending && "Confirm Transaction"}
         </div>
       )}
-
       {showModal && <Modal />}
     </div>
   );
