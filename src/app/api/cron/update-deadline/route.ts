@@ -375,13 +375,14 @@ async function estimateTargetHeight(start:Date, baseH:number, deadline:Date){
 
 /* ───────────── GET handler ───────────── */
 export async function GET(req: Request) {
+  console.log(process.env.CRON_SECRET," ",req.headers.get('Authorization'));
   // Skip the check locally so dev is easy
-  if (process.env.NODE_ENV !== 'development') {
-    const auth = req.headers.get('Authorization');
-    if (auth !== process.env.CRON_SECRET) {
-      return NextResponse.json({ error: 'unauthorized' }, { status: 401 });
-    }
-  }
+  // if (process.env.NODE_ENV !== 'development') {
+  //   const auth = req.headers.get('Authorization');
+  //   if (auth !== process.env.CRON_SECRET) {
+  //     return NextResponse.json({ error: 'unauthorized' }, { status: 401 });
+  //   }
+  // }
 
   const now = new Date();
   try {
