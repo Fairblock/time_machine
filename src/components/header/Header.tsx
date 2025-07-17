@@ -66,39 +66,32 @@ async function killWcSessionsRemote() {
 
 /* ------------------------------------------------------------------ */
 /* Defensive close for lingering Web3Modal overlay on mobile returns. */
-function forceCloseWcModal() {
-  try {
-    wcModal.closeModal();
-  } catch {
-    /* ignore */
-  }
 
-  const hosts = Array.from(
-    document.querySelectorAll<HTMLElement>("#w3m-modal, w3m-modal"),
-  );
-  hosts.forEach((el) => {
-    el.style.display = "none";
-    try {
-      el.remove();
-    } catch {
-      /* ignore */
-    }
+function unlockScroll() {
+  const html = document.documentElement;
+  const body = document.body;
+  const scrollY = body.style.top ? -parseInt(body.style.top || "0", 10) : window.scrollY;
+
+  ["overflow", "position", "top", "left", "right", "bottom", "width", "height"].forEach((p) => {
+    html.style.removeProperty(p);
+    body.style.removeProperty(p);
   });
 
-  const stray = document.querySelectorAll<HTMLElement>(
-    "[class*='w3m-overlay'],[data-w3m-overlay],[class*='w3m-modal']",
-  );
-  stray.forEach((el) => {
-    el.style.opacity = "0";
-    el.style.pointerEvents = "none";
-  });
-
-  const body = document?.body;
-  if (body) {
-    body.style.removeProperty("overflow");
-    body.classList.remove("w3m-modal-open", "w3m-open");
-  }
+  html.classList.remove("w3m-modal-open", "w3m-open");
+  body.classList.remove("w3m-modal-open", "w3m-open");
+  window.scrollTo(0, scrollY);
 }
+
+function forceCloseWcModal() {
+  try { wcModal.closeModal(); } catch {}
+
+  document
+    .querySelectorAll<HTMLElement>("#w3m-modal, w3m-modal, [class*='w3m-overlay'],[data-w3m-overlay],[class*='w3m-modal']")
+    .forEach((el) => { try { el.remove(); } catch {} });
+
+  unlockScroll();
+}
+
 /* ------------------------------------------------------------------ */
 /* Purge persisted WalletConnect v2 items in localStorage.            */
 function clearWcSessions() {
