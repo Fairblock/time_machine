@@ -90,14 +90,18 @@ function _reallyUnlock() {
 function forceCloseWcModal() {
   try { wcModal.closeModal(); } catch {}
 
+  /* brute‑force: remove every top‑level element created by Web3Modal */
   document
     .querySelectorAll<HTMLElement>(
-      "#w3m-modal, [class*='w3m-overlay'],[data-w3m-overlay],[class*='w3m-modal']",
+      "w3m-modal, w3m-widget, w3m-overlay," +          // custom elements
+      "[id^='w3m-'], [data-w3m-overlay]," +            // id="w3m‑…" or data attr
+      "[class*='w3m-overlay'], [class*='w3m-modal']"   // class contains
     )
     .forEach((el) => { try { el.remove(); } catch {} });
 
-  unlockScroll();
+  unlockScroll();               // restores scroll & clears classes/styles again
 }
+
 
 
 
