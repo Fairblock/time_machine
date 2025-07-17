@@ -151,11 +151,11 @@ async function purgeParticipantsIfEpochStart(symbol: string) {
     console.log("🧹  updated", updErr ? "error" : "success");
   /* 2️⃣  Delete everyone else                        */
   const { error: delErr } = await supabase
-    .from("participants")
-    .delete()
-    .lt("last_tweet_at", eraStartISO)   // older than era start
-    .or("last_tweet_at.is.null")        // OR never tweeted
-    .throwOnError();                              // ensures you see mistakes
+  .from("participants")
+  .delete()
+  .or(`last_tweet_at.lt.${eraStartISO},last_tweet_at.is.null`) // OR, not AND
+  .throwOnError();
+                  
    console.log("🧹  deleted", delErr ? "error" : "success");
   if (updErr || delErr) throw updErr || delErr;
 }
