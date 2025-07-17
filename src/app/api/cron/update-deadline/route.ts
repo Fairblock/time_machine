@@ -148,7 +148,7 @@ async function purgeParticipantsIfEpochStart(symbol: string) {
     })
     .gte("last_tweet_at", eraStartISO)        // ← only “fresh” tweeters
     .throwOnError();
-
+    console.log("🧹  updated", updErr ? "error" : "success");
   /* 2️⃣  Delete everyone else                        */
   const { error: delErr } = await supabase
     .from("participants")
@@ -156,7 +156,7 @@ async function purgeParticipantsIfEpochStart(symbol: string) {
     .lt("last_tweet_at", eraStartISO)   // older than era start
     .or("last_tweet_at.is.null")        // OR never tweeted
     .throwOnError();                              // ensures you see mistakes
-
+   console.log("🧹  deleted", delErr ? "error" : "success");
   if (updErr || delErr) throw updErr || delErr;
 }
 
@@ -375,7 +375,7 @@ async function estimateTargetHeight(start:Date, baseH:number, deadline:Date){
 
 /* ───────────── GET handler ───────────── */
 export async function GET(req: Request) {
-  console.log(process.env.CRON_SECRET," ",req.headers.get('Authorization'));
+
  // Skip the check locally so dev is easy
   if (process.env.NODE_ENV !== 'development') {
     const auth = req.headers.get('Authorization');
