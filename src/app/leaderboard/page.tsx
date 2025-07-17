@@ -16,6 +16,8 @@ import Header from "@/components/header/Header";
 import CountdownClock from "@/components/countdown-timer/CountdownClock";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { verifyTweet } from "../actions/verifyTweet";
+import { getPendingProofAction } from "../actions/getPendingProof";
 
 /* ── API types ────────────────────────────────────────────── */
 type OverallRow = { address: string; totalScore: number };
@@ -143,33 +145,25 @@ export default function LeaderboardPage() {
   useEffect(() => {
     setPending(null);
     if (!account?.bech32Address) return;
-    fetch(`/api/twitter/pending?wallet=${account.bech32Address}`)
-      .then(async (r) => (r.ok ? r.json() : {}))
-      .then((js) => {
-        if (js.token) setPending(js as PendingProof);
-      })
-      .catch(console.error);
-  }, [account?.bech32Address]);
-
+    getPendingProofAction(account.bech32Address)
+    .then((res) => {
+      if (res.ok && res.data) setPending(res.data as PendingProof);
+    })
+    .catch(console.error);
+}, [account?.bech32Address]);
   /* ── claim handler ─ */
   const handleClaim = async () => {
     if (!pending || !tweetUrl || !account?.bech32Address) return;
     setClaimErr(null);
     setClaiming(true);
     try {
-      const res = await fetch("/api/twitter/verify", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          wallet: account.bech32Address,
-          token: pending.token,
-          url: tweetUrl,
-        }),
-      });
-      if (!res.ok) {
-        const { error } = await res.json();
-        throw new Error(error || "failed");
-      }
+      const res = await verifyTweet(
+        account.bech32Address,
+        pending.token,
+        tweetUrl,
+      );
+      if (!res.ok) throw new Error(res.reason ?? "failed");
+      
       setClaimed(true);
       setPending(null);
 

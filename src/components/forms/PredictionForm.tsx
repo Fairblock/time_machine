@@ -23,6 +23,7 @@ import { MsgSubmitEncryptedTx } from "@/types/fairyring/codec/pep/tx";
 import { Buffer } from "buffer";
 import { useActiveToken } from "@/hooks/useActiveToken";
 import { SigningStargateClient, GasPrice, StdFee } from "@cosmjs/stargate"; // <<< added
+import { upsertProofAction } from "@/app/actions/upsertProof";
 
 /* ───────── constants ────────────────────────────────────────────── */
 const MEMO = "price-predict";
@@ -282,12 +283,12 @@ export default function PredictionForm() {
 
       /* proof‑token (unchanged) */
       const newToken = nanoid(8);
-      const res = await fetch("/api/twitter/proof", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ wallet: address, token: newToken }),
+      const res = await upsertProofAction({
+        wallet: address,
+        token:  newToken,
       });
-      if (!res.ok) throw new Error("failed to create proof‑token");
+      
+      if (!res.ok) throw new Error(res.reason ?? "failed to create proof‑token");
 
       setProofToken(newToken);
       setSubmitted(true);
