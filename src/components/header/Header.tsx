@@ -67,30 +67,46 @@ async function killWcSessionsRemote() {
 /* ------------------------------------------------------------------ */
 /* Defensive close for lingering Web3Modal overlay on mobile returns. */
 
-function unlockScroll() {
+function _reallyUnlock() {
   const html = document.documentElement;
   const body = document.body;
-  const scrollY = body.style.top ? -parseInt(body.style.top || "0", 10) : window.scrollY;
 
-  ["overflow", "position", "top", "left", "right", "bottom", "width", "height"].forEach((p) => {
-    html.style.removeProperty(p);
-    body.style.removeProperty(p);
-  });
-
+  // 1) blast the locking classes
   html.classList.remove("w3m-modal-open", "w3m-open");
   body.classList.remove("w3m-modal-open", "w3m-open");
-  window.scrollTo(0, scrollY);
+
+  // 2) inline‑override *everything* that can freeze scrolling
+  ["overflow", "position", "top", "left", "right", "bottom", "height"].forEach((prop) => {
+    html.style.setProperty(prop, "initial", "important");
+    body.style.setProperty(prop, "initial", "important");
+  });
+
+  // 3) restore scroll position if body was offset
+  const frozenTop = parseInt(body.style.top || "0", 10);
+  if (frozenTop) window.scrollTo(0, -frozenTop);
+  body.style.removeProperty("top");
 }
 
 function forceCloseWcModal() {
   try { wcModal.closeModal(); } catch {}
 
   document
-    .querySelectorAll<HTMLElement>("#w3m-modal, w3m-modal, [class*='w3m-overlay'],[data-w3m-overlay],[class*='w3m-modal']")
+    .querySelectorAll<HTMLElement>(
+      "#w3m-modal, [class*='w3m-overlay'],[data-w3m-overlay],[class*='w3m-modal']",
+    )
     .forEach((el) => { try { el.remove(); } catch {} });
 
   unlockScroll();
 }
+
+
+
+export function unlockScroll() {
+  _reallyUnlock();
+  requestAnimationFrame(_reallyUnlock);   // run on the next frame too
+}
+
+
 
 /* ------------------------------------------------------------------ */
 /* Purge persisted WalletConnect v2 items in localStorage.            */
@@ -245,6 +261,9 @@ function Header() {
       forceCloseWcModal();
     }
   }, [isConnected, account?.bech32Address]);
+  useEffect(() => {
+    if (isConnected) unlockScroll();
+  }, [isConnected]);
 
   /* ───────── close lingering WC modal when returning from background ───────── */
   useEffect(() => {
