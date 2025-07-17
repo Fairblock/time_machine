@@ -37,10 +37,11 @@ const COL_PREFIX: Record<Token['symbol'], string> = {
 };
 
 const TOKEN_SCHEDULE: Record<Token['symbol'], { open: number; decrypt: number }> = {
-  SOL: { open: 1, decrypt: 3 },   // Mon → Wed
-  BTC: { open: 4, decrypt: 6 },   // Thu → Sat
-  ARB: { open: 1, decrypt: 3 },
-  ETH: { open: 4, decrypt: 6 }
+  //           open DOW   decrypt DOW
+  SOL: { open: 1, decrypt: 4 },   // Mon → Thu
+  BTC: { open: 4, decrypt: 0 },   // Thu → Sun
+  ARB: { open: 1, decrypt: 4 },   // Mon → Thu
+  ETH: { open: 4, decrypt: 0 }    // Thu → Sun
 };
 
 const DAY_MULTIPLIERS = [1.5, 1.25, 1] as const;  // Day-1 · Day-2 · Day-3+
@@ -50,7 +51,7 @@ function getNextDeadline(start: Date, token: Token) {
   const targetDow  = TOKEN_SCHEDULE[token.symbol].decrypt;    // 0-6
   const todayDow   = start.getUTCDay();
   const candidate  = new Date(start);
-  candidate.setUTCHours(23, 59, 0, 0);
+  candidate.setUTCHours(10, 59, 0, 0);   // 10:59 UTC 
 
   if (todayDow === targetDow && start < candidate) return candidate;
 
@@ -110,12 +111,15 @@ async function pickNextToken(): Promise<Token> {
 
 /* ───────────── maintenance helpers ───────────── */
 /* ── helpers ─────────────────────────────────────────────── */
-function eraStart(now = new Date()) {
-  // Monday 00:00 UTC of the current two-week epoch
+function eraStart(now: Date = new Date()) {
   const d = new Date(now);
-  d.setUTCHours(0, 0, 0, 0);
-  d.setUTCDate(d.getUTCDate() - ((d.getUTCDay() + 6) % 7)); // back to Mon
-  return d;                // 00:00 UTC Monday
+
+  /* 1️⃣  Rewind to Monday (getUTCDay: 0 = Sun … 6 = Sat) */
+  d.setUTCDate(d.getUTCDate() - ((d.getUTCDay() + 6) % 7));  // back to Mon
+  /* 2️⃣  Snap clock to 11 : 00 UTC  */
+  d.setUTCHours(11, 0, 0, 0);                                // 11:00 UTC  :contentReference[oaicite:1]{index=1}
+
+  return d;   // Monday 11:00 UTC
 }
 
 const ERA_TWEET_BONUS = 200;
@@ -144,15 +148,15 @@ async function purgeParticipantsIfEpochStart(symbol: string) {
     })
     .gte("last_tweet_at", eraStartISO)        // ← only “fresh” tweeters
     .throwOnError();
-
+    console.log("🧹  updated", updErr ? "error" : "success");
   /* 2️⃣  Delete everyone else                        */
   const { error: delErr } = await supabase
-    .from("participants")
-    .delete()
-    .lt("last_tweet_at", eraStartISO)   // older than era start
-    .or("last_tweet_at.is.null")        // OR never tweeted
-    .throwOnError();                              // ensures you see mistakes
-
+  .from("participants")
+  .delete()
+  .or(`last_tweet_at.lt.${eraStartISO},last_tweet_at.is.null`) // OR, not AND
+  .throwOnError();
+                  
+   console.log("🧹  deleted", delErr ? "error" : "success");
   if (updErr || delErr) throw updErr || delErr;
 }
 
@@ -249,7 +253,9 @@ async function fetchEncryptedTimes(targetHeight: number): Promise<Map<string,Dat
 /* ---------- 3️⃣  scoring pipeline --------------------------- */
 function multiplierFor(submitted: Date|null, decrypt: Date): number {
   if (!submitted) return 1;
-  const open = new Date(decrypt); open.setUTCDate(open.getUTCDate()-2); open.setUTCHours(0,0,0,0);
+  const open = new Date(decrypt);
+  open.setUTCDate(open.getUTCDate() - 3);    // –3 days
+  open.setUTCHours(11, 0, 0, 0);             // 11:00 UTC
   const idx  = Math.floor((submitted.getTime()-open.getTime())/86_400_000);
   return idx<=0 ? DAY_MULTIPLIERS[0] : idx===1 ? DAY_MULTIPLIERS[1] : DAY_MULTIPLIERS[2];
 }
@@ -309,7 +315,9 @@ async function updateScoresForLastDeadline() {
     if (submitted > decryptDate) continue;            // sanity guard
     
     /* only keep within 3-day window */
-    const open = new Date(decryptDate); open.setUTCDate(open.getUTCDate()-2); open.setUTCHours(0,0,0,0);
+    const open = new Date(decryptDate);
+    open.setUTCDate(open.getUTCDate() - 3);
+    open.setUTCHours(11, 0, 0, 0);
     if (submitted < open) continue;
 
     const mult = multiplierFor(submitted, decryptDate);
@@ -366,7 +374,16 @@ async function estimateTargetHeight(start:Date, baseH:number, deadline:Date){
 }
 
 /* ───────────── GET handler ───────────── */
-export async function GET() {
+export async function GET(req: Request) {
+
+ // Skip the check locally so dev is easy
+  if (process.env.NODE_ENV !== 'development') {
+    const auth = req.headers.get('Authorization');
+    if (auth !== ("Bearer "+process.env.CRON_SECRET)) {
+      return NextResponse.json({ error: 'unauthorized' }, { status: 401 });
+    }
+  }
+
   const now = new Date();
   try {
     console.log('▶ cron/update-deadline start');

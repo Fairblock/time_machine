@@ -7,23 +7,28 @@ import Image from "next/image";
 import rightTextBg from "../../../public/Right.png";
 import { useActiveToken } from "@/hooks/useActiveToken";
 
-/* decrypt weekday (UTC, Sun = 0) */
+/* ──────────────────────────────────────────────────────────────
+ *  Decrypt cut‑off weekday map  (UTC, 0 = Sun … 6 = Sat)
+ *  SOL/ARB close Thu 10 : 59; BTC/ETH close Sun 10 : 59
+ * ───────────────────────────────────────────────────────────── */
 const DECRYPT_DOW: Record<string, number> = {
-  SOL: 3, // Wednesday
-  ARB: 3,
-  BTC: 6, // Saturday
-  ETH: 6,
+  SOL: 4,  // Thursday
+  ARB: 4,
+  BTC: 0,  // Sunday
+  ETH: 0,
 };
 
-/* build next cut-off - 23:59 UTC on that weekday */
+/* ──────────────────────────────────────────────────────────────
+ *  Next decrypt deadline  — 10 : 59 UTC on the target weekday
+ * ───────────────────────────────────────────────────────────── */
 function nextDecryptDeadline(symbol: string, now = new Date()) {
-  const targetDow = DECRYPT_DOW[symbol] ?? 3;
+  const targetDow = DECRYPT_DOW[symbol] ?? 4;        // default Thu
   const deadline  = new Date(now);
-  deadline.setUTCHours(23, 59, 0, 0);
+  deadline.setUTCHours(10, 59, 0, 0);               // 10:59 UTC
 
   const delta = (targetDow + 7 - now.getUTCDay()) % 7;
   if (delta === 0 && now < deadline) {
-    /* tonight */
+    /* later today ‑ keep same date */
   } else {
     deadline.setUTCDate(deadline.getUTCDate() + (delta || 7));
   }
@@ -33,9 +38,9 @@ function nextDecryptDeadline(symbol: string, now = new Date()) {
 export default function CountdownCard() {
   const { data: token } = useActiveToken();
   const [daysRemaining, setDaysRemaining] = useState<number | null>(null);
-  const [weekdayText, setWeekdayText] = useState<string>("");
+  const [weekdayText, setWeekdayText]     = useState<string>("");
 
-  /* update once a minute */
+  /* update every minute */
   useEffect(() => {
     if (!token) return;
 
@@ -52,7 +57,7 @@ export default function CountdownCard() {
     };
 
     update();
-    const id = setInterval(update, 60_000); // 1 min
+    const id = setInterval(update, 60_000);   // 1 min
     return () => clearInterval(id);
   }, [token]);
 
@@ -70,14 +75,12 @@ export default function CountdownCard() {
           Remaining time for Prediction
         </p>
         <p className="text-xs md:text-sm text-gray-500 mt-2">
-          Unlocks on {weekdayText} around 23:59 UTC.
+          Unlocks on {weekdayText} at 10:59&nbsp;UTC.
         </p>
       </div>
 
       {/* ─ clock + overlay ─ */}
-      <div
-        className="flex items-end relative min-h-44 h-full w-full md:w-[55%] lg:w-1/2 xl:w-[55%]"
-      >
+      <div className="flex items-end relative min-h-44 h-full w-full md:w-[55%] lg:w-1/2 xl:w-[55%]">
         <div
           className="flex items-end relative min-h-44 h-full w-full opacity-40"
           style={{

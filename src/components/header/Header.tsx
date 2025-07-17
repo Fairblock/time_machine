@@ -4,10 +4,11 @@ import { useState, useEffect } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Copy, Menu, X as CloseIcon, LogOut, Monitor } from "lucide-react";
+import { Copy, Menu, X as CloseIcon, LogOut, ChevronRight } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { fairyring } from "@/constant/chains";
+
 import {
   useAccount,
   useConnect,
@@ -15,109 +16,269 @@ import {
   useSuggestChainAndConnect,
   WalletType,
 } from "graz";
-import { PUBLIC_ENVIRONMENT } from "@/constant/env";
+
+import { wcModal } from "@/lib/wcModal";
 import HowItWorksModal from "../modals/HowItWorksModal";
 import { useHowItWorksContext } from "@/contexts/HowItWorksContext";
 
+/* --- WalletConnect protocol disconnect helpers -------------------- */
+import SignClient from "@walletconnect/sign-client";
+import { getSdkError } from "@walletconnect/utils";
+
+/** Your WalletConnect projectId (keep in sync w/ wcModal.ts) */
+const WC_PROJECT_ID = "cbfcaf564ee9293b0d9d25bbdac11ea3";
+
+/**
+ * Disconnect all active WalletConnect sessions & pairings for this projectId.
+ * This forces the *next* connect attempt to create a brand‑new pairing,
+ * which prompts Keplr to open and lets the user pick/switch accounts.
+ */
+async function killWcSessionsRemote() {
+  try {
+    const client = await SignClient.init({ projectId: WC_PROJECT_ID });
+
+    // Kill active sessions.
+    const sessions = client.session.getAll();
+    for (const s of sessions) {
+      try {
+        await client.disconnect({
+          topic: s.topic,
+          reason: getSdkError("USER_DISCONNECTED"),
+        });
+      } catch {
+        /* ignore */
+      }
+    }
+
+    // Delete stored pairings (prevents silent auto‑reuse).
+    const pairings = client.pairing.getAll();
+    for (const p of pairings) {
+      try {
+        await client.pairing.delete(p.topic, getSdkError("USER_DISCONNECTED"));
+      } catch {
+        /* ignore */
+      }
+    }
+  } catch {
+    /* ignore init errors */
+  }
+}
+
+/* ------------------------------------------------------------------ */
+/* Defensive close for lingering Web3Modal overlay on mobile returns. */
+function forceCloseWcModal() {
+  try {
+    wcModal.closeModal();
+  } catch {
+    /* ignore */
+  }
+
+  const hosts = Array.from(
+    document.querySelectorAll<HTMLElement>("#w3m-modal, w3m-modal"),
+  );
+  hosts.forEach((el) => {
+    el.style.display = "none";
+    try {
+      el.remove();
+    } catch {
+      /* ignore */
+    }
+  });
+
+  const stray = document.querySelectorAll<HTMLElement>(
+    "[class*='w3m-overlay'],[data-w3m-overlay],[class*='w3m-modal']",
+  );
+  stray.forEach((el) => {
+    el.style.opacity = "0";
+    el.style.pointerEvents = "none";
+  });
+
+  const body = document?.body;
+  if (body) {
+    body.style.removeProperty("overflow");
+    body.classList.remove("w3m-modal-open", "w3m-open");
+  }
+}
+/* ------------------------------------------------------------------ */
+/* Purge persisted WalletConnect v2 items in localStorage.            */
+function clearWcSessions() {
+  try {
+    const ls = window.localStorage;
+    const keys = Object.keys(ls);
+    for (const k of keys) {
+      if (
+        k.startsWith("wc@") ||
+        k.startsWith("walletconnect") ||
+        k === "WALLETCONNECT_DEEPLINK_CHOICE"
+      ) {
+        ls.removeItem(k);
+      }
+    }
+  } catch {
+    /* ignore */
+  }
+}
+/* ------------------------------------------------------------------ */
+
 function Header() {
-  /* ───────── wallet helpers ─────────────────────────────────────── */
+  /* ───────── local state ───────── */
   const [showWallet, setShowWallet] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
-  const [attempted, setAttempted] = useState<WalletType | null>(null);
   const [walletMenu, setWalletMenu] = useState(false);
 
-  const { data: account, isConnected } = useAccount();
-  const { connect, error: walletErr } = useConnect();
+  /* ───────── wallet hooks ──────── */
+  const {
+    data: account,
+    isConnected,
+    walletType: connectedWalletType,
+  } = useAccount();
+  const { connect } = useConnect();
   const { disconnect } = useDisconnect();
   const { suggestAndConnect } = useSuggestChainAndConnect();
+
+  /* ───────── app context ───────── */
+  const pathname = usePathname();
   const { showModal, setShowModal } = useHowItWorksContext();
 
-  const pathname = usePathname();
-
+  /* ───────── utilities ─────────── */
   const truncated = account?.bech32Address
     ? `${account.bech32Address.slice(0, 6)}…${account.bech32Address.slice(-4)}`
     : "";
 
-  /* === listen for global open‑wallet events === */
-  useEffect(() => {
-    function handleOpen() {
-      setShowWallet(true);
-    }
-    window.addEventListener("open-wallet-modal", handleOpen);
-    return () => window.removeEventListener("open-wallet-modal", handleOpen);
-  }, []);
+  const isMobile = /Android|iPhone|iPad|iPod/i.test(
+    typeof navigator !== "undefined" ? navigator.userAgent : "",
+  );
 
-  /* ───────── connect helpers ────────────────────────────────────── */
-  async function connectKeplr() {
-    const mobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
-    const hasExt = typeof window !== "undefined" && (window as any).keplr;
-    const type = mobile && !hasExt ? WalletType.WC_KEPLR_MOBILE : WalletType.KEPLR;
-  
-    setAttempted(type);
-  
-    try {
-      await connect({
-        walletType: type,
-        chainId: PUBLIC_ENVIRONMENT.NEXT_PUBLIC_CHAIN_ID!,
-      });
-    } catch {
-      await suggestAndConnect({ chainInfo: fairyring, walletType: type });
-    }
-  
-    setShowWallet(false);
-  }
-  
-  async function connectLeap() {
-    const mobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
-    const hasExt = typeof window !== "undefined" && (window as any).leap;
-    const type = mobile && !hasExt
-      ? WalletType.WC_LEAP_MOBILE
-      : WalletType.LEAP;
-  
-    setAttempted(type);
-  
-    if (!mobile && !hasExt) {
-      alert(
-        "Leap extension not detected.\nInstall/enable it and refresh the page."
-      );
-      return;
-    }
+  /* ───────── Keplr (WalletConnect) helper ───────── */
+  async function connectKeplrMobile() {
+    const walletType = WalletType.WC_KEPLR_MOBILE;
+
+    await killWcSessionsRemote();
+    clearWcSessions();
+
+    await wcModal.openModal({
+      requiredNamespaces: {
+        cosmos: {
+          chains: ["cosmos:fairyring-testnet-3"],
+          methods: ["cosmos_signDirect", "cosmos_signAmino"],
+          events: ["accountsChanged"],
+        },
+      },
+      standaloneChains: ["cosmos:fairyring-testnet-3"],
+    });
 
     try {
       await connect({
-        walletType: type,
-        chainId: PUBLIC_ENVIRONMENT.NEXT_PUBLIC_CHAIN_ID!,
+        chainId: fairyring.chainId,
+        walletType,
+        autoReconnect: true,
       });
     } catch {
       await suggestAndConnect({
         chainInfo: fairyring,
-        walletType: type,
+        walletType,
+        autoReconnect: true,
+      });
+    } finally {
+      forceCloseWcModal();
+    }
+  }
+
+  /* ───────── Leap (WalletConnect) helper ───────── */
+  async function connectLeapMobile() {
+    const walletType = WalletType.WC_LEAP_MOBILE;
+
+    await killWcSessionsRemote();
+    clearWcSessions();
+
+    await wcModal.openModal({
+      requiredNamespaces: {
+        cosmos: {
+          chains: ["cosmos:fairyring-testnet-3"],
+          methods: ["cosmos_signDirect", "cosmos_signAmino"],
+          events: ["accountsChanged"],
+        },
+      },
+      standaloneChains: ["cosmos:fairyring-testnet-3"],
+      explorerRecommendedWalletIds: ["io.leapwallet"],
+    });
+
+    try {
+      await connect({
+        chainId: fairyring.chainId,
+        walletType,
+        autoReconnect: true,
+      });
+    } catch {
+      await suggestAndConnect({
+        chainInfo: fairyring,
+        walletType,
+        autoReconnect: true,
+      });
+    } finally {
+      forceCloseWcModal();
+    }
+  }
+
+  /* ───────── public connect handlers ───────── */
+  async function connectKeplr() {
+    setShowWallet(false);
+    if (isMobile) {
+      await connectKeplrMobile();
+    } else {
+      await suggestAndConnect({
+        chainInfo: fairyring,
+        walletType: WalletType.KEPLR,
       });
     }
+  }
 
+  async function connectLeap() {
     setShowWallet(false);
-  }
-  
-  
-
-  async function waitForLeap(ms = 2000): Promise<void> {
-    const start = Date.now();
-    while (Date.now() - start < ms) {
-      if (typeof window !== "undefined" && (window as any).leap) return;
-      await new Promise((r) => setTimeout(r, 100));
+    if (isMobile) {
+      await connectLeapMobile();
+    } else {
+      await suggestAndConnect({
+        chainInfo: fairyring,
+        walletType: WalletType.LEAP,
+      });
     }
-    throw new Error("Leap extension not detected");
   }
 
-
-  /* retry with suggestChain if wallet needs the chain registered */
+  /* ───────── auto-close banner + WC sheet when connected ───────── */
   useEffect(() => {
-    if (walletErr && attempted) {
-      suggestAndConnect({ chainInfo: fairyring, walletType: attempted });
+    if (isConnected && account?.bech32Address) {
+      setShowWallet(false);
+      forceCloseWcModal();
     }
-  }, [walletErr, attempted, suggestAndConnect]);
+  }, [isConnected, account?.bech32Address]);
 
-  /* ───────── JSX ────────────────────────────────────────────────── */
+  /* ───────── close lingering WC modal when returning from background ───────── */
+  useEffect(() => {
+    const onVis = () => {
+      if (document.visibilityState === "visible" && isConnected) {
+        forceCloseWcModal();
+      }
+    };
+    const onFocus = () => {
+      if (isConnected) forceCloseWcModal();
+    };
+    document.addEventListener("visibilitychange", onVis);
+    window.addEventListener("focus", onFocus);
+    return () => {
+      document.removeEventListener("visibilitychange", onVis);
+      window.removeEventListener("focus", onFocus);
+    };
+  }, [isConnected]);
+
+  /* ───────── global “open-wallet” event ───────── */
+  useEffect(() => {
+    const opener = () => setShowWallet(true);
+    window.addEventListener("open-wallet-modal", opener);
+    return () => window.removeEventListener("open-wallet-modal", opener);
+  }, []);
+
+  /* ───────── JSX ───────── */
   return (
     <>
       {/* ===== TOP BAR ===== */}
@@ -214,8 +375,9 @@ function Header() {
                       className="flex items-center w-full px-4 py-2 text-sm text-red-600 hover:bg-gray-50"
                       onClick={async () => {
                         await disconnect();
+                        await killWcSessionsRemote();
+                        clearWcSessions();
                         setWalletMenu(false);
-                        /* —— refresh ONLY after disconnect —— */
                         window.location.reload();
                       }}
                     >
@@ -274,7 +436,7 @@ function Header() {
                 setMobileOpen(false);
                 setShowModal(true);
               }}
-              className={`text-gray-900 whitespace-nowrap cursor-pointer`}
+              className="text-gray-900 whitespace-nowrap cursor-pointer"
             >
               How it works
             </button>
@@ -319,8 +481,10 @@ function Header() {
                     className="w-full"
                     onClick={async () => {
                       await disconnect();
+                      await killWcSessionsRemote();
+                      clearWcSessions();
                       setMobileOpen(false);
-                      window.location.reload(); // refresh on disconnect
+                      window.location.reload();
                     }}
                   >
                     Disconnect
@@ -342,24 +506,21 @@ function Header() {
         </div>
       )}
 
-      {/* ===== WALLET MODAL ===== */}
-      {showWallet && (
+      {/* ===== WALLET MODAL (desktop + mobile) ===== */}
+      {showWallet && !isConnected && (
         <div
           className="fixed inset-0 z-50 flex items-center justify-center bg-black/40"
           onClick={() => setShowWallet(false)}
         >
+          {/* ---- DESKTOP VIEW ---- */}
           <div
             onClick={(e) => e.stopPropagation()}
             className="hidden lg:block w-[90%] sm:w-[420px] bg-white rounded-lg px-8 py-10 text-center space-y-8"
           >
-            <h2 className="text-3xl font-extrabold uppercase">
-              Connect Wallet
-            </h2>
+            <h2 className="text-3xl font-extrabold uppercase">Connect Wallet</h2>
             <p className="text-gray-700 text-sm">
               By connecting your wallet, you agree to our <br />
-              <span className="font-semibold underline">
-                Terms of Service
-              </span>{" "}
+              <span className="font-semibold underline">Terms of Service</span>{" "}
               and{" "}
               <span className="font-semibold underline">Privacy Policy</span>.
             </p>
@@ -367,12 +528,7 @@ function Header() {
             {/* Keplr */}
             <div className="flex items-center justify-between">
               <div className="flex items-center space-x-3">
-                <Image
-                  src="/keplr.png"
-                  alt="Keplr icon"
-                  width={32}
-                  height={32}
-                />
+                <Image src="/keplr.png" alt="Keplr icon" width={32} height={32} />
                 <span className="text-lg font-medium">Keplr</span>
               </div>
               <Button
@@ -400,14 +556,36 @@ function Header() {
             </div>
           </div>
 
-          <div className="lg:hidden w-[90%] sm:w-[420px] bg-white rounded-lg px-8 py-10 text-center space-y-8">
-            <div className="flex flex-col gap-8 justify-between items-center">
-              <h3 className="font-medium text-xl">Please switch to desktop.</h3>
-              <div className="border border-neutral-900 p-6 rounded-lg">
-                <Monitor className="text-3xl" />
-              </div>
-              <h5 className="font-medium text-xl">Mobile app support coming soon.</h5>
-            </div>
+          {/* ---- MOBILE VIEW ---- */}
+          <div
+            onClick={(e) => e.stopPropagation()}
+            className="lg:hidden w-[90%] sm:w-[420px] bg-white rounded-lg px-8 py-10 text-center space-y-6"
+          >
+            <h2 className="text-2xl font-bold mb-4">Connect Wallet</h2>
+
+            {/* Keplr (WalletConnect) */}
+            <button
+              onClick={connectKeplr}
+              className="w-full flex items-center justify-between border rounded-lg px-4 py-3 hover:bg-gray-50"
+            >
+              <span className="flex items-center space-x-3">
+                <Image src="/keplr.png" alt="Keplr Wallet" width={28} height={28} />
+                <span className="font-medium">Keplr&nbsp;(WalletConnect)</span>
+              </span>
+              <ChevronRight size={16} />
+            </button>
+
+            {/* Leap (WalletConnect) */}
+            <button
+              onClick={connectLeap}
+              className="w-full flex items-center justify-between border rounded-lg px-4 py-3 hover:bg-gray-50"
+            >
+              <span className="flex items-center space-x-3">
+                <Image src="/leap.png" alt="Leap Wallet" width={28} height={28} />
+                <span className="font-medium">Leap&nbsp;(WalletConnect)</span>
+              </span>
+              <ChevronRight size={16} />
+            </button>
           </div>
         </div>
       )}

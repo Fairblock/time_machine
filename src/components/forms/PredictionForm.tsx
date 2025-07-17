@@ -16,12 +16,14 @@ import {
   signOfflineWithCustomNonce,
 } from "@/services/fairyring/sign";
 import { Amount } from "@/types/fairyring";
-import { useAccount } from "graz";
+import { useAccount, WalletType, useOfflineSigners } from "graz"; // <<< added WalletType + useOfflineSigners
 import { Lock, Loader2, CircleX } from "lucide-react";
 import { TxRaw, TxBody } from "cosmjs-types/cosmos/tx/v1beta1/tx";
 import { MsgSubmitEncryptedTx } from "@/types/fairyring/codec/pep/tx";
 import { Buffer } from "buffer";
 import { useActiveToken } from "@/hooks/useActiveToken";
+import { SigningStargateClient, GasPrice, StdFee } from "@cosmjs/stargate"; // <<< added
+import { upsertProofAction } from "@/app/actions/upsertProof";
 
 /* ───────── constants ────────────────────────────────────────────── */
 const MEMO = "price-predict";
@@ -49,8 +51,8 @@ export default function PredictionForm() {
   /* hooks */
   const { data: activeToken } = useActiveToken();
   const client = useClient();
-  const { data: account } = useAccount();
-  const { walletType } = useAccount();
+  const { data: account, walletType, isConnected } = useAccount(); // <<< consolidated; added isConnected
+  const { data: offlineSignersData } = useOfflineSigners(); // <<< added (auto signer from Graz WC/extension)
   const address = account?.bech32Address;
   const { data: pubkey } = useKeysharePubKey();
 
@@ -127,7 +129,7 @@ export default function PredictionForm() {
   /* ─ submit encrypted tx ─ */
   async function submitOnChain(pred: number) {
     /* ——— wallet not connected → open connect banner and exit ——— */
-    if (!address) {
+    if (!address || !isConnected) {
       window.dispatchEvent(new Event("open-wallet-modal"));
       return;
     }
@@ -182,19 +184,50 @@ export default function PredictionForm() {
       }
 
       /* 2️⃣  sign MsgSend with estimated gas */
-      const signed = await signOfflineWithCustomNonce(
-        address,
-        FAIRYRING_ENV.rpcURL,
-        FAIRYRING_ENV.chainID,
-        [sendMsg],
-        {
+      // --- minimal mobile fix: use Graz signer when WC Keplr mobile is active ---
+      const isWcKeplr = walletType === WalletType.WC_KEPLR_MOBILE; // <<< added
+      let signed: Buffer;                                          // <<< added
+      if (isWcKeplr && offlineSignersData?.offlineSignerAuto) {    // <<< added
+        const offlineSigner = offlineSignersData.offlineSignerAuto as any; // <<< added
+        const accounts = await offlineSigner.getAccounts();        // <<< added
+        const match = accounts.find((a: any) => a.address === address); // <<< added
+        if (!match) throw new Error("active WC Keplr account mismatch"); // <<< added
+        const fee: StdFee = {                                      // <<< added
           amount: [{ denom: "ufairy", amount: "0" }],
           gas: String(estimatedGas),
-        },
-        memo,
-        nonce,
-        walletType!
-      );
+        };
+        const stargate = await SigningStargateClient.connectWithSigner(       // <<< added
+          FAIRYRING_ENV.rpcURL,
+          offlineSigner,
+          { gasPrice: GasPrice.fromString("0.025ufairy") },
+        );
+        const { accountNumber } = await stargate.getSequence(address);        // <<< added
+        const signedTx = await stargate.sign(                                 // <<< added
+          address,
+          [sendMsg],
+          fee,
+          memo,
+          { accountNumber, sequence: nonce, chainId: FAIRYRING_ENV.chainID },
+        );
+        signed = Buffer.from(TxRaw.encode(signedTx).finish());                // <<< added
+      } else {
+        // desktop or non-WC fallback: use existing helper (unchanged path)
+        signed = await signOfflineWithCustomNonce(                            // <<< changed var name
+          address,
+          FAIRYRING_ENV.rpcURL,
+          FAIRYRING_ENV.chainID,
+          [sendMsg],
+          {
+            amount: [{ denom: "ufairy", amount: "0" }],
+            gas: String(estimatedGas),
+          },
+          memo,
+          nonce,
+          walletType!,
+        );
+      }
+      // --- end minimal mobile fix ---
+
       let key = (pubkey as any).active_pubkey?.public_key;
       /* encrypt & size‑aware gas for MsgSubmitEncryptedTx */
       if (targetHeight > Number((pubkey as any).active_pubkey?.expiry)) {
@@ -250,12 +283,12 @@ export default function PredictionForm() {
 
       /* proof‑token (unchanged) */
       const newToken = nanoid(8);
-      const res = await fetch("/api/twitter/proof", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ wallet: address, token: newToken }),
+      const res = await upsertProofAction({
+        wallet: address,
+        token:  newToken,
       });
-      if (!res.ok) throw new Error("failed to create proof‑token");
+      
+      if (!res.ok) throw new Error(res.reason ?? "failed to create proof‑token");
 
       setProofToken(newToken);
       setSubmitted(true);
