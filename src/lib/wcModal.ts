@@ -16,13 +16,4 @@ export const wcModal = new Web3Modal({
   explorerExcludedWalletIds: "ALL",
 
   standaloneChains: ["cosmos:fairyring-testnet-3"],
-  metadata: {
-    name:        'FairyRing',
-    description: 'Encrypt predictions on Fairblock',
-    url:         'https://timemachine.fairblock.network',
-    icons:       ['https://timemachine.fairblock.network/icon.png'],
-    redirect: {
-      universal: 'https://timemachine.fairblock.network/', // opens in default browser
-      // native:  'fairyring://'                      // optional custom scheme
-    }}
 });

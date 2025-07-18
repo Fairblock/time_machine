@@ -35,16 +35,7 @@ const WC_PROJECT_ID = "cbfcaf564ee9293b0d9d25bbdac11ea3";
  */
 async function killWcSessionsRemote() {
   try {
-    const client = await SignClient.init({ projectId: WC_PROJECT_ID,   metadata: {
-      name:        'FairyRing',
-      description: 'Encrypt predictions on Fairblock',
-      url:         'https://timemachine.fairblock.network',
-      icons:       ['https://timemachine.fairblock.network/icon.png'],
-      redirect: {
-        universal: 'https://timemachine.fairblock.network/', // opens in default browser
-        // native:  'fairyring://'                      // optional custom scheme
-      }
-    } });
+    const client = await SignClient.init({ projectId: WC_PROJECT_ID });
 
     // Kill active sessions.
     const sessions = client.session.getAll();
