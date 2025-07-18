@@ -198,41 +198,44 @@ function Header() {
   }
 
   /* ───────── Leap (WalletConnect) helper ───────── */
-  async function connectLeapMobile() {
-    const walletType = WalletType.WC_LEAP_MOBILE;
+  // async function connectLeapMobile() {
+  //   const walletType = WalletType.WC_LEAP_MOBILE;
 
-    await killWcSessionsRemote();
-    clearWcSessions();
+  //   await killWcSessionsRemote();
+  //   clearWcSessions();
 
-    await wcModal.openModal({
-      requiredNamespaces: {
-        cosmos: {
-          chains: ["cosmos:fairyring-testnet-3"],
-          methods: ["cosmos_signDirect", "cosmos_signAmino"],
-          events: ["accountsChanged"],
-        },
-      },
-      standaloneChains: ["cosmos:fairyring-testnet-3"],
-      explorerRecommendedWalletIds: ["io.leapwallet"],
-    });
+  //   await wcModal.openModal({
+  //     requiredNamespaces: {
+  //       cosmos: {
+  //         chains: ["cosmos:fairyring-testnet-3"],
+  //         methods: ["cosmos_signDirect", "cosmos_signAmino"],
+  //         events: ["accountsChanged"],
+  //       },
+  //     },
+  //     standaloneChains: ["cosmos:fairyring-testnet-3"],
+  //     explorerRecommendedWalletIds: ["io.leapwallet"],
+  //   });
 
-    try {
-      await connect({
-        chainId: fairyring.chainId,
-        walletType,
-        autoReconnect: true,
-      });
-    } catch {
-      await suggestAndConnect({
-        chainInfo: fairyring,
-        walletType,
-        autoReconnect: true,
-      });
-    } finally {
-      forceCloseWcModal();
-    }
-  }
-
+  //   try {
+  //     await connect({
+  //       chainId: fairyring.chainId,
+  //       walletType,
+  //       autoReconnect: true,
+  //     });
+  //   } catch {
+  //     await suggestAndConnect({
+  //       chainInfo: fairyring,
+  //       walletType,
+  //       autoReconnect: true,
+  //     });
+  //   } finally {
+  //     forceCloseWcModal();
+  //   }
+  // }
+   async function connectLeapMobile() {
+       const dapp = encodeURIComponent(window.location.href);
+       window.location.href = `https://link.leapwallet.app/dapp/${dapp}`;
+     }
   /* ───────── public connect handlers ───────── */
   async function connectKeplr() {
     setShowWallet(false);

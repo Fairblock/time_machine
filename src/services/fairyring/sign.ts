@@ -21,13 +21,11 @@ async function getWalletSigner(
       : window.keplr.getOfflineSignerAuto(chainID)) as unknown as OfflineSigner;
   }
 
-  if (wallet === WalletType.LEAP || isWcLeap) {
-    if (!window.leap) throw new Error("Leap extension not found");
-    await window.leap.enable(chainID);
-    return isWcLeap
-      ? window.leap.getOfflineSignerOnlyAmino(chainID)
-      : window.leap.getOfflineSigner(chainID);
-  }
+   if (wallet === WalletType.LEAP || isWcLeap) {
+       if (!window.leap) throw new Error("Leap extension not found");
+       await window.leap.enable(chainID);
+       return window.leap.getOfflineSigner(chainID);
+     }
 
   throw new Error(`Unsupported wallet: ${wallet}`);
 }
