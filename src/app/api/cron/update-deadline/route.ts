@@ -269,7 +269,7 @@ async function updateScoresForLastDeadline() {
     .limit(1).single();
   if (!last) return;
 
-  await purgeParticipantsIfEpochStart(last.symbol);
+  // await purgeParticipantsIfEpochStart(last.symbol);
 
   const targetHeight = Number(last.target_block);
   if (!targetHeight) return;
@@ -369,7 +369,7 @@ async function estimateTargetHeight(start:Date, baseH:number, deadline:Date){
   const secPer = await avgBlockTime(400);
   const tipT   = await getBlockTime(baseH);
   const left   = (deadline.getTime()-tipT.getTime())/1_000;
-  const safe   = secPer*1.002;
+  const safe   = secPer*1.02;
   return baseH + Math.floor(left/safe);
 }
 
@@ -394,14 +394,9 @@ export async function GET(req: Request) {
       .select('target_block')
       .order('deadline_date',{ ascending:false })
       .limit(1).single();
-    if (!lastRow?.target_block) throw new Error('no previous deadline row');
+  
 
     const tipH    = await getCurrentBlockHeight();
-    if (tipH < Number(lastRow.target_block)) await waitUntilHeight(Number(lastRow.target_block));
-
-    await updateScoresForLastDeadline();
-    await wipeProofsTable();
-
     /* next schedule */
     const nextTok   = await pickNextToken();
     const deadline  = getNextDeadline(now, nextTok);
@@ -416,6 +411,13 @@ export async function GET(req: Request) {
     if (error) throw new Error(error.message);
 
     console.log(`✅ new deadline ${deadline.toISOString()} → ${nextTok.symbol} @ block ${targetBlk}`);
+    if (lastRow?.target_block){
+    if (tipH < Number(lastRow.target_block)) await waitUntilHeight(Number(lastRow.target_block));
+
+    await updateScoresForLastDeadline();
+    await wipeProofsTable();
+    }
+
     return NextResponse.json({
       success:true,
       deadline:deadline.toISOString(),

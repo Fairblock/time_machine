@@ -41,10 +41,10 @@ async function avgBlockTime(tip: number, lookback: number) {
 
 /* return the *next* Wed/Sat @23:59 UTC strictly after t ---------------- */
 function nextDeadlineAfter(t: Date) {
-  const isDecryptDay = (d: Date) => d.getUTCDay() === 3 || d.getUTCDay() === 6;
+  const isDecryptDay = (d: Date) => d.getUTCDay() === 4 || d.getUTCDay() === 0;
   const dl = new Date(t);
   dl.setUTCMinutes(59, 0, 0);
-  dl.setUTCHours(23);
+  dl.setUTCHours(10);
 
   if (t >= dl) dl.setUTCDate(dl.getUTCDate() + 1);    // already past 23:59
 
@@ -74,7 +74,7 @@ function nextDeadlineAfter(t: Date) {
   const estSec     = avgSec * slowFac;
   const blocksAhead= Math.floor(secsUntil / estSec);
   let   predicted  = baseHeight + blocksAhead;
-
+  console.log('Predicted block:', predicted);
   let   targetTime = new Date((await getBlock(predicted)).header.time);
 
   /* 3️⃣ diagnostics */
@@ -89,5 +89,5 @@ function nextDeadlineAfter(t: Date) {
   console.log('Predicted height   :', predicted);
   console.log('Predicted time     :', targetTime.toISOString());
   console.log('Δ to deadline (s)  :', diffSec.toFixed(1),
-              diffSec <= 0 ? '(late — OK)' : '(early!)');
+              diffSec >= 0 ? '(early — OK)' : '(late!)');
 })();
