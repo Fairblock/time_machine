@@ -75,10 +75,10 @@ function nextDeadlineAfter(t: Date) {
   const blocksAhead= Math.floor(secsUntil / estSec);
   let   predicted  = baseHeight + blocksAhead;
 
-  // let   targetTime = new Date((await getBlock(predicted)).header.time);
+  let   targetTime = new Date((await getBlock(predicted)).header.time);
 
-  // /* 3️⃣ diagnostics */
-  // const diffSec = (deadline.getTime() - targetTime.getTime()) / 1000;
+  /* 3️⃣ diagnostics */
+  const diffSec = (deadline.getTime() - targetTime.getTime()) / 1000;
 
   console.log('Base height        :', baseHeight);
   console.log('Base header time   :', baseTime.toISOString());
@@ -87,7 +87,7 @@ function nextDeadlineAfter(t: Date) {
   console.log('Safety slow factor :', slowFac, '(effective', estSec.toFixed(3), 's)');
   console.log('Blocks until target:', predicted - baseHeight);
   console.log('Predicted height   :', predicted);
-  // console.log('Predicted time     :', targetTime.toISOString());
-  // console.log('Δ to deadline (s)  :', diffSec.toFixed(1),
-  //             diffSec >= 0 ? '(earlier — OK)' : '(late!)');
+  console.log('Predicted time     :', targetTime.toISOString());
+  console.log('Δ to deadline (s)  :', diffSec.toFixed(1),
+              diffSec <= 0 ? '(late — OK)' : '(early!)');
 })();
