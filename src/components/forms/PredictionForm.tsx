@@ -48,7 +48,12 @@ export default function PredictionForm() {
   const [proofToken, setProofToken] = useState("");
   const [formError, setFormError] = useState<string | React.ReactNode | null>(null);
   // ─── TX lifecycle stages ─────────────────────────
-  const [stage, setStage] = useState<"idle" | "confirm" | "sign" | "encrypt">("idle");
+  const [stage, setStage] = useState<
+    | "idle"
+    | "approve"
+    | "sign"
+    | "submit"
+  >("idle");
 
   /* hooks */
   const { data: activeToken } = useActiveToken();
@@ -102,7 +107,7 @@ export default function PredictionForm() {
 
         for (const row of res.result?.txs ?? []) {
           const raw = TxRaw.decode(Buffer.from(row.tx, "base64"));
-          const body = TxBody.decode(raw.bodyBytes);
+            const body = TxBody.decode(raw.bodyBytes);
 
           const anyMsg = body.messages.find(
             (m) => m.typeUrl === "/fairyring.pep.MsgSubmitEncryptedTx"
@@ -130,21 +135,17 @@ export default function PredictionForm() {
 
   /* ─ submit encrypted tx ─ */
   async function submitOnChain(pred: number) {
-    /* ——— wallet not connected → open connect banner and exit ——— */
     if (!address || !isConnected) {
       window.dispatchEvent(new Event("open-wallet-modal"));
       return;
     }
     if (targetHeight == null) return;
 
-    /* clear any previous error for this new attempt */
     setIsSending(true);
-    // kick off the very first phase
-    setStage("confirm");
+    setStage("approve");
     setFormError(null);
 
     try {
-      /* — nonce helper (unchanged) — */
       const {
         data: { pep_nonce },
       } = await client.FairyringPep.query.queryPepNonce(address);
@@ -157,7 +158,6 @@ export default function PredictionForm() {
       );
       const nonce = pep_nonce?.nonce ? +pep_nonce.nonce + sent : sent;
 
-      /* — build send-msg (unchanged) — */
       const amount: Amount[] = [{ denom: "ufairy", amount: "1" }];
       const payload = {
         amount,
@@ -171,7 +171,6 @@ export default function PredictionForm() {
       });
       const sendMsg = client.CosmosBankV1Beta1.tx.msgSend({ value: payload });
 
-      /* 1️⃣  GAS ESTIMATION (simulate MsgSend) */
       let estimatedGas = FALLBACK_GAS;
       try {
         const sim = (client as any).CosmosTxV1Beta1?.query?.simulate;
@@ -187,10 +186,7 @@ export default function PredictionForm() {
         console.warn("gas simulation failed, using fallback", e);
       }
 
-      /* 2️⃣  sign MsgSend with estimated gas */
-      // right before we pop the wallet up to sign
       setStage("sign");
-      // --- minimal mobile fix: use Graz signer when WC Keplr mobile is active ---
       const isWcKeplr = walletType === WalletType.WC_KEPLR_MOBILE;
       let signed: Buffer;
       if (isWcKeplr && offlineSignersData?.offlineSignerAuto) {
@@ -231,26 +227,21 @@ export default function PredictionForm() {
           walletType!
         );
       }
-      // --- end minimal mobile fix ---
 
       let key = (pubkey as any).active_pubkey?.public_key;
-      /* encrypt & size-aware gas for MsgSubmitEncryptedTx */
       if (targetHeight > Number((pubkey as any).active_pubkey?.expiry)) {
         key = (pubkey as any).queued_pubkey?.public_key;
       }
 
-      // 3️⃣  now encrypt that signed send-msg
-      setStage("encrypt");
       const encryptedHex = await encryptSignedTx(key, targetHeight, signed);
 
-      // Add gas for KV-store write (WritePerByte)
       const bytesToWrite = encryptedHex.length / 2;
       const submitGas = Math.max(
         estimatedGas,
         Math.ceil(bytesToWrite * WRITE_PER_BYTE_GAS + 200_000)
       );
 
-      /* 3️⃣  broadcast */
+      setStage("submit");
       const txResult = await client.FairyringPep.tx.sendMsgSubmitEncryptedTx({
         value: {
           creator: address,
@@ -265,7 +256,6 @@ export default function PredictionForm() {
       });
 
       if (txResult.code) {
-        // Retry once with double gas if we still hit out-of-gas
         if (/out of gas/i.test(txResult.rawLog ?? "")) {
           const retryGas = submitGas * 2;
           console.warn(`retrying with higher gas (${retryGas})…`);
@@ -424,13 +414,14 @@ Proof → ${proofToken}`
             inputMode="decimal"
             value={prediction}
             onChange={(e) => setPrediction(e.target.value)}
-            placeholder="E.g. 168.50"
+            placeholder="E.g. 168.50"
             className="w-full"
             min={0}
           />
           <Button
             type="submit"
             disabled={isSending || (address ? !prediction : false)}
+            onClick={() => setStage("approve")}
             className="w-full flex items-center justify-center space-x-2"
           >
             {address && isSending && encryptLockIcon ? (
@@ -441,13 +432,13 @@ Proof → ${proofToken}`
             <span>
               {address
                 ? isSending
-                  ? stage === "confirm"
-                    ? "Approve Connection"
+                  ? stage === "approve"
+                    ? "1. Approve Transaction"
                     : stage === "sign"
-                    ? "Sign Transaction"
-                    : stage === "encrypt"
-                    ? "Encrypting and Submitting…"
-                    : "…"
+                    ? "2. Sign Transaction"
+                    : stage === "submit"
+                    ? "Submitting..."
+                    : "Submitting..."
                   : "Encrypt Now"
                 : "Connect Wallet"}
             </span>
@@ -458,12 +449,12 @@ Proof → ${proofToken}`
       {(isChecking || isSending) && (
         <div className="absolute cursor-not-allowed inset-0 z-10 flex gap-2 items-center justify-center border border-neutral-200 bg-[#686363] w-full h-10 rounded-xl top-12 text-white text-sm">
           <Loader2 className="h-5 w-5 animate-spin" />{" "}
-          {stage === "confirm"
-            ? "Approve Connection"
+          {stage === "approve"
+            ? "1. Approve Transaction"
             : stage === "sign"
-            ? "Sign Transaction"
-            : stage === "encrypt"
-            ? "Encrypting and Submitting..."
+            ? "2. Sign Transaction"
+            : stage === "submit"
+            ? "Submitting..."
             : ""}
         </div>
       )}
