@@ -586,7 +586,7 @@ function Header() {
             >
               <span className="flex items-center space-x-3">
                 <Image src="/keplr.png" alt="Keplr Wallet" width={28} height={28} />
-                <span className="font-medium">Keplr&nbsp;(WalletConnect)</span>
+                <span className="font-medium">Keplr</span>
               </span>
               <ChevronRight size={16} />
             </button>
@@ -598,7 +598,7 @@ function Header() {
             >
               <span className="flex items-center space-x-3">
                 <Image src="/leap.png" alt="Leap Wallet" width={28} height={28} />
-                <span className="font-medium">Leap&nbsp;(WalletConnect)</span>
+                <span className="font-medium">Leap</span>
               </span>
               <ChevronRight size={16} />
             </button>
