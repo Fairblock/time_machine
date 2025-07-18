@@ -165,21 +165,7 @@ function Header() {
   /* ───────── Keplr (WalletConnect) helper ───────── */
   async function connectKeplrMobile() {
     const walletType = WalletType.WC_KEPLR_MOBILE;
-
-    await killWcSessionsRemote();
-    clearWcSessions();
-
-    await wcModal.openModal({
-      requiredNamespaces: {
-        cosmos: {
-          chains: ["cosmos:fairyring-testnet-3"],
-          methods: ["cosmos_signDirect", "cosmos_signAmino"],
-          events: ["accountsChanged"],
-        },
-      },
-      standaloneChains: ["cosmos:fairyring-testnet-3"],
-    });
-
+  
     try {
       await connect({
         chainId: fairyring.chainId,
@@ -193,9 +179,11 @@ function Header() {
         autoReconnect: true,
       });
     } finally {
-      forceCloseWcModal();
+      forceCloseWcModal(); // uses your existing DOM purge + unlockScroll()
+      unlockScroll();      // extra pass (idempotent)
     }
   }
+  
 
   /* ───────── Leap (WalletConnect) helper ───────── */
   // async function connectLeapMobile() {
