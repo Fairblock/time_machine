@@ -232,10 +232,24 @@ function Header() {
   //     forceCloseWcModal();
   //   }
   // }
-   async function connectLeapMobile() {
-       const dapp = encodeURIComponent(window.location.href);
-       window.location.href = `https://link.leapwallet.app/dapp/${dapp}`;
-     }
+  async function connectLeapMobile() {
+    if (typeof window === "undefined") return;        // SSR guard
+  
+    // Already in the Leap dApp browser?  → just connect.
+    if (/LeapWallet/i.test(navigator.userAgent ?? "")) {
+      await suggestAndConnect({
+        chainInfo: fairyring,
+        walletType: WalletType.LEAP,
+        autoReconnect: true,
+      });
+      return;
+    }
+  
+    // Redirect every other mobile UA to your pre‑generated Dynamic Link.
+    window.location.replace(
+      "https://leapcosmoswallet.page.link/6Zp5rk9VWcX9Rwo9",
+    );
+  }
   /* ───────── public connect handlers ───────── */
   async function connectKeplr() {
     setShowWallet(false);
