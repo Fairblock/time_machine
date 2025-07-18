@@ -157,7 +157,7 @@ export default function PredictionForm() {
       );
       const nonce = pep_nonce?.nonce ? +pep_nonce.nonce + sent : sent;
 
-      /* — build send‑msg (unchanged) — */
+      /* — build send-msg (unchanged) — */
       const amount: Amount[] = [{ denom: "ufairy", amount: "1" }];
       const payload = {
         amount,
@@ -234,16 +234,16 @@ export default function PredictionForm() {
       // --- end minimal mobile fix ---
 
       let key = (pubkey as any).active_pubkey?.public_key;
-      /* encrypt & size‑aware gas for MsgSubmitEncryptedTx */
+      /* encrypt & size-aware gas for MsgSubmitEncryptedTx */
       if (targetHeight > Number((pubkey as any).active_pubkey?.expiry)) {
         key = (pubkey as any).queued_pubkey?.public_key;
       }
 
-      // 3️⃣  now encrypt that signed send‑msg
+      // 3️⃣  now encrypt that signed send-msg
       setStage("encrypt");
       const encryptedHex = await encryptSignedTx(key, targetHeight, signed);
 
-      // Add gas for KV‑store write (WritePerByte)
+      // Add gas for KV-store write (WritePerByte)
       const bytesToWrite = encryptedHex.length / 2;
       const submitGas = Math.max(
         estimatedGas,
@@ -265,7 +265,7 @@ export default function PredictionForm() {
       });
 
       if (txResult.code) {
-        // Retry once with double gas if we still hit out‑of‑gas
+        // Retry once with double gas if we still hit out-of-gas
         if (/out of gas/i.test(txResult.rawLog ?? "")) {
           const retryGas = submitGas * 2;
           console.warn(`retrying with higher gas (${retryGas})…`);
@@ -339,10 +339,6 @@ Is this legal? Is this alpha? Who knows.
 Try free time travelling before they patch the glitch: https://timemachine.fairblock.network/
 
 Proof → ${proofToken}`
-    // `I just encrypted my ${
-    //   activeToken?.symbol ?? ""
-    // } price prediction on @0xfairblock. ` +
-    //   `Proof→${proofToken}  Join the weekly game and earn points!`
   );
   const tweetUrl = `${SHARE_URL}?text=${tweetText}`;
 
@@ -428,14 +424,13 @@ Proof → ${proofToken}`
             inputMode="decimal"
             value={prediction}
             onChange={(e) => setPrediction(e.target.value)}
-            placeholder="E.g. 168.50"
+            placeholder="E.g. 168.50"
             className="w-full"
             min={0}
           />
           <Button
             type="submit"
             disabled={isSending || (address ? !prediction : false)}
-            onClick={() => setStage("confirm")}
             className="w-full flex items-center justify-center space-x-2"
           >
             {address && isSending && encryptLockIcon ? (
@@ -447,12 +442,12 @@ Proof → ${proofToken}`
               {address
                 ? isSending
                   ? stage === "confirm"
-                    ? "Confirm Transaction"
+                    ? "Approve Connection"
                     : stage === "sign"
                     ? "Sign Transaction"
                     : stage === "encrypt"
-                    ? "Encrypting Transaction"
-                    : "Sending…"
+                    ? "Encrypting and Submitting…"
+                    : "…"
                   : "Encrypt Now"
                 : "Connect Wallet"}
             </span>
