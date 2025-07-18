@@ -16,13 +16,13 @@ import {
   signOfflineWithCustomNonce,
 } from "@/services/fairyring/sign";
 import { Amount } from "@/types/fairyring";
-import { useAccount, WalletType, useOfflineSigners } from "graz"; // <<< added WalletType + useOfflineSigners
+import { useAccount, WalletType, useOfflineSigners } from "graz";
 import { Lock, Loader2, CircleX } from "lucide-react";
 import { TxRaw, TxBody } from "cosmjs-types/cosmos/tx/v1beta1/tx";
 import { MsgSubmitEncryptedTx } from "@/types/fairyring/codec/pep/tx";
 import { Buffer } from "buffer";
 import { useActiveToken } from "@/hooks/useActiveToken";
-import { SigningStargateClient, GasPrice, StdFee } from "@cosmjs/stargate"; // <<< added
+import { SigningStargateClient, GasPrice, StdFee } from "@cosmjs/stargate";
 import { upsertProofAction } from "@/app/actions/upsertProof";
 
 /* ───────── constants ────────────────────────────────────────────── */
@@ -46,13 +46,15 @@ export default function PredictionForm() {
 
   /* UX states */
   const [proofToken, setProofToken] = useState("");
-  const [formError, setFormError] = useState<string | React.ReactNode | null>(null);
+  const [formError, setFormError] = = useState<string | React.ReactNode | null>(null);
+  // ─── TX lifecycle stages ─────────────────────────
+  const [stage, setStage] = useState<"idle" | "confirm" | "sign" | "encrypt">("idle");
 
   /* hooks */
   const { data: activeToken } = useActiveToken();
   const client = useClient();
-  const { data: account, walletType, isConnected } = useAccount(); // <<< consolidated; added isConnected
-  const { data: offlineSignersData } = useOfflineSigners(); // <<< added (auto signer from Graz WC/extension)
+  const { data: account, walletType, isConnected } = useAccount();
+  const { data: offlineSignersData } = useOfflineSigners();
   const address = account?.bech32Address;
   const { data: pubkey } = useKeysharePubKey();
 
@@ -137,10 +139,12 @@ export default function PredictionForm() {
 
     /* clear any previous error for this new attempt */
     setIsSending(true);
+    // kick off the very first phase
+    setStage("confirm");
     setFormError(null);
 
     try {
-      /* nonce helper (unchanged) */
+      /* — nonce helper (unchanged) — */
       const {
         data: { pep_nonce },
       } = await client.FairyringPep.query.queryPepNonce(address);
@@ -153,7 +157,7 @@ export default function PredictionForm() {
       );
       const nonce = pep_nonce?.nonce ? +pep_nonce.nonce + sent : sent;
 
-      /* build send‑msg */
+      /* — build send‑msg (unchanged) — */
       const amount: Amount[] = [{ denom: "ufairy", amount: "1" }];
       const payload = {
         amount,
@@ -176,7 +180,7 @@ export default function PredictionForm() {
             tx: { body: { messages: [sendMsg], memo }, signatures: [] },
           });
           if (res?.gasInfo?.gasUsed) {
-            estimatedGas = Math.ceil(Number(res.gasInfo.gasUsed) * 1.3); // +30 % buffer
+            estimatedGas = Math.ceil(Number(res.gasInfo.gasUsed) * 1.3);
           }
         }
       } catch (e) {
@@ -184,35 +188,36 @@ export default function PredictionForm() {
       }
 
       /* 2️⃣  sign MsgSend with estimated gas */
+      // right before we pop the wallet up to sign
+      setStage("sign");
       // --- minimal mobile fix: use Graz signer when WC Keplr mobile is active ---
-      const isWcKeplr = walletType === WalletType.WC_KEPLR_MOBILE; // <<< added
-      let signed: Buffer;                                          // <<< added
-      if (isWcKeplr && offlineSignersData?.offlineSignerAuto) {    // <<< added
-        const offlineSigner = offlineSignersData.offlineSignerAuto as any; // <<< added
-        const accounts = await offlineSigner.getAccounts();        // <<< added
-        const match = accounts.find((a: any) => a.address === address); // <<< added
-        if (!match) throw new Error("active WC Keplr account mismatch"); // <<< added
-        const fee: StdFee = {                                      // <<< added
+      const isWcKeplr = walletType === WalletType.WC_KEPLR_MOBILE;
+      let signed: Buffer;
+      if (isWcKeplr && offlineSignersData?.offlineSignerAuto) {
+        const offlineSigner = offlineSignersData.offlineSignerAuto as any;
+        const accounts = await offlineSigner.getAccounts();
+        const match = accounts.find((a: any) => a.address === address);
+        if (!match) throw new Error("active WC Keplr account mismatch");
+        const fee: StdFee = {
           amount: [{ denom: "ufairy", amount: "0" }],
           gas: String(estimatedGas),
         };
-        const stargate = await SigningStargateClient.connectWithSigner(       // <<< added
+        const stargate = await SigningStargateClient.connectWithSigner(
           FAIRYRING_ENV.rpcURL,
           offlineSigner,
-          { gasPrice: GasPrice.fromString("0.025ufairy") },
+          { gasPrice: GasPrice.fromString("0.025ufairy") }
         );
-        const { accountNumber } = await stargate.getSequence(address);        // <<< added
-        const signedTx = await stargate.sign(                                 // <<< added
+        const { accountNumber } = await stargate.getSequence(address);
+        const signedTx = await stargate.sign(
           address,
           [sendMsg],
           fee,
           memo,
-          { accountNumber, sequence: nonce, chainId: FAIRYRING_ENV.chainID },
+          { accountNumber, sequence: nonce, chainId: FAIRYRING_ENV.chainID }
         );
-        signed = Buffer.from(TxRaw.encode(signedTx).finish());                // <<< added
+        signed = Buffer.from(TxRaw.encode(signedTx).finish());
       } else {
-        // desktop or non-WC fallback: use existing helper (unchanged path)
-        signed = await signOfflineWithCustomNonce(                            // <<< changed var name
+        signed = await signOfflineWithCustomNonce(
           address,
           FAIRYRING_ENV.rpcURL,
           FAIRYRING_ENV.chainID,
@@ -223,7 +228,7 @@ export default function PredictionForm() {
           },
           memo,
           nonce,
-          walletType!,
+          walletType!
         );
       }
       // --- end minimal mobile fix ---
@@ -234,17 +239,18 @@ export default function PredictionForm() {
         key = (pubkey as any).queued_pubkey?.public_key;
       }
 
+      // 3️⃣  now encrypt that signed send‑msg
+      setStage("encrypt");
       const encryptedHex = await encryptSignedTx(key, targetHeight, signed);
 
       // Add gas for KV‑store write (WritePerByte)
-      const bytesToWrite = encryptedHex.length / 2; // 2 hex chars per byte
+      const bytesToWrite = encryptedHex.length / 2;
       const submitGas = Math.max(
         estimatedGas,
-        Math.ceil(bytesToWrite * WRITE_PER_BYTE_GAS + 200_000) // base + per‑byte
+        Math.ceil(bytesToWrite * WRITE_PER_BYTE_GAS + 200_000)
       );
 
       /* 3️⃣  broadcast */
-
       const txResult = await client.FairyringPep.tx.sendMsgSubmitEncryptedTx({
         value: {
           creator: address,
@@ -281,13 +287,12 @@ export default function PredictionForm() {
         }
       }
 
-      /* proof‑token (unchanged) */
       const newToken = nanoid(8);
       const res = await upsertProofAction({
         wallet: address,
-        token:  newToken,
+        token: newToken,
       });
-      
+
       if (!res.ok) throw new Error(res.reason ?? "failed to create proof‑token");
 
       setProofToken(newToken);
@@ -296,18 +301,20 @@ export default function PredictionForm() {
     } catch (err: any) {
       const msg = String(err?.message || err);
       if (/insufficien/i.test(msg) || /does not exist on chain/i.test(msg)) {
-        setFormError(<p className="text-red-500">
-        Insufficient testnet tokens, get some from the{" "}
-        <a
-          href="https://testnet-faucet.fairblock.network/"
-          target="_blank"
-          rel="noopener noreferrer"
-          className="underline"
-        >
-          faucet
-        </a>
-        .
-      </p>);
+        setFormError(
+          <p className="text-red-500">
+            Insufficient testnet tokens, get some from the{" "}
+            <a
+              href="https://testnet-faucet.fairblock.network/"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="underline"
+            >
+              faucet
+            </a>
+            .
+          </p>
+        );
       } else {
         setFormError("Transaction failed. Please try again.");
       }
@@ -315,6 +322,7 @@ export default function PredictionForm() {
       setSubmitted(false);
     } finally {
       setIsSending(false);
+      setStage("idle");
     }
   }
 
@@ -401,7 +409,12 @@ Proof → ${proofToken}`
 
       {submitted ? (
         <div className="bg-[#686363] cursor-not-allowed flex gap-3 items-center justify-center py-2 rounded-xl text-white text-sm text-center">
-          <img className="relative -top-[1px] w-4" src="/prediction-locked.png" alt="" /> Prediction Encrypted!
+          <img
+            className="relative -top-[1px] w-4"
+            src="/prediction-locked.png"
+            alt=""
+          />{" "}
+          Prediction Encrypted!
         </div>
       ) : (
         <form
@@ -421,11 +434,8 @@ Proof → ${proofToken}`
           />
           <Button
             type="submit"
-            disabled={
-              isSending || // same as before
-              (address ? !prediction : false) // ⬅ require input only if wallet connected
-            }
-            onClick={() => setEncryptLockIcon(true)}
+            disabled={isSending || (address ? !prediction : false)}
+            onClick={() => setStage("confirm")}
             className="w-full flex items-center justify-center space-x-2"
           >
             {address && isSending && encryptLockIcon ? (
@@ -436,19 +446,30 @@ Proof → ${proofToken}`
             <span>
               {address
                 ? isSending
-                  ? "Encrypting…"
+                  ? stage === "confirm"
+                    ? "Confirm Transaction"
+                    : stage === "sign"
+                    ? "Sign Transaction"
+                    : stage === "encrypt"
+                    ? "Encrypting Transaction"
+                    : "Sending…"
                   : "Encrypt Now"
                 : "Connect Wallet"}
             </span>
           </Button>
-
-
         </form>
       )}
 
       {(isChecking || isSending) && (
         <div className="absolute cursor-not-allowed inset-0 z-10 flex gap-2 items-center justify-center border border-neutral-200 bg-[#686363] w-full h-10 rounded-xl top-12 text-white text-sm">
-          <Loader2 className="h-5 w-5 animate-spin" /> {isSending && "Confirm Transaction"}
+          <Loader2 className="h-5 w-5 animate-spin" />{" "}
+          {stage === "confirm"
+            ? "Approve Connection"
+            : stage === "sign"
+            ? "Sign Transaction"
+            : stage === "encrypt"
+            ? "Encrypting and Submitting"
+            : ""}
         </div>
       )}
       {showModal && <Modal />}
