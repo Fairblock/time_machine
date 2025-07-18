@@ -142,7 +142,7 @@ export default function PredictionForm() {
     if (targetHeight == null) return;
 
     setIsSending(true);
-    setStage("approve");
+    
     setFormError(null);
 
     try {
@@ -186,7 +186,7 @@ export default function PredictionForm() {
         console.warn("gas simulation failed, using fallback", e);
       }
 
-      setStage("sign");
+      setStage("approve");
       const isWcKeplr = walletType === WalletType.WC_KEPLR_MOBILE;
       let signed: Buffer;
       if (isWcKeplr && offlineSignersData?.offlineSignerAuto) {
@@ -227,7 +227,7 @@ export default function PredictionForm() {
           walletType!
         );
       }
-
+      setStage("sign");
       let key = (pubkey as any).active_pubkey?.public_key;
       if (targetHeight > Number((pubkey as any).active_pubkey?.expiry)) {
         key = (pubkey as any).queued_pubkey?.public_key;
@@ -241,7 +241,7 @@ export default function PredictionForm() {
         Math.ceil(bytesToWrite * WRITE_PER_BYTE_GAS + 200_000)
       );
 
-      setStage("submit");
+      
       const txResult = await client.FairyringPep.tx.sendMsgSubmitEncryptedTx({
         value: {
           creator: address,
@@ -254,7 +254,7 @@ export default function PredictionForm() {
         },
         memo: MEMO,
       });
-
+      setStage("submit");
       if (txResult.code) {
         if (/out of gas/i.test(txResult.rawLog ?? "")) {
           const retryGas = submitGas * 2;
@@ -450,9 +450,9 @@ Proof → ${proofToken}`
         <div className="absolute cursor-not-allowed inset-0 z-10 flex gap-2 items-center justify-center border border-neutral-200 bg-[#686363] w-full h-10 rounded-xl top-12 text-white text-sm">
           <Loader2 className="h-5 w-5 animate-spin" />{" "}
           {stage === "approve"
-            ? "1. Approve Transaction"
+            ? "Approve Transaction"
             : stage === "sign"
-            ? "2. Sign Transaction"
+            ? "Sign Transaction"
             : stage === "submit"
             ? "Submitting..."
             : ""}
