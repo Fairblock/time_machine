@@ -238,7 +238,7 @@ export default function PredictionForm() {
       const bytesToWrite = encryptedHex.length / 2;
       const submitGas = Math.max(
         estimatedGas,
-        Math.ceil(bytesToWrite * WRITE_PER_BYTE_GAS + 200_000)
+        Math.ceil((bytesToWrite * WRITE_PER_BYTE_GAS + 200_000)*2)
       );
 
       
