@@ -46,7 +46,7 @@ export default function PredictionForm() {
 
   /* UX states */
   const [proofToken, setProofToken] = useState("");
-  const [formError, setFormError] = = useState<string | React.ReactNode | null>(null);
+  const [formError, setFormError] = useState<string | React.ReactNode | null>(null);
   // ─── TX lifecycle stages ─────────────────────────
   const [stage, setStage] = useState<"idle" | "confirm" | "sign" | "encrypt">("idle");
 
