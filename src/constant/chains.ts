@@ -39,7 +39,7 @@ export const fairyring = defineChainInfo({
   chainId: PUBLIC_ENVIRONMENT.NEXT_PUBLIC_CHAIN_ID,
   currencies: [
     {
-      coinDenom: 'fairy',
+      coinDenom: 'FAIRY',
       coinMinimalDenom: 'ufairy',
       coinDecimals: 6,
       coinGeckoId: 'fairy',
