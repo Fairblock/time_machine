@@ -58,14 +58,14 @@ export const fairyring = defineChainInfo({
   chainName: 'Fairblock FairyRing Testnet',
   feeCurrencies: [
     {
-      coinDenom: 'fairy',
+      coinDenom: 'FAIRY',
       coinMinimalDenom: 'ufairy',
       coinDecimals: 6,
       coinGeckoId: 'fairy',
     },
   ],
   stakeCurrency: {
-    coinDenom: 'fairy',
+    coinDenom: 'FAIRY',
     coinMinimalDenom: 'ufairy',
     coinDecimals: 6,
     coinGeckoId: 'fairy',
