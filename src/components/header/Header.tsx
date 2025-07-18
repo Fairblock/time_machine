@@ -233,10 +233,22 @@ function Header() {
   //   }
   // }
   const LEAP_DEEPLINK_URL = "https://leapcosmoswallet.page.link/6Zp5rkq9VWcX9Rwo9";
-   function connectLeapMobile() {
-       // Redirect straight into Leap’s dApp browser via your deep link
-       window.location.href = LEAP_DEEPLINK_URL;
-     }
+    async function connectLeapMobile() {
+        if (typeof window.leap !== "undefined") {
+          // we’re inside Leap’s in‑app browser or desktop extension → use injected provider
+          try {
+            await suggestAndConnect({
+              chainInfo: fairyring,
+              walletType: WalletType.LEAP,
+            });
+          } catch (e) {
+            console.error("Leap provider connect failed:", e);
+          }
+        } else {
+          // no provider injected → deep‑link into Leap app
+          window.location.href = LEAP_DEEPLINK_URL;
+        }
+      }
   /* ───────── public connect handlers ───────── */
   async function connectKeplr() {
     setShowWallet(false);
@@ -252,16 +264,8 @@ function Header() {
 
    async function connectLeap() {
        setShowWallet(false);
-       if (isMobile) {
-         // launch Leap’s in‑app browser
-         connectLeapMobile();
-       } else {
-         // desktop: inject via window.leap
-         await suggestAndConnect({
-           chainInfo: fairyring,
-           walletType: WalletType.LEAP,
-         });
-       }
+       // unified: detection & deep‑link logic inside connectLeapMobile
+       await connectLeapMobile();
      }
 
   /* ───────── auto-close banner + WC sheet when connected ───────── */
