@@ -468,7 +468,7 @@ Proof → ${proofToken}`
             : stage === "sign"
             ? "Sign Transaction"
             : stage === "encrypt"
-            ? "Encrypting and Submitting"
+            ? "Encrypting and Submitting..."
             : ""}
         </div>
       )}
