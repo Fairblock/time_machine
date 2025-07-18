@@ -232,28 +232,11 @@ function Header() {
   //     forceCloseWcModal();
   //   }
   // }
-    async function connectLeapMobile() {
-        if (typeof window === "undefined") return;                 // SSR guard
-    
-        /* Already inside Leap’s in‑app browser? – just connect. */
-        if (/LeapWallet/i.test(navigator.userAgent ?? "")) {
-          await suggestAndConnect({
-            chainInfo: fairyring,
-            walletType: WalletType.LEAP,
-            autoReconnect: true,
-          });
-          return;
-        }
-    
-        /* Universal Dynamic‑Link (opens dApp tab inside Leap) */
-        const deepLink =
-          "https://leapcosmoswallet.page.link/?" +
-         "link=" + encodeURIComponent(window.location.href) +
-         "&apn=io.leapwallet.cosmos" +           // Android package name
-         "&isi=1642465549&ibi=io.leapwallet.cosmos";  // iOS bundle‑ID
-    
-        window.location.replace(deepLink);        // cleaner history
-      }
+  const LEAP_DEEPLINK_URL = "https://leapcosmoswallet.page.link/6Zp5rkq9VWcX9Rwo9";
+   function connectLeapMobile() {
+       // Redirect straight into Leap’s dApp browser via your deep link
+       window.location.href = LEAP_DEEPLINK_URL;
+     }
   /* ───────── public connect handlers ───────── */
   async function connectKeplr() {
     setShowWallet(false);
@@ -267,17 +250,19 @@ function Header() {
     }
   }
 
-  async function connectLeap() {
-    setShowWallet(false);
-    if (isMobile) {
-      await connectLeapMobile();
-    } else {
-      await suggestAndConnect({
-        chainInfo: fairyring,
-        walletType: WalletType.LEAP,
-      });
-    }
-  }
+   async function connectLeap() {
+       setShowWallet(false);
+       if (isMobile) {
+         // launch Leap’s in‑app browser
+         connectLeapMobile();
+       } else {
+         // desktop: inject via window.leap
+         await suggestAndConnect({
+           chainInfo: fairyring,
+           walletType: WalletType.LEAP,
+         });
+       }
+     }
 
   /* ───────── auto-close banner + WC sheet when connected ───────── */
   useEffect(() => {
