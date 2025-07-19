@@ -75,8 +75,15 @@ export default function Prediction() {
   if (isLoading) return <p className="text-center mt-20">Loading…</p>;
 
   /* 2️⃣ Sunday window‑closed logic (UTC) */
-  const todayDow = new Date().getUTCDay();  // 0 = Sunday
-  const closedToday = todayDow === 0;       // no token on Sundays
+  const now = new Date();
+  const dow = now.getUTCDay();            // 0 = Sunday
+  const lastSunday11 = new Date(now);
+  lastSunday11.setUTCDate(now.getUTCDate() - dow); // move to Sunday
+  lastSunday11.setUTCHours(11, 0, 0, 0);           // Sunday 11:00 UTC
+  const monday11 = new Date(lastSunday11);
+  monday11.setUTCDate(monday11.getUTCDate() + 1);  // Monday 11:00 UTC
+  const closedToday = now >= lastSunday11 && now < monday11; // only between Sun 11:00 → Mon 11:00
+
 
   /* 3️⃣ ribbon helpers */
   const idx        = ROTATION.indexOf(token!.symbol as (typeof ROTATION)[number]);

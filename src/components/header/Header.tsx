@@ -532,12 +532,6 @@ function Header() {
             className="hidden lg:block w-[90%] sm:w-[420px] bg-white rounded-lg px-8 py-10 text-center space-y-8"
           >
             <h2 className="text-3xl font-extrabold uppercase">Connect Wallet</h2>
-            <p className="text-gray-700 text-sm">
-              By connecting your wallet, you agree to our <br />
-              <span className="font-semibold underline">Terms of Service</span>{" "}
-              and{" "}
-              <span className="font-semibold underline">Privacy Policy</span>.
-            </p>
 
             {/* Keplr */}
             <div className="flex items-center justify-between">

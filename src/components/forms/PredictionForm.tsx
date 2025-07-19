@@ -290,7 +290,9 @@ export default function PredictionForm() {
       setShowModal(true);
     } catch (err: any) {
       const msg = String(err?.message || err);
-      if (/insufficien/i.test(msg) || /does not exist on chain/i.test(msg)) {
+      if (/invalid target block height/i.test(msg)) {
+        setFormError("Deadline block height is already reached. Please wait for the next token.");
+      } else if (/insufficien/i.test(msg) || /does not exist on chain/i.test(msg)) {
         setFormError(
           <p className="text-red-500">
             Insufficient testnet tokens, get some from the{" "}
