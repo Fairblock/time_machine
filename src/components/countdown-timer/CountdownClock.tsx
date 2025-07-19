@@ -38,6 +38,8 @@ function nextDecryptDeadline(symbol: string, now = new Date()) {
 export default function CountdownCard() {
   const { data: token } = useActiveToken();
   const [daysRemaining, setDaysRemaining] = useState<number | null>(null);
+  const [hoursRemaining, setHoursRemaining] = useState<number | null>(null);
+  const [showHours, setShowHours]         = useState<boolean>(false);
   const [weekdayText, setWeekdayText]     = useState<string>("");
 
   /* update every minute */
@@ -47,7 +49,20 @@ export default function CountdownCard() {
     const update = () => {
       const now      = new Date();
       const deadline = nextDecryptDeadline(token.symbol, now);
-      setDaysRemaining(Math.max(0, differenceInDays(deadline, now)));
+      const msDiff   = deadline.getTime() - now.getTime();
+
+      const fullDays  = msDiff > 0 ? Math.floor(msDiff / 86_400_000) : 0;
+      const remHours  = msDiff > 0 ? Math.ceil(msDiff / 3_600_000) : 0;
+
+      if (fullDays < 1) {
+        setShowHours(true);
+        setHoursRemaining(remHours);
+        setDaysRemaining(0);
+      } else {
+        setShowHours(false);
+        setDaysRemaining(fullDays);
+        setHoursRemaining(null);
+      }
 
       const wd = deadline.toLocaleDateString("en-US", {
         weekday: "long",
@@ -98,12 +113,14 @@ export default function CountdownCard() {
         />
 
         <div className="absolute top-5 inset-0 flex flex-col items-center justify-center text-white">
-          <span className="font-bold leading-none text-6xl lg:text-5xl xl:text-8xl">
-            {daysRemaining ?? "--"}
-          </span>
-          <span className="uppercase tracking-widest text-lg text-gray-300">
-            Days
-          </span>
+            <span className="font-bold leading-none text-6xl lg:text-5xl xl:text-8xl">
+              {showHours
+                ? (hoursRemaining ?? "--")
+                : (daysRemaining ?? "--")}
+            </span>
+            <span className="uppercase tracking-widest text-lg text-gray-300">
+              {showHours ? "Hours" : "Days"}
+            </span>
         </div>
       </div>
     </div>
