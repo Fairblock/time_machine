@@ -135,22 +135,24 @@ export async function getOHLC(
 
   throw new Error('Failed to fetch OHLC after multiple retries');
 }
+// utils/prices.ts
 export async function fetchPriceAt(date: Date, token: string): Promise<number> {
-  try {
-    console.log(`Fetching price for ${token} at ${date.toISOString()}`)
-    const startMs = date.getTime()
-    const endMs   = startMs + 24 * 60 * 60 * 1000
+  const targetMs = date.getTime();            // the instant you really care about
 
-   
-    let pricePoints = await getPrices(startMs, endMs, token)
-    while (pricePoints[0]?.price === 0) {
-      pricePoints = await getPrices(startMs, endMs, token)
-    }
-    console.log(`Price points for ${token}:`, pricePoints)
-    return pricePoints[0]?.price ?? 0
-  } catch (error) {
-    console.error(`Error fetching token price at ${date.toISOString()}:`, error)
-    return 0
-  }
+  /* 1) widen the range to ±10 minutes (plenty for 5‑min buckets) */
+  const fromMs   = targetMs - 10 * 60_000;    // 10 min before
+  const toMs     = targetMs + 10 * 60_000;    // 10 min after
+
+  /* 2) fetch points inside that window */
+  const pts = await getPrices(fromMs, toMs, token);
+  if (!pts.length) throw new Error('No price data in 20‑minute window');
+
+  /* 3) choose the timestamp that is closest to the target */
+  const closest = pts.reduce((a, b) =>
+    Math.abs(b.timestamp - targetMs) < Math.abs(a.timestamp - targetMs) ? b : a
+  );
+  console.log(`Closest price to ${date.toISOString()} is at ${new Date(closest.timestamp).toISOString()}`);
+  return closest.price;                       // ← exact (or nearest‑5‑min) price
 }
+
 
