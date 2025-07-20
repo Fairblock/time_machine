@@ -226,7 +226,7 @@ export default function Prediction() {
                 Prediction window is closed.
               </p>
               <p className="text-sm text-gray-700">
-                Week 1 is wrapped! Next token prediction opens Monday&nbsp;
+                Token prediction opens Monday&nbsp;
                 <strong>11:00 UTC</strong>. <br /> Enjoy your Sunday and touch
                 some grass.
               </p>
