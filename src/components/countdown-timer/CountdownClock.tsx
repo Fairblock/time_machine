@@ -52,7 +52,7 @@ export default function CountdownCard() {
       const msDiff   = deadline.getTime() - now.getTime();
 
       const fullDays  = msDiff > 0 ? Math.floor(msDiff / 86_400_000) : 0;
-      const remHours  = msDiff > 0 ? Math.ceil(msDiff / 3_600_000) : 0;
+      const remHours  = msDiff > 0 ? Math.floor(msDiff / 3_600_000) : 0;
 
       if (fullDays < 1) {
         setShowHours(true);
