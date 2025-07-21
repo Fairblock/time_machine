@@ -115,10 +115,13 @@ export default function PredictionForm() {
           if (!anyMsg) continue;
 
           const msg = MsgSubmitEncryptedTx.decode(new Uint8Array(anyMsg.value));
-          if (
-            msg.targetBlockHeight === targetHeight &&
-            msg.creator === address
-          ) {
+                  const txTarget = Number(
+                      // `Long` → number (safe while heights < 2^53)
+                      // fallback to `parseInt` covers string builds
+                      (msg as any).targetBlockHeight ?? 0
+                    );
+            
+            if (txTarget === targetHeight && msg.creator === address) {
             setSubmitted(true);
             return;
           }
