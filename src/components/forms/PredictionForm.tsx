@@ -30,8 +30,8 @@ const MEMO = "price-predict";
 const PER_PAGE = 100;
 const RPC = FAIRYRING_ENV.rpcURL.replace(/^ws/, "http");
 const SHARE_URL = "https://twitter.com/intent/tweet";
-const WRITE_PER_BYTE_GAS = 100;
-const FALLBACK_GAS = 3_000_000;
+const WRITE_PER_BYTE_GAS = 600;
+const FALLBACK_GAS = 9_000_000;
 
 /* ───────── component ────────────────────────────────────────────── */
 export default function PredictionForm() {
