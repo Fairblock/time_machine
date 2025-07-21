@@ -33,7 +33,7 @@ const SHARE_URL = "https://twitter.com/intent/tweet";
 const WRITE_PER_BYTE_GAS = 900;
 const FALLBACK_GAS = 50_000_000;
 const GAS_BUMP_FACTOR   = 2;      // multiply gas each retry
-const GAS_BUMP_MIN_ADD  = 2000_000;   // ensure a meaningful jump each time
+const GAS_BUMP_MIN_ADD  = 2_000_000;   // ensure a meaningful jump each time
 const GAS_MAX_HARD_CAP  = 500_000_000; // safety ceiling; adjust for your chain
 const GAS_MAX_ATTEMPTS  = 10;         // avoids infinite loops if cap never hit
 /* ───────── component ────────────────────────────────────────────── */
