@@ -266,6 +266,7 @@ export default function CapsulesPage() {
           if (txs.length < PER_PAGE) break;
           page += 1;
         }
+        console.log("encrypted capsules:", encryptedCaps.length);
         let revealedCaps: Capsule[] = [];
         if (lastH){
         /* 2️⃣ revealed capsules */
