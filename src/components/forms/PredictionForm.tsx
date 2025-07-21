@@ -30,11 +30,11 @@ const MEMO = "price-predict";
 const PER_PAGE = 100;
 const RPC = FAIRYRING_ENV.rpcURL.replace(/^ws/, "http");
 const SHARE_URL = "https://twitter.com/intent/tweet";
-const WRITE_PER_BYTE_GAS = 600;
-const FALLBACK_GAS = 12_000_000;
+const WRITE_PER_BYTE_GAS = 900;
+const FALLBACK_GAS = 50_000_000;
 const GAS_BUMP_FACTOR   = 2;      // multiply gas each retry
-const GAS_BUMP_MIN_ADD  = 200_000;   // ensure a meaningful jump each time
-const GAS_MAX_HARD_CAP  = 50_000_000; // safety ceiling; adjust for your chain
+const GAS_BUMP_MIN_ADD  = 2000_000;   // ensure a meaningful jump each time
+const GAS_MAX_HARD_CAP  = 500_000_000; // safety ceiling; adjust for your chain
 const GAS_MAX_ATTEMPTS  = 10;         // avoids infinite loops if cap never hit
 /* ───────── component ────────────────────────────────────────────── */
 
@@ -363,7 +363,7 @@ if (lastErr) {
           }
         
       else if (/Transaction declined/i.test(msg)) {
-        setFormError("Transaction declined due to network issues. Please try again in a few seconds.");
+        setFormError("Transaction declined potentially due to network issues. Please try again in a few seconds.");
       }
       else 
         setFormError("Transaction failed. Please try again.");
