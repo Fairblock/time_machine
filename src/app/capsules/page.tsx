@@ -1,3 +1,4 @@
+/* app/capsules/page.tsx */
 "use client";
 
 import { useEffect, useState } from "react";
@@ -31,9 +32,10 @@ type Capsule = {
 
 /* ───── constants ──────────────────────────────────────────────── */
 const MEMO = "price-predict";
-const PER_PAGE = 100;
+const PER_PAGE_RPC = 100;          /* RPC pagination */
+const PAGE_SIZE = 24;              /* UI pagination size */
 const RPC = FAIRYRING_ENV.rpcURL.replace(/^ws/, "http");
-const ONE_WEEK = 403_200; // Tendermint blocks (~7 days)
+const ONE_WEEK = 403_200;
 
 /* ───── UI helpers (unchanged) ─────────────────────────────────── */
 const TOKEN_LOGOS: Record<string, string> = {
@@ -45,8 +47,7 @@ const TOKEN_LOGOS: Record<string, string> = {
 const avatar = (addr: string) =>
   `https://api.dicebear.com/9.x/identicon/svg?seed=${encodeURIComponent(addr)}`;
 
-/* ───── capsule card ─────────────────────────────────────────────── */
-
+/* ───── capsule card ───────────────────────────────────────────── */
 function CapsuleCard({ creator, target, token, type, price }: Capsule) {
   const shortAddr = `${creator.slice(0, 6)}…${creator.slice(-4)}`;
   const logo = TOKEN_LOGOS[token.toUpperCase()] ?? null;
@@ -93,8 +94,7 @@ function CapsuleCard({ creator, target, token, type, price }: Capsule) {
   );
 }
 
-/* ───── cute loader ─────────────────────────────────────────────── */
-
+/* ───── cute loader ───────────────────────────────────────────── */
 function LoadingCapsules({
   progress,
   message,
@@ -117,7 +117,7 @@ function LoadingCapsules({
   );
 }
 
-/* ───── revealed‑tx helper ─────────────────────────────────────── */
+/* ───── revealed‑tx helper ────────────────────────────────────── */
 async function fetchRevealedTxs(heights: number[]) {
   const out: { creator: string; price: number }[] = [];
 
@@ -160,7 +160,7 @@ async function fetchRevealedTxs(heights: number[]) {
   return out;
 }
 
-/* ───── main page component ────────────────────────────────────── */
+/* ───── main page component ───────────────────────────────────── */
 export default function CapsulesPage() {
   const { data: account } = useAccount();
   const { error: walletError } = useConnect();
@@ -170,14 +170,13 @@ export default function CapsulesPage() {
   const [loading, setLoading] = useState(true);
   const [tab, setTab] = useState<"all" | "yours">("all");
 
+  /* paging state */
+  const [page, setPage] = useState(0);
+
   /* progress + rotating messages */
   const [progress, setProgress] = useState(10);
   const [msgIndex, setMsgIndex] = useState(0);
-  const loadingMessages = [
-    "Fetching capsules…",
-    "Sorting capsules…",
-    "Almost there…",
-  ];
+  const loadingMessages = ["Fetching capsules…", "Sorting capsules…", "Almost there…"];
 
   /* animate loader */
   useEffect(() => {
@@ -210,8 +209,7 @@ export default function CapsulesPage() {
       try {
         const next = await fetch("/api/deadline/next").then((r) => r.json());
         const last = await fetch("/api/deadline/last").then((r) => r.json());
-        console.log("next deadline:", next);
-        console.log("last deadline:", last);
+
         const nextH = Number(next?.nextDeadline?.target_block);
         const nextToken =
           next?.nextDeadline?.symbol ?? next?.nextDeadline?.token ?? "—";
@@ -221,25 +219,25 @@ export default function CapsulesPage() {
           last?.lastDeadline?.symbol ?? last?.lastDeadline?.token ?? "—";
 
         if (!nextH) throw new Error("deadline height missing");
-       
+
         /* 1️⃣ encrypted capsules */
         const encryptedCaps: Capsule[] = [];
         const now = await getCurrentBlockHeight();
-        const minHeight = (now - ONE_WEEK) > 0 ? now - ONE_WEEK : 0;
+        const minHeight = Math.max(0, now - ONE_WEEK);
         const q = encodeURIComponent(
           `tx.height>${minHeight} AND message.action='/fairyring.pep.MsgSubmitEncryptedTx'`
         );
 
-        let page = 1;
+        let rpcPage = 1;
         while (!cancelled) {
           const url =
-          `${RPC}/tx_search` +
-          `?query=%22${q}%22` +           // "%22" … "%22" == JSON double-quotes
-          `&order_by=%22desc%22` +        // `"desc"` must also be JSON-quoted
-          `&per_page=${PER_PAGE}` +
-          `&page=${page}`;
+            `${RPC}/tx_search` +
+            `?query=%22${q}%22` +
+            `&order_by=%22desc%22` +
+            `&per_page=${PER_PAGE_RPC}` +
+            `&page=${rpcPage}`;
+
           const res = await fetch(url).then((r) => r.json());
-          console.log(res)
           const txs = res.result?.txs ?? [];
           for (const row of txs) {
             const raw = TxRaw.decode(Buffer.from(row.tx, "base64"));
@@ -250,9 +248,7 @@ export default function CapsulesPage() {
             );
             if (!anyMsg) continue;
 
-            const msg = MsgSubmitEncryptedTx.decode(
-              new Uint8Array(anyMsg.value)
-            );
+            const msg = MsgSubmitEncryptedTx.decode(new Uint8Array(anyMsg.value));
             if (msg.targetBlockHeight !== nextH) continue;
 
             encryptedCaps.push({
@@ -263,32 +259,28 @@ export default function CapsulesPage() {
               data: msg.data,
             });
           }
-          if (txs.length < PER_PAGE) break;
-          page += 1;
+          if (txs.length < PER_PAGE_RPC) break;
+          rpcPage += 1;
         }
         console.log("encrypted capsules:", encryptedCaps.length);
         let revealedCaps: Capsule[] = [];
-        if (lastH){
-        /* 2️⃣ revealed capsules */
-        const revealedTxs = await fetchRevealedTxs([lastH]);
-        revealedCaps = revealedTxs.map(
-          (tx): Capsule => ({
-            creator: tx.creator,
-            target: lastH,
-            token: String(lastToken),
-            type: "revealed",
-            price: tx.price,
-          })
-        );
-      }
-    
+        if (lastH) {
+          const revealedTxs = await fetchRevealedTxs([lastH]);
+          revealedCaps = revealedTxs.map(
+            (tx): Capsule => ({
+              creator: tx.creator,
+              target: lastH,
+              token: String(lastToken),
+              type: "revealed",
+              price: tx.price,
+            })
+          );
+        }
 
         if (!cancelled) {
           const merged = [...encryptedCaps, ...revealedCaps];
           const uniqueMap = new Map<string, Capsule>();
-          for (const c of merged) {
-            uniqueMap.set(`${c.type}-${c.creator}-${c.target}`, c);
-          }
+          for (const c of merged) uniqueMap.set(`${c.type}-${c.creator}-${c.target}`, c);
           setCapsules(Array.from(uniqueMap.values()));
         }
       } catch (err) {
@@ -306,10 +298,17 @@ export default function CapsulesPage() {
     };
   }, []);
 
-  const list =
-    tab === "all"
-      ? capsules
-      : capsules.filter((c) => c.creator === account?.bech32Address);
+  /* filter + paging */
+  const filtered =
+    tab === "all" ? capsules : capsules.filter((c) => c.creator === account?.bech32Address);
+
+  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+  const pageCaps = filtered.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE);
+
+  /* reset page when filter changes */
+  useEffect(() => {
+    setPage(0);
+  }, [tab, filtered.length]);
 
   /* Height for edge images when visible (≥ lg) */
   const EDGE_HEIGHT = "70vh";
@@ -354,11 +353,13 @@ export default function CapsulesPage() {
             className="object-cover filter grayscale opacity-40"
           />
         </div>
+
         <main className="bg-white border border-[#DCDCDC] mx-auto xl:my-16 px-4 sm:px-16 xl:px-8 py-10 rounded-xl space-y-6 max-w-[1360px] min-h-screen xl:min-h-[70vh] relative z-20">
           <h1 className="text-3xl font-bold text-center uppercase tracking-wide">
             Encrypted Capsules
           </h1>
 
+          {/* tabs */}
           <div className="flex justify-center space-x-6 border-b text-sm font-medium">
             {(["all", "yours"] as const).map((t) => (
               <button
@@ -375,22 +376,41 @@ export default function CapsulesPage() {
             ))}
           </div>
 
+          {/* grid */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             {loading ? (
-              <LoadingCapsules
-                progress={progress}
-                message={loadingMessages[msgIndex]}
-              />
-            ) : list.length ? (
-              list.map((c, i) => (
+              <LoadingCapsules progress={progress} message={loadingMessages[msgIndex]} />
+            ) : pageCaps.length ? (
+              pageCaps.map((c, i) => (
                 <CapsuleCard key={`${c.target}-${c.creator}-${i}`} {...c} />
               ))
             ) : (
-              <p className="text-center text-gray-400 col-span-full mt-12">
-                No capsules found.
-              </p>
+              <p className="text-center text-gray-400 col-span-full mt-12">No capsules found.</p>
             )}
           </div>
+
+          {/* pager controls */}
+          {!loading && totalPages > 1 && (
+            <div className="flex justify-center items-center gap-4 mt-6">
+              <button
+                onClick={() => setPage((p) => Math.max(0, p - 1))}
+                disabled={page === 0}
+                className="px-4 py-2 border rounded disabled:opacity-40"
+              >
+                Prev
+              </button>
+              <span className="text-sm">
+                Page {page + 1} of {totalPages}
+              </span>
+              <button
+                onClick={() => setPage((p) => Math.min(totalPages - 1, p + 1))}
+                disabled={page + 1 >= totalPages}
+                className="px-4 py-2 border rounded disabled:opacity-40"
+              >
+                Next
+              </button>
+            </div>
+          )}
         </main>
       </div>
     </>
