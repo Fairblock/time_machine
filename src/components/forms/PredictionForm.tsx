@@ -91,8 +91,8 @@ export default function PredictionForm() {
 
     let cancelled = false;
     (async () => {
-      const last = await fetch("/api/deadline/last").then((r) => r.json());
-      const lastH = Number(last?.lastDeadline?.target_block);
+      const last = await fetch("/api/deadline/next").then((r) => r.json());
+      const lastH = Number(last?.nextDeadline?.target_block);
       if (!lastH) return;
 
       const q = encodeURIComponent(
