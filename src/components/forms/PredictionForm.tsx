@@ -32,8 +32,24 @@ const RPC = FAIRYRING_ENV.rpcURL.replace(/^ws/, "http");
 const SHARE_URL = "https://twitter.com/intent/tweet";
 const WRITE_PER_BYTE_GAS = 600;
 const FALLBACK_GAS = 9_000_000;
-
+const GAS_BUMP_FACTOR   = 2;      // multiply gas each retry
+const GAS_BUMP_MIN_ADD  = 200_000;   // ensure a meaningful jump each time
+const GAS_MAX_HARD_CAP  = 50_000_000; // safety ceiling; adjust for your chain
+const GAS_MAX_ATTEMPTS  = 6;         // avoids infinite loops if cap never hit
 /* ───────── component ────────────────────────────────────────────── */
+
+function isOutOfGas(rawLog?: string | null): boolean {
+  if (!rawLog) return false;
+  // cover common SDK strings
+  return /out\s*of\s*gas/i.test(rawLog) ||
+         /insufficient\s+gas/i.test(rawLog) ||
+         /gas\s+wanted/i.test(rawLog) && /gas\s+used/i.test(rawLog);
+}
+
+function bumpGas(prev: number): number {
+  const bumped = Math.ceil(prev * GAS_BUMP_FACTOR + GAS_BUMP_MIN_ADD);
+  return Math.min(bumped, GAS_MAX_HARD_CAP);
+}
 export default function PredictionForm() {
   /* form / tx state */
   const [prediction, setPrediction] = useState("");
@@ -258,27 +274,57 @@ export default function PredictionForm() {
         memo: MEMO,
       });
       setStage("submit");
-      if (txResult.code) {
-        if (/out of gas/i.test(txResult.rawLog ?? "")) {
-          const retryGas = submitGas * 2;
-          console.warn(`retrying with higher gas (${retryGas})…`);
-          const retry = await client.FairyringPep.tx.sendMsgSubmitEncryptedTx({
-            value: {
-              creator: address,
-              data: encryptedHex,
-              targetBlockHeight: targetHeight,
-            },
-            fee: {
-              amount: [{ denom: "ufairy", amount: "0" }],
-              gas: String(retryGas),
-            },
-            memo: MEMO,
-          });
-          if (retry.code) throw new Error(retry.rawLog);
-        } else {
-          throw new Error(txResult.rawLog);
-        }
-      }
+     // Auto gas-bump retry loop ------------------------------------------
+let attempt = 1;
+let gasToUse = submitGas;
+let lastErr: any = null;
+
+while (true) {
+  console.info(`[submitEncryptedTx] attempt ${attempt} gas=${gasToUse}`);
+  const res = attempt === 1
+    ? txResult // we already did first network call above
+    : await client.FairyringPep.tx.sendMsgSubmitEncryptedTx({
+        value: {
+          creator: address,
+          data: encryptedHex,
+          targetBlockHeight: targetHeight,
+        },
+        fee: {
+          amount: [{ denom: "ufairy", amount: "0" }],
+          gas: String(gasToUse),
+        },
+        memo: MEMO,
+      });
+
+  if (!res.code || res.code === 0) {
+    // success!
+    break;
+  }
+
+  if (!isOutOfGas(res.rawLog)) {
+    // hard failure — not gas related
+    lastErr = new Error(res.rawLog);
+    break;
+  }
+
+  // out of gas — should we bump again?
+  const nextGas = bumpGas(gasToUse);
+  if (nextGas === gasToUse || attempt >= GAS_MAX_ATTEMPTS) {
+    // no further bump possible or attempts exhausted
+    lastErr = new Error(`Out of gas after ${attempt} attempts (last gas=${gasToUse}). RawLog: ${res.rawLog}`);
+    break;
+  }
+
+  console.warn(`[submitEncryptedTx] out of gas; bumping to ${nextGas}…`);
+  gasToUse = nextGas;
+  attempt += 1;
+  continue;
+}
+
+if (lastErr) {
+  throw lastErr;
+}
+
 
       const newToken = nanoid(8);
       const res = await upsertProofAction({
