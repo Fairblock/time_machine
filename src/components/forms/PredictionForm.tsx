@@ -91,9 +91,9 @@ export default function PredictionForm() {
 
     let cancelled = false;
     (async () => {
-      const last = await fetch("/api/deadline/next").then((r) => r.json());
-      const lastH = Number(last?.nextDeadline?.target_block);
-      if (!lastH) return;
+      const last = await fetch("/api/deadline/last").then((r) => r.json());
+      let lastH = Number(last?.lastDeadline?.target_block);
+      if (!lastH) lastH = 333333;
 
       const q = encodeURIComponent(
         `tx.height>${lastH} AND message.action='/fairyring.pep.MsgSubmitEncryptedTx'`
