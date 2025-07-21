@@ -298,6 +298,7 @@ while (true) {
 
   if (!res.code || res.code === 0) {
     // success!
+    setFormError(null);
     break;
   }
 
@@ -316,6 +317,7 @@ while (true) {
   }
 
   console.warn(`[submitEncryptedTx] out of gas; bumping to ${nextGas}…`);
+  setFormError(`Busy network, automatically retrying with higher gas limit…`);
   gasToUse = nextGas;
   attempt += 1;
   continue;
@@ -363,7 +365,7 @@ if (lastErr) {
           }
         
       else if (/Transaction declined/i.test(msg)) {
-        setFormError("Transaction declined potentially due to network issues. Please try again in a few seconds.");
+        setFormError("Transaction declined. Please try again in a few seconds.");
       }
       else 
         setFormError("Transaction failed. Please try again.");
@@ -478,9 +480,10 @@ Proof → ${proofToken}`
             className="w-full"
             min={0}
           />
+          {!isSending && (
           <Button
             type="submit"
-            disabled={isSending || (address ? !prediction : false)}
+            disabled={address ? !prediction : false}
             onClick={() => setStage("approve")}
             className="w-full flex items-center justify-center space-x-2"
           >
@@ -493,9 +496,9 @@ Proof → ${proofToken}`
               {address
                 ? isSending
                   ? stage === "approve"
-                    ? "1. Approve Transaction"
+                    ? "Approve Transaction"
                     : stage === "sign"
-                    ? "2. Sign Transaction"
+                    ? "Sign Transaction"
                     : stage === "submit"
                     ? "Submitting..."
                     : "Submitting..."
@@ -503,6 +506,7 @@ Proof → ${proofToken}`
                 : "Connect Wallet"}
             </span>
           </Button>
+          )}
         </form>
       )}
 
