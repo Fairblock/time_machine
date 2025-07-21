@@ -121,6 +121,10 @@ export default function LeaderboardPage() {
   const [claimed, setClaimed] = useState(false);
   const [claimErr, setClaimErr] = useState<string | null>(null);
 
+  /* ── paging ─ */
+  const PAGE_SIZE = 20;
+  const [page, setPage] = useState(0);
+
   /* ── fetch leaderboard once ─ */
   useEffect(() => {
     (async () => {
@@ -146,11 +150,17 @@ export default function LeaderboardPage() {
     setPending(null);
     if (!account?.bech32Address) return;
     getPendingProofAction(account.bech32Address)
-    .then((res) => {
-      if (res.ok && res.data) setPending(res.data as PendingProof);
-    })
-    .catch(console.error);
-}, [account?.bech32Address]);
+      .then((res) => {
+        if (res.ok && res.data) setPending(res.data as PendingProof);
+      })
+      .catch(console.error);
+  }, [account?.bech32Address]);
+
+  /* ── reset page when data or slide changes ─ */
+  useEffect(() => {
+    setPage(0);
+  }, [active, overall, tokens, tweets]);
+
   /* ── claim handler ─ */
   const handleClaim = async () => {
     if (!pending || !tweetUrl || !account?.bech32Address) return;
@@ -205,15 +215,12 @@ export default function LeaderboardPage() {
       : tokens[active as keyof typeof tokens].map((r) => ({
           address: r.address,
           cols: [
-            /* Score  ─ number on top, multiplier pill below */
             <span className="flex justify-center leading-snug">
-              {/* score */}
-              <span className=" text-gray-900 tabular-nums">
+              <span className="text-gray-900 tabular-nums">
                 {r.score.toLocaleString()}
               </span>
             </span>,
             <span className="flex justify-center leading-snug">
-              {/* multiplier pill */}
               <span
                 className="
                   mt-[2px] px-2 py-[1px]
@@ -225,7 +232,6 @@ export default function LeaderboardPage() {
                 ×{r.mult.toFixed(2)}
               </span>
             </span>,
-            /* remaining columns unchanged */
             r.guess.toLocaleString(),
             r.delta.toLocaleString(),
           ],
@@ -239,6 +245,10 @@ export default function LeaderboardPage() {
     ETH: ["Points", "Early Boost", "Prediction", "Delta"],
     ARB: ["Points", "Early Boost", "Prediction", "Delta"],
   };
+
+  /* paging derived data */
+  const totalPages = Math.max(1, Math.ceil(rows.length / PAGE_SIZE));
+  const pageRows = rows.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE);
 
   /* other derived data */
   const current =
@@ -407,36 +417,57 @@ export default function LeaderboardPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {rows.slice(0, 50).map((r, i) => (
-                    <tr
-                      key={r.address}
-                      className="odd:bg-white even:bg-gray-50"
-                    >
+                  {pageRows.map((r, i) => (
+                    <tr key={r.address} className="odd:bg-white even:bg-gray-50">
                       <td className="pl-4 md:px-8 py-2 flex items-center justify-center">
-                        {i < medals.length ? (
-                          <img src={medals[i]} className="w-4" />
+                      {(() => {
+                        const globalIdx = page * PAGE_SIZE + i;          // zero‑based rank
+                        return globalIdx < medals.length ? (
+                          <img src={medals[globalIdx]} className="w-4" />
                         ) : (
-                          i + 1
-                        )}
-                      </td>
+                          globalIdx + 1                                  // human‑friendly rank
+                        );
+                      })()}
+                    </td>
                       <td className="px-4 md:px-8 py-2 font-mono break-all truncate text-center">
                         {longShort(r.address)}
                       </td>
-                      {r.cols.map((c, idx) => {
-                        return (
-                          <td
-                            key={idx}
-                            className="px-4 py-2 md:px-8 text-center tabular-nums"
-                          >
-                            {c}
-                          </td>
-                        );
-                      })}
+                      {r.cols.map((c, idx) => (
+                        <td key={idx} className="px-4 py-2 md:px-8 text-center tabular-nums">
+                          {c}
+                        </td>
+                      ))}
                     </tr>
                   ))}
                 </tbody>
               </table>
             </section>
+
+            {/* pager controls */}
+            {totalPages > 1 && (
+              <div className="flex justify-center items-center gap-4 mt-4">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={page === 0}
+                  onClick={() => setPage((p) => Math.max(0, p - 1))}
+                >
+                  Prev
+                </Button>
+                <span className="text-sm">
+                  Page {page + 1} of {totalPages}
+                </span>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={page + 1 >= totalPages}
+                  onClick={() => setPage((p) => Math.min(totalPages - 1, p + 1))}
+                >
+                  Next
+                </Button>
+              </div>
+            )}
+
             {showTooltip && (
               <p className="absolute -top-12 right-0 border-2 border-gray-[#A9BDC3] bg-gray-50 font-normal flex gap-2 items-center px-4 py-2 rounded-xl text-sm bg-red-white min-w-fit whitespace-nowrap z-50">
                 The difference between your guess and the actual price.
