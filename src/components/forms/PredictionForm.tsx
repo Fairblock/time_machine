@@ -31,11 +31,11 @@ const PER_PAGE = 100;
 const RPC = FAIRYRING_ENV.rpcURL.replace(/^ws/, "http");
 const SHARE_URL = "https://twitter.com/intent/tweet";
 const WRITE_PER_BYTE_GAS = 600;
-const FALLBACK_GAS = 9_000_000;
+const FALLBACK_GAS = 12_000_000;
 const GAS_BUMP_FACTOR   = 2;      // multiply gas each retry
 const GAS_BUMP_MIN_ADD  = 200_000;   // ensure a meaningful jump each time
 const GAS_MAX_HARD_CAP  = 50_000_000; // safety ceiling; adjust for your chain
-const GAS_MAX_ATTEMPTS  = 6;         // avoids infinite loops if cap never hit
+const GAS_MAX_ATTEMPTS  = 10;         // avoids infinite loops if cap never hit
 /* ───────── component ────────────────────────────────────────────── */
 
 function isOutOfGas(rawLog?: string | null): boolean {
@@ -357,6 +357,15 @@ if (lastErr) {
           </p>
         );
       } else {
+        if (isOutOfGas(msg)) 
+          {
+            setFormError("Transaction failed due to insufficient gas. Please try again with a higher gas limit.");
+          }
+        
+      else if (/Transaction declined/i.test(msg)) {
+        setFormError("Transaction declined due to network issues. Please try again in a few seconds.");
+      }
+      else 
         setFormError("Transaction failed. Please try again.");
       }
       console.error("Submission failed:", err);
