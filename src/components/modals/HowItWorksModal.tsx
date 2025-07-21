@@ -63,19 +63,26 @@ const HowItWorksModal = ({
             payoffs. No greeks. No frontrunning. No manipulation.
           </p>
           <p className="">
-            Refer to the complete {" "}
-            <a href="https://fairblock.notion.site/Guide-to-Fairblock-Time-Machine-226ee984fb4e80a48c72cfd928b979c2">
-              <span className="font-semibold underline">guide</span>
-            </a>{" "}
-            <br />
-            Need help? Join our 
-            <a
-              className="font-semibold underline"
-              href="https://discord.gg/fairblock"
-            >
-              Discord
-            </a>
-          </p>
+  Refer to the complete{" "}
+  <a
+    href="https://fairblock.notion.site/Guide-to-Fairblock-Time-Machine-226ee984fb4e80a48c72cfd928b979c2"
+    target="_blank"
+    rel="noopener noreferrer"
+  >
+    <span className="font-semibold underline">guide</span>
+  </a>{" "}
+  <br />
+  Need help? Join our{" "}
+  <a
+    href="https://discord.gg/fairblock"
+    className="font-semibold underline"
+    target="_blank"
+    rel="noopener noreferrer"
+  >
+    Discord
+  </a>
+</p>
+
           <Link
             className="bg-black font-medium mx-auto mt-4 px-6 py-2 rounded-xl text-white text-lg w-fit"
             href={"/prediction"}
