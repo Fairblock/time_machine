@@ -471,28 +471,53 @@ Proof → ${pending.token}`
 
             {/* pager controls */}
             {totalPages > 1 && (
-              <div className="flex justify-center items-center gap-4 mt-4">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  disabled={page === 0}
-                  onClick={() => setPage((p) => Math.max(0, p - 1))}
-                >
-                  Prev
-                </Button>
-                <span className="text-sm">
-                  Page {page + 1} of {totalPages}
-                </span>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  disabled={page + 1 >= totalPages}
-                  onClick={() => setPage((p) => Math.min(totalPages - 1, p + 1))}
-                >
-                  Next
-                </Button>
-              </div>
-            )}
+  <div className="flex justify-center items-center gap-4 mt-4">
+   
+    <Button                               
+      variant="outline"                   
+      size="sm"                           
+      disabled={page === 0}               
+      onClick={() => setPage(0)}          
+    >                                     
+      {"<<"}                              
+    </Button>                             
+
+    {/* previous page (unchanged) */}
+    <Button
+      variant="outline"
+      size="sm"
+      disabled={page === 0}
+      onClick={() => setPage((p) => Math.max(0, p - 1))}
+    >
+      Prev
+    </Button>
+
+    {/* page indicator (unchanged) */}
+    <span className="text-sm">
+      Page {page + 1} of {totalPages}
+    </span>
+
+    {/* next page (unchanged) */}
+    <Button
+      variant="outline"
+      size="sm"
+      disabled={page + 1 >= totalPages}
+      onClick={() => setPage((p) => Math.min(totalPages - 1, p + 1))}
+    >
+      Next
+    </Button>
+
+  
+    <Button                               
+      variant="outline"                   
+      size="sm"                           
+      disabled={page + 1 >= totalPages}   
+      onClick={() => setPage(totalPages - 1)} 
+    >                                     
+      {">>"}                              
+    </Button>                             
+  </div>
+)}
 
             {showTooltip && (
               <p className="absolute -top-12 right-0 border-2 border-gray-[#A9BDC3] bg-gray-50 font-normal flex gap-2 items-center px-4 py-2 rounded-xl text-sm bg-red-white min-w-fit whitespace-nowrap z-50">

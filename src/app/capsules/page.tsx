@@ -390,27 +390,51 @@ export default function CapsulesPage() {
           </div>
 
           {/* pager controls */}
-          {!loading && totalPages > 1 && (
-            <div className="flex justify-center items-center gap-4 mt-6">
-              <button
-                onClick={() => setPage((p) => Math.max(0, p - 1))}
-                disabled={page === 0}
-                className="px-4 py-2 border rounded disabled:opacity-40"
-              >
-                Prev
-              </button>
-              <span className="text-sm">
-                Page {page + 1} of {totalPages}
-              </span>
-              <button
-                onClick={() => setPage((p) => Math.min(totalPages - 1, p + 1))}
-                disabled={page + 1 >= totalPages}
-                className="px-4 py-2 border rounded disabled:opacity-40"
-              >
-                Next
-              </button>
-            </div>
-          )}
+        
+{!loading && totalPages > 1 && (
+  <div className="flex justify-center items-center gap-4 mt-6">
+    {/* jump to first page */}
+    <button
+      onClick={() => setPage(0)}
+      disabled={page === 0}
+      className="px-4 py-2 border rounded disabled:opacity-40"
+    >
+      {"<<"}
+    </button>
+
+    {/* previous page */}
+    <button
+      onClick={() => setPage((p) => Math.max(0, p - 1))}
+      disabled={page === 0}
+      className="px-4 py-2 border rounded disabled:opacity-40"
+    >
+      Prev
+    </button>
+
+    <span className="text-sm">
+      Page {page + 1} of {totalPages}
+    </span>
+
+    {/* next page */}
+    <button
+      onClick={() => setPage((p) => Math.min(totalPages - 1, p + 1))}
+      disabled={page + 1 >= totalPages}
+      className="px-4 py-2 border rounded disabled:opacity-40"
+    >
+      Next
+    </button>
+
+    {/* jump to last page */}
+    <button
+      onClick={() => setPage(totalPages - 1)}
+      disabled={page + 1 >= totalPages}
+      className="px-4 py-2 border rounded disabled:opacity-40"
+    >
+      {">>"}
+    </button>
+  </div>
+)}
+
         </main>
       </div>
     </>
