@@ -31,8 +31,8 @@ const PER_PAGE = 100;
 const RPC = FAIRYRING_ENV.rpcURL.replace(/^ws/, "http");
 const SHARE_URL = "https://twitter.com/intent/tweet";
 const WRITE_PER_BYTE_GAS = 900;
-const FALLBACK_GAS = 20_000_000;
-const GAS_BUMP_FACTOR   = 2;      // multiply gas each retry
+const FALLBACK_GAS = 5_000_000;
+const GAS_BUMP_FACTOR   = 1.5;      // multiply gas each retry
 const GAS_BUMP_MIN_ADD  = 2_000_000;   // ensure a meaningful jump each time
 const GAS_MAX_HARD_CAP  = 500_000_000; // safety ceiling; adjust for your chain
 const GAS_MAX_ATTEMPTS  = 10;         // avoids infinite loops if cap never hit
@@ -308,25 +308,41 @@ while (true) {
     break;
   }
 
-  // out of gas — should we bump again?
-  const nextGas = bumpGas(gasToUse);
-  if (nextGas === gasToUse || attempt >= GAS_MAX_ATTEMPTS) {
-    // no further bump possible or attempts exhausted
-    lastErr = new Error(`Out of gas after ${attempt} attempts (last gas=${gasToUse}). RawLog: ${res.rawLog}`);
-    break;
-  }
+        // Look for `gasWanted:` in raw log and jump straight there (+15 %)
+        console.warn(res.rawLog);
+        const mW = /gasWanted:\s*"?(\d+)/i.exec(res.rawLog ?? "");
+        const mU = /gasUsed:\s*"?(\d+)/i.exec(res.rawLog ?? "");
+        const wanted = mW ? Number(mW[1]) : null;
+        const used   = mU ? Number(mU[1]) : null;
+        
+        let nextGas = bumpGas(gasToUse);        // default fallback
+        const base  = Math.max(wanted ?? 0, used ?? 0);
+        if (base && base > gasToUse) {
+          // jump straight to 30 % above the larger of gasUsed / gasWanted
+          nextGas = Math.ceil(base * 1.5);
+        }
 
-  console.warn(`[submitEncryptedTx] out of gas; bumping to ${nextGas}…`);
-  setFormError(`Busy network, automatically retrying with higher gas limit…`);
-  gasToUse = nextGas;
-  attempt += 1;
-  continue;
-}
+        if (nextGas === gasToUse || attempt >= GAS_MAX_ATTEMPTS) {
+          lastErr = new Error(
+            `Out of gas after ${attempt} attempts (last gas=${gasToUse}). RawLog: ${res.rawLog}`
+          );
+          break;
+        }
 
-if (lastErr) {
-  throw lastErr;
-}
+        console.warn(
+          `[submitEncryptedTx] out of gas; bumping to ${nextGas}…`
+        );
+        setFormError(
+          `Busy network, automatically retrying with higher gas limit…`
+        );
+        gasToUse = nextGas;
+        attempt += 1;
+        continue;
+      }
 
+      if (lastErr) {
+        throw lastErr;
+      }
 
       const newToken = nanoid(8);
       const res = await upsertProofAction({

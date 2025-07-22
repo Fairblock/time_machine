@@ -13,7 +13,8 @@
   "dependencies": {
     "@bufbuild/protobuf": "^2.4.0",
     "@cosmjs/cosmwasm-stargate": "^0.33.1",
-    "@cosmjs/stargate": "^0.33.1",
+    "@cosmjs/proto-signing": "^0.34.0",
+    "@cosmjs/stargate": "0.34.0",
     "@keplr-wallet/common": "0.12.252",
     "@keplr-wallet/cosmos": "0.12.252",
     "@keplr-wallet/crypto": "0.12.252",
