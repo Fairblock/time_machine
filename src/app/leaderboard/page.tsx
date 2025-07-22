@@ -11,7 +11,7 @@ import {
   InfoIcon,
   CircleX,
 } from "lucide-react";
-
+import { useActiveToken } from "@/hooks/useActiveToken";
 import Header from "@/components/header/Header";
 import CountdownClock from "@/components/countdown-timer/CountdownClock";
 import { Input } from "@/components/ui/input";
@@ -49,7 +49,7 @@ type PendingProof = { token: string; createdAt: string };
 const TOKENS = ["SOL", "BTC", "ARB", "ETH"] as const;
 const SLIDES = ["Overall", "Tweets", ...TOKENS] as const;
 type SlideKey = (typeof SLIDES)[number];
-
+const SHARE_URL = "https://twitter.com/intent/tweet";
 /* ── helpers ─────────────────────────────────────────────── */
 const longShort = (addr: string) => addr.slice(0, 10) + "…" + addr.slice(-6);
 const medals = ["/1st.png", "/2nd.png", "/3rd.png"] as const;
@@ -120,7 +120,21 @@ export default function LeaderboardPage() {
   const [claiming, setClaiming] = useState(false);
   const [claimed, setClaimed] = useState(false);
   const [claimErr, setClaimErr] = useState<string | null>(null);
+  /* active prediction token (SOL / BTC / …) for tweet copy */
+  const { data: activeToken } = useActiveToken();             // ← NEW
 
+  /* tweet helper — keeps identical copy to PredictionForm */
+  const shareTweetUrl = useMemo(() => {                       // ← NEW
+    if (!pending || !activeToken?.symbol) return "";
+    const txt = encodeURIComponent(
+      `BREAKING: Man time travels to 2026, returns with ${activeToken?.symbol ?? ""} price, and encrypts it so no one can copy him.
+Is this legal? Is this alpha? Who knows.
+Try free time travelling before they patch the glitch: https://timemachine.fairblock.network/
+
+Proof → ${pending.token}`
+    );
+    return `${SHARE_URL}?text=${txt}`;
+  }, [pending, activeToken]);
   /* ── paging ─ */
   const PAGE_SIZE = 20;
   const [page, setPage] = useState(0);
@@ -320,7 +334,7 @@ export default function LeaderboardPage() {
                 <p className="text-xs text-gray-600">
                   Paste the tweet URL below.
                 </p>
-
+              
                 <Input
                   value={tweetUrl}
                   onChange={(e) => setTweetUrl(e.target.value)}
@@ -334,7 +348,19 @@ export default function LeaderboardPage() {
                 >
                   {claiming ? "Verifying…" : "Verify & Collect"}
                 </Button>
-
+  {/* quick‑tweet helper */}
+  <a
+                  href={shareTweetUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="
+                    inline-block text-center bg-black text-white
+                    px-4 py-2 rounded-xl text-sm font-medium
+                    hover:bg-gray-900 transition-colors
+                  "
+                >
+                  Share on&nbsp;X
+                </a>
                 {claimErr && <p className="text-xs text-red-600">{claimErr}</p>}
               </div>
             )}
