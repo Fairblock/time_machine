@@ -214,7 +214,7 @@ export default function Prediction() {
             className="cursor-pointer font-medium underline mb-4"
             onClick={() => setShowModal(true)}
           >
-            How it Works
+            How It Works
           </p>
         </main>
 

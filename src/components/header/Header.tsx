@@ -325,7 +325,7 @@ function Header() {
                 showModal ? "text-gray-900" : "text-gray-600"
               } whitespace-nowrap cursor-pointer`}
             >
-              How it works
+              How It works
             </button>
             <Link
               href="/capsules"
@@ -452,7 +452,7 @@ function Header() {
               }}
               className="text-gray-900 whitespace-nowrap cursor-pointer"
             >
-              How it works
+              How It works
             </button>
             <Link
               href="/capsules"

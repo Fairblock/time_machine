@@ -564,7 +564,7 @@ Proof → ${proofToken}`
             ? "Sign Transaction"
             : stage === "submit"
             ? "Submitting..."
-            : ""}
+            : "Running security checks..."}
         </div>
       )}
       {showModal && <Modal />}
