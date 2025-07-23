@@ -319,7 +319,7 @@ while (true) {
         const base  = Math.max(wanted ?? 0, used ?? 0);
         if (base && base > gasToUse) {
           // jump straight to 30 % above the larger of gasUsed / gasWanted
-          nextGas = Math.ceil(base * 1.3);
+          nextGas = Math.ceil(base * 1.05);
         }
 
         if (nextGas === gasToUse || attempt >= GAS_MAX_ATTEMPTS) {
