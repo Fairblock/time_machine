@@ -22,7 +22,7 @@ import { TxRaw, TxBody } from "cosmjs-types/cosmos/tx/v1beta1/tx";
 import { MsgSubmitEncryptedTx } from "@/types/fairyring/codec/pep/tx";
 import { Buffer } from "buffer";
 import { useActiveToken } from "@/hooks/useActiveToken";
-import { SigningStargateClient, GasPrice, StdFee } from "@cosmjs/stargate";
+import { SigningStargateClient, StdFee } from "@cosmjs/stargate";
 import { upsertProofAction } from "@/app/actions/upsertProof";
 
 /* ───────── constants ────────────────────────────────────────────── */
@@ -31,22 +31,21 @@ const PER_PAGE = 100;
 const RPC = FAIRYRING_ENV.rpcURL.replace(/^ws/, "http");
 const SHARE_URL = "https://twitter.com/intent/tweet";
 const WRITE_PER_BYTE_GAS = 900;
-const FALLBACK_GAS = 15_000_000;
-const GAS_BUMP_FACTOR   = 1.5;      // multiply gas each retry
-const GAS_BUMP_MIN_ADD  = 2_000_000;   // ensure a meaningful jump each time
-const GAS_MAX_HARD_CAP  = 500_000_000; // safety ceiling; adjust for your chain
-const GAS_MAX_ATTEMPTS  = 10;         // avoids infinite loops if cap never hit
+const FALLBACK_GAS = 50_000_000;
+const GAS_BUMP_FACTOR   = 1.5;
+const GAS_BUMP_MIN_ADD  = 2_000_000;
+const GAS_MAX_HARD_CAP  = 500_000_000;
+const GAS_MAX_ATTEMPTS  = 10;
+const LOW_GAS_PRICE_UFAIRY = 0.01;
+const makeLowFee = (gas: number): StdFee => {
+  const amt = Math.ceil(gas * LOW_GAS_PRICE_UFAIRY);
+  return {
+    amount: [{ denom: "ufairy", amount: String(amt) }],
+    gas: String(gas),
+  };
+};
 /* ───────── component ────────────────────────────────────────────── */
-const LOW_GAS_PRICE_UFAIRY = 0.01;   
-const makeLowFee = (gas: number): StdFee => ({
-  amount: [
-    {
-      denom: "ufairy",
-      amount: String(gas * LOW_GAS_PRICE_UFAIRY),   // e.g. 15 000 000 × 10 = 150 000
-    },
-  ],
-  gas: String(gas),
-});
+
 function isOutOfGas(rawLog?: string | null): boolean {
   if (!rawLog) return false;
   // cover common SDK strings
@@ -168,10 +167,13 @@ export default function PredictionForm() {
       return;
     }
     if (typeof window !== "undefined" && (window as any).keplr) {
-      (window as any).keplr.defaultOptions = {
+      const k = (window as any).keplr;
+      k.defaultOptions = {
+        ...(k.defaultOptions ?? {}),
         sign: {
-          preferNoSetFee: true,   //  ← key line
-          preferNoSetMemo: true,  //  optional; keeps your custom memo too
+          ...(k.defaultOptions?.sign ?? {}),
+          preferNoSetFee: true,
+          preferNoSetMemo: true,
         },
       };
     }
@@ -231,20 +233,42 @@ export default function PredictionForm() {
         const match = accounts.find((a: any) => a.address === address);
         if (!match) throw new Error("active WC Keplr account mismatch");
         const fee: StdFee = makeLowFee(estimatedGas);
-        const stargate = await SigningStargateClient.connectWithSigner(
-          FAIRYRING_ENV.rpcURL,
-          offlineSigner,
-          { gasPrice: GasPrice.fromString("0.025ufairy") }
+
+        const seqClient = await SigningStargateClient.connect(FAIRYRING_ENV.rpcURL);
+        const { accountNumber } = await seqClient.getSequence(address);
+
+        const signer: any = offlineSignersData.offlineSignerAuto;
+        const origSignDirect = signer.signDirect?.bind(signer);
+        signer.signDirect = (cid: string, addr: string, doc: any, opts?: any) =>
+          origSignDirect(cid, addr, doc, { ...(opts ?? {}), preferNoSetFee: true, preferNoSetMemo: true });
+
+        const txBodyBytes = TxBody.encode({ messages: [sendMsg], memo }).finish();
+        const gasLimit = BigInt(fee.gas);
+        const authInfoBytes = SigningStargateClient.makeAuthInfoBytes(
+          [{ pubkey: undefined as any, sequence: nonce }],
+          fee.amount,
+          gasLimit
         );
-        const { accountNumber } = await stargate.getSequence(address);
-        const signedTx = await stargate.sign(
+        const signDoc = {
+          bodyBytes: txBodyBytes,
+          authInfoBytes,
+          chainId: FAIRYRING_ENV.chainID,
+          accountNumber: BigInt(accountNumber),
+        };
+
+        const { signed: s, signature } = await signer.signDirect(
+          FAIRYRING_ENV.chainID,
           address,
-          [sendMsg],
-          fee,
-          memo,
-          { accountNumber, sequence: nonce, chainId: FAIRYRING_ENV.chainID }
+          signDoc
         );
-        signed = Buffer.from(TxRaw.encode(signedTx).finish());
+
+        signed = Buffer.from(
+          TxRaw.encode({
+            bodyBytes: s.bodyBytes,
+            authInfoBytes: s.authInfoBytes,
+            signatures: [Buffer.from(signature.signature, "base64")],
+          }).finish()
+        );
       } else {
         signed = await signOfflineWithCustomNonce(
           address,
