@@ -37,7 +37,16 @@ const GAS_BUMP_MIN_ADD  = 2_000_000;   // ensure a meaningful jump each time
 const GAS_MAX_HARD_CAP  = 500_000_000; // safety ceiling; adjust for your chain
 const GAS_MAX_ATTEMPTS  = 10;         // avoids infinite loops if cap never hit
 /* ───────── component ────────────────────────────────────────────── */
-
+const LOW_GAS_PRICE_UFAIRY = 0.01;   
+const makeLowFee = (gas: number): StdFee => ({
+  amount: [
+    {
+      denom: "ufairy",
+      amount: String(gas * LOW_GAS_PRICE_UFAIRY),   // e.g. 15 000 000 × 10 = 150 000
+    },
+  ],
+  gas: String(gas),
+});
 function isOutOfGas(rawLog?: string | null): boolean {
   if (!rawLog) return false;
   // cover common SDK strings
@@ -158,6 +167,14 @@ export default function PredictionForm() {
       window.dispatchEvent(new Event("open-wallet-modal"));
       return;
     }
+    if (typeof window !== "undefined" && (window as any).keplr) {
+      (window as any).keplr.defaultOptions = {
+        sign: {
+          preferNoSetFee: true,   //  ← key line
+          preferNoSetMemo: true,  //  optional; keeps your custom memo too
+        },
+      };
+    }
     if (targetHeight == null) return;
 
     setIsSending(true);
@@ -213,10 +230,7 @@ export default function PredictionForm() {
         const accounts = await offlineSigner.getAccounts();
         const match = accounts.find((a: any) => a.address === address);
         if (!match) throw new Error("active WC Keplr account mismatch");
-        const fee: StdFee = {
-          amount: [{ denom: "ufairy", amount: "10" }],
-          gas: String(estimatedGas),
-        };
+        const fee: StdFee = makeLowFee(estimatedGas);
         const stargate = await SigningStargateClient.connectWithSigner(
           FAIRYRING_ENV.rpcURL,
           offlineSigner,
@@ -237,10 +251,7 @@ export default function PredictionForm() {
           FAIRYRING_ENV.rpcURL,
           FAIRYRING_ENV.chainID,
           [sendMsg],
-          {
-            amount: [{ denom: "ufairy", amount: "10" }],
-            gas: String(estimatedGas),
-          },
+          makeLowFee(estimatedGas),
           memo,
           nonce,
           walletType!
@@ -267,10 +278,7 @@ export default function PredictionForm() {
           data: encryptedHex,
           targetBlockHeight: targetHeight,
         },
-        fee: {
-          amount: [{ denom: "ufairy", amount: "10" }],
-          gas: String(submitGas),
-        },
+        fee: makeLowFee(submitGas),
         memo: MEMO,
       });
       setStage("submit");
@@ -289,10 +297,7 @@ while (true) {
           data: encryptedHex,
           targetBlockHeight: targetHeight,
         },
-        fee: {
-          amount: [{ denom: "ufairy", amount: "10" }],
-          gas: String(gasToUse),
-        },
+        fee: makeLowFee(gasToUse),
         memo: MEMO,
       });
 
