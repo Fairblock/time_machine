@@ -214,7 +214,7 @@ export default function PredictionForm() {
         const match = accounts.find((a: any) => a.address === address);
         if (!match) throw new Error("active WC Keplr account mismatch");
         const fee: StdFee = {
-          amount: [{ denom: "ufairy", amount: "0" }],
+          amount: [{ denom: "ufairy", amount: "10" }],
           gas: String(estimatedGas),
         };
         const stargate = await SigningStargateClient.connectWithSigner(
@@ -238,7 +238,7 @@ export default function PredictionForm() {
           FAIRYRING_ENV.chainID,
           [sendMsg],
           {
-            amount: [{ denom: "ufairy", amount: "0" }],
+            amount: [{ denom: "ufairy", amount: "10" }],
             gas: String(estimatedGas),
           },
           memo,
@@ -268,7 +268,7 @@ export default function PredictionForm() {
           targetBlockHeight: targetHeight,
         },
         fee: {
-          amount: [{ denom: "ufairy", amount: "0" }],
+          amount: [{ denom: "ufairy", amount: "10" }],
           gas: String(submitGas),
         },
         memo: MEMO,
@@ -290,7 +290,7 @@ while (true) {
           targetBlockHeight: targetHeight,
         },
         fee: {
-          amount: [{ denom: "ufairy", amount: "0" }],
+          amount: [{ denom: "ufairy", amount: "10" }],
           gas: String(gasToUse),
         },
         memo: MEMO,
