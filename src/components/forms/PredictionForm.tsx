@@ -7,6 +7,8 @@ import { nanoid } from "nanoid";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { makeAuthInfoBytes } from "@cosmjs/proto-signing";
+import { PubKey } from "cosmjs-types/cosmos/crypto/secp256k1/keys";
 
 import { FAIRYRING_ENV, PUBLIC_ENVIRONMENT } from "@/constant/env";
 import { useClient } from "@/hooks/fairyring/useClient";
@@ -235,19 +237,36 @@ export default function PredictionForm() {
         const fee: StdFee = makeLowFee(estimatedGas);
 
         const seqClient = await SigningStargateClient.connect(FAIRYRING_ENV.rpcURL);
-        const { accountNumber } = await seqClient.getSequence(address);
-
+        const { accountNumber, sequence: accountSequence } = await seqClient.getSequence(address);
+        
         const signer: any = offlineSignersData.offlineSignerAuto;
         const origSignDirect = signer.signDirect?.bind(signer);
         signer.signDirect = (cid: string, addr: string, doc: any, opts?: any) =>
           origSignDirect(cid, addr, doc, { ...(opts ?? {}), preferNoSetFee: true, preferNoSetMemo: true });
-
-        const txBodyBytes = TxBody.encode({ messages: [sendMsg], memo }).finish();
-        const gasLimit = BigInt(fee.gas);
-        const authInfoBytes = SigningStargateClient.makeAuthInfoBytes(
-          [{ pubkey: undefined as any, sequence: nonce }],
+        
+        // build Any[] messages
+        const registry = (client as any).registry;
+        const anyMessages = [sendMsg].map((m: any) => registry.encodeAsAny(m));
+        
+        // tx body
+        const txBodyBytes = TxBody.encode(
+          TxBody.fromPartial({ messages: anyMessages, memo })
+        ).finish();
+        
+        // pubkey (Any)
+        const pubkeyAny = {
+          typeUrl: "/cosmos.crypto.secp256k1.PubKey",
+          value: PubKey.encode({ key: match.pubkey }).finish(),
+        };
+        
+        // auth info
+        const authInfoBytes = makeAuthInfoBytes(
+          [{ pubkey: pubkeyAny, sequence: accountSequence }],
           fee.amount,
-          gasLimit
+          Number(fee.gas),
+          undefined, // feeGranter
+          undefined  // feePayer
+          // (optionally add SignMode as 6th arg)
         );
         const signDoc = {
           bodyBytes: txBodyBytes,
@@ -286,7 +305,7 @@ export default function PredictionForm() {
       if (targetHeight > Number((pubkey as any).active_pubkey?.expiry)) {
         key = (pubkey as any).queued_pubkey?.public_key;
       }
-
+      console.log(pubkey, "active key:", key, "target height:", targetHeight, signed);
       const encryptedHex = await encryptSignedTx(key, targetHeight, signed);
 
       const bytesToWrite = encryptedHex.length / 2;
