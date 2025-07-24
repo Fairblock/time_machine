@@ -7,8 +7,6 @@ import { nanoid } from "nanoid";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { makeAuthInfoBytes } from "@cosmjs/proto-signing";
-import { PubKey } from "cosmjs-types/cosmos/crypto/secp256k1/keys";
 
 import { FAIRYRING_ENV, PUBLIC_ENVIRONMENT } from "@/constant/env";
 import { useClient } from "@/hooks/fairyring/useClient";
@@ -26,7 +24,6 @@ import { Buffer } from "buffer";
 import { useActiveToken } from "@/hooks/useActiveToken";
 import { SigningStargateClient, StdFee } from "@cosmjs/stargate";
 import { upsertProofAction } from "@/app/actions/upsertProof";
-import { MsgSend } from "cosmjs-types/cosmos/bank/v1beta1/tx";
 
 /* ───────── constants ────────────────────────────────────────────── */
 const MEMO = "price-predict";
@@ -231,69 +228,25 @@ export default function PredictionForm() {
       const isWcKeplr = walletType === WalletType.WC_KEPLR_MOBILE;
       let signed: Buffer;
       if (isWcKeplr && offlineSignersData?.offlineSignerAuto) {
-        const offlineSigner = offlineSignersData.offlineSignerAuto as any;
-        const accounts = await offlineSigner.getAccounts();
-        const match = accounts.find((a: any) => a.address === address);
-        if (!match) throw new Error("active WC Keplr account mismatch");
-        const fee: StdFee = makeLowFee(estimatedGas);
+     // Ensure WC session is enabled
+      await (window as any).keplr.enable(FAIRYRING_ENV.chainID);
 
-        const seqClient = await SigningStargateClient.connect(FAIRYRING_ENV.rpcURL);
-        const { accountNumber, sequence: accountSequence } = await seqClient.getSequence(address);
-        
-        const signer: any = offlineSignersData.offlineSignerAuto;
-        const origSignDirect = signer.signDirect?.bind(signer);
-        signer.signDirect = (cid: string, addr: string, doc: any, opts?: any) =>
-          origSignDirect(cid, addr, doc, { ...(opts ?? {}), preferNoSetFee: true, preferNoSetMemo: true });
-        
-        // build Any[] messages
-        const registry = (client as any).registry;
-        const anyMessages = [
-          {
-            typeUrl: sendMsg.typeUrl,
-            value: MsgSend.encode(sendMsg.value).finish(),
-          },
-        ];
-        
-        // tx body
-        const txBodyBytes = TxBody.encode(
-          TxBody.fromPartial({ messages: anyMessages, memo })
-        ).finish();
-        
-        // pubkey (Any)
-        const pubkeyAny = {
-          typeUrl: "/cosmos.crypto.secp256k1.PubKey",
-          value: PubKey.encode({ key: match.pubkey }).finish(),
-        };
-        
-        // auth info
-        const authInfoBytes = makeAuthInfoBytes(
-          [{ pubkey: pubkeyAny, sequence: accountSequence }],
-          fee.amount,
-          Number(fee.gas),
-          undefined, // feeGranter
-          undefined  // feePayer
-          // (optionally add SignMode as 6th arg)
-        );
-        const signDoc = {
-          bodyBytes: txBodyBytes,
-          authInfoBytes,
-          chainId: FAIRYRING_ENV.chainID,
-          accountNumber: BigInt(accountNumber),
-        };
+      const offlineSigner = offlineSignersData.offlineSignerAuto;
+      // Wait until signer is really there
+      if (!offlineSigner) throw new Error("WC Keplr signer not ready");
 
-        const { signed: s, signature } = await signer.signDirect(
-          FAIRYRING_ENV.chainID,
-          address,
-          signDoc
-        );
+      const fee: StdFee = makeLowFee(estimatedGas);
 
-        signed = Buffer.from(
-          TxRaw.encode({
-            bodyBytes: s.bodyBytes,
-            authInfoBytes: s.authInfoBytes,
-            signatures: [Buffer.from(signature.signature, "base64")],
-          }).finish()
-        );
+      // Let CosmJS build body/authInfo/signDoc for us
+      const sc = await SigningStargateClient.connectWithSigner(
+        FAIRYRING_ENV.rpcURL,
+        offlineSigner
+      );
+
+      // This returns a TxRaw
+      const signedTxRaw = await sc.sign(address, [sendMsg], fee, memo);
+
+      signed = Buffer.from(TxRaw.encode(signedTxRaw).finish());
       } else {
         signed = await signOfflineWithCustomNonce(
           address,
