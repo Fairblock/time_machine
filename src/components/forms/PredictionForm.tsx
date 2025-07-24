@@ -26,6 +26,7 @@ import { Buffer } from "buffer";
 import { useActiveToken } from "@/hooks/useActiveToken";
 import { SigningStargateClient, StdFee } from "@cosmjs/stargate";
 import { upsertProofAction } from "@/app/actions/upsertProof";
+import { MsgSend } from "cosmjs-types/cosmos/bank/v1beta1/tx";
 
 /* ───────── constants ────────────────────────────────────────────── */
 const MEMO = "price-predict";
@@ -246,7 +247,12 @@ export default function PredictionForm() {
         
         // build Any[] messages
         const registry = (client as any).registry;
-        const anyMessages = [sendMsg].map((m: any) => registry.encodeAsAny(m));
+        const anyMessages = [
+          {
+            typeUrl: sendMsg.typeUrl,
+            value: MsgSend.encode(sendMsg.value).finish(),
+          },
+        ];
         
         // tx body
         const txBodyBytes = TxBody.encode(
@@ -305,7 +311,7 @@ export default function PredictionForm() {
       if (targetHeight > Number((pubkey as any).active_pubkey?.expiry)) {
         key = (pubkey as any).queued_pubkey?.public_key;
       }
-      console.log(pubkey, "active key:", key, "target height:", targetHeight, signed);
+      console.log("key:", key, "target height:", targetHeight, signed);
       const encryptedHex = await encryptSignedTx(key, targetHeight, signed);
 
       const bytesToWrite = encryptedHex.length / 2;
