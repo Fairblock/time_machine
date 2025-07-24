@@ -8,7 +8,8 @@
     "start": "next start",
     "lint": "next lint",
     "test": "vitest",
-    "check-height": "node --loader ts-node/esm src/tools/check-deadline-height.ts"
+    "check-height": "node --loader ts-node/esm src/tools/check-deadline-height.ts",
+    "score": "node --loader ts-node/esm src/tools/score.ts"
   },
   "dependencies": {
     "@bufbuild/protobuf": "^2.4.0",

@@ -210,7 +210,7 @@ async function fetchEncryptedTimes(targetHeight: number): Promise<Map<string,Dat
   );
 
  
-  for (let page = 1; page <= 50; page++) {
+  for (let page = 1; page <= 100; page++) {
     const url =
     `${RPC_URL}/tx_search` +
     `?query=%22${q}%22` +           // "%22" … "%22" == JSON double-quotes
@@ -269,7 +269,6 @@ async function updateScoresForLastDeadline() {
     .limit(1).single();
   if (!last) return;
 
-  // await purgeParticipantsIfEpochStart(last.symbol);
 
   const targetHeight = Number(last.target_block);
   if (!targetHeight) return;
@@ -335,10 +334,7 @@ async function updateScoresForLastDeadline() {
         delta : dlt,
         mult  : mult,                          // store it
       });
-    } else if (prev && submitted>prev.latest!) {
-      prev.latest = submitted; 
-      prev.mult   = mult;                       // update “latest”
-    }
+    } 
   }
   console.log('[scoring] bucket size', bucket.size);
 
@@ -353,7 +349,11 @@ async function updateScoresForLastDeadline() {
     [`${prefix}_score`] : v.worst,
     [`${prefix}_mult`]  : v.mult,            
   }));
-
+  const approxSize = Buffer.byteLength(JSON.stringify(rows));
+  if (approxSize > 800_000) {
+    console.log("ERROR", "rows too large", { size: approxSize, limit: 800_000 });
+    throw new Error("rows too large for upsert");
+  }
   const { data, error, status } =
   await supabase
     .from('participants')

@@ -1,9 +1,22 @@
+import { FAIRYRING_ENV } from '@/constant/env';
 import { getCurrentBlockHeight } from '@/services/fairyring/block';
 import { IPrice } from '@/types/global';
 import axios from 'axios';
 import { clsx, type ClassValue } from 'clsx';
 import { differenceInSeconds } from 'date-fns';
 import { twMerge } from 'tailwind-merge';
+
+// ─────────── CoinGecko auth config ──────────────────────────
+const COINGECKO_KEY = FAIRYRING_ENV.coinGeckoKey!;      // set in .env
+const IS_PRO        = FAIRYRING_ENV.coinGeckoPlan === 'pro';
+
+const BASE_URL = IS_PRO
+  ? 'https://pro-api.coingecko.com/api/v3'             // Pro root URL :contentReference[oaicite:0]{index=0}
+  : 'https://api.coingecko.com/api/v3';                // Demo/Public root URL :contentReference[oaicite:1]{index=1}
+
+const AUTH_HEADER = IS_PRO
+  ? { 'x-cg-pro-api-key': COINGECKO_KEY }              // Pro header name :contentReference[oaicite:2]{index=2}
+  : { 'x-cg-demo-api-key': COINGECKO_KEY };            // Demo header name :contentReference[oaicite:3]{index=3}
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
@@ -53,12 +66,14 @@ export async function getPrices(
     try {
       const from  = Math.floor(fromMs / 1000);
       const to    = Math.floor(toMs   / 1000);
-
-      const { data } = await axios.get<
-        { prices: [number, number][] }
-      >(`https://api.coingecko.com/api/v3/coins/${asset}/market_chart/range`, {
-        params: { vs_currency: 'usd', from, to },
-      });
+      console.log(`Fetching prices for ${asset} from ${new Date(fromMs).toISOString()} to ${new Date(toMs).toISOString()}`);
+      const { data } = await axios.get<{ prices: [number, number][] }>(
+        `${BASE_URL}/coins/${asset}/market_chart/range`,
+        {
+          params: { vs_currency: 'usd', from, to },
+          headers: AUTH_HEADER,        // ← new
+        }
+      );
 
       const mapped: PricePoint[] = data.prices.map(([ts, price]) => ({
         timestamp: ts,

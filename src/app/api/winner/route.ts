@@ -63,12 +63,17 @@ async function collectTokenInfo(boundaryISO: string | null) {
 
     const dObj   = new Date(row.deadline_date + 'Z');
     const price  = await fetchPriceAt(dObj, row.coingecko_id);
-    const cgDate = ddmmyyyy(dObj);
+    const targetMs = dObj.getTime();              
+    const fromSec  = Math.floor((targetMs - 10 * 60_000) / 1000);  // −10 min
+    const toSec    = Math.floor((targetMs + 10 * 60_000) / 1000);  // +10 min
+    
 
+    const url = `https://api.coingecko.com/api/v3/coins/${row.coingecko_id}` +
+                `/market_chart/range?vs_currency=usd&from=${fromSec}&to=${toSec}`;
     info[sym] = {
       price,
       date : dObj.toISOString(),
-      url  : `https://api.coingecko.com/api/v3/coins/${row.coingecko_id}/history?date=${cgDate}`,
+      url  : url,
       block: row.target_block ? Number(row.target_block) : null
     };
 
