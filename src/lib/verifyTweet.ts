@@ -68,32 +68,35 @@ export async function verifyTweetUnchecked(
     return { ok: false, reason: "token not in tweet" };
 
   /* 3️⃣ credit 200 pts & upsert participant ---------------------------- */
-  const { data: participant } = await supabase
-    .from("participants")
-    .select("total_score,tweet_points")
-    .eq("address", wallet)
-    .maybeSingle();
+  // const { data: participant } = await supabase
+  //   .from("participants")
+  //   .select("total_score,tweet_points")
+  //   .eq("address", wallet)
+  //   .maybeSingle();
 
-  if (participant) {
-    await supabase
-      .from("participants")
-      .update({
-        total_score: (participant.total_score ?? 0) + 200,
-        tweet_points: (participant.tweet_points ?? 0) + 200,
-        last_tweet_at: new Date().toISOString(),
-      })
-      .eq("address", wallet);
-  } else {
-    await supabase.from("participants").insert({
-      address: wallet,
-      total_score: 200,
-      tweet_points: 200,
-      last_tweet_at: new Date().toISOString(),
-    });
-  }
+  // if (participant) {
+  //   await supabase
+  //     .from("participants")
+  //     .update({
+  //       total_score: (participant.total_score ?? 0) + 200,
+  //       tweet_points: (participant.tweet_points ?? 0) + 200,
+  //       last_tweet_at: new Date().toISOString(),
+  //     })
+  //     .eq("address", wallet);
+  // } else {
+  //   await supabase.from("participants").insert({
+  //     address: wallet,
+  //     total_score: 200,
+  //     tweet_points: 200,
+  //     last_tweet_at: new Date().toISOString(),
+  //   });
+  // }
 
   /* 4️⃣ mark proof used ----------------------------------------------- */
-  await supabase.from("proofs").delete().eq("id", proof.id);
+  await supabase
+  .from("proofs")
+  .update({ used: true })
+  .eq("id", proof.id);
 
   return { ok: true };
 }
