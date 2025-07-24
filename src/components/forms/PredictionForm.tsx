@@ -182,7 +182,18 @@ export default function PredictionForm() {
     setIsSending(true);
     
     setFormError(null);
-
+    async function waitForWcSigner(timeoutMs = 10000): Promise<any> {
+      const start = Date.now();
+      while (true) {
+        const signer = offlineSignersData?.offlineSignerAuto;
+        if (signer) return signer;
+        if (Date.now() - start > timeoutMs) {
+          throw new Error("WC Keplr signer not ready");
+        }
+        await new Promise((r) => setTimeout(r, 300));
+      }
+    }
+    
     try {
       const {
         data: { pep_nonce },
@@ -227,26 +238,17 @@ export default function PredictionForm() {
       setStage("approve");
       const isWcKeplr = walletType === WalletType.WC_KEPLR_MOBILE;
       let signed: Buffer;
-      if (isWcKeplr && offlineSignersData?.offlineSignerAuto) {
-     // Ensure WC session is enabled
-      await (window as any).keplr.enable(FAIRYRING_ENV.chainID);
-
-      const offlineSigner = offlineSignersData.offlineSignerAuto;
-      // Wait until signer is really there
-      if (!offlineSigner) throw new Error("WC Keplr signer not ready");
-
+      if (isWcKeplr) {
+        const offlineSigner = await waitForWcSigner();   // waits up to ~10s
       const fee: StdFee = makeLowFee(estimatedGas);
 
-      // Let CosmJS build body/authInfo/signDoc for us
       const sc = await SigningStargateClient.connectWithSigner(
         FAIRYRING_ENV.rpcURL,
         offlineSigner
       );
 
-      // This returns a TxRaw
       const signedTxRaw = await sc.sign(address, [sendMsg], fee, memo);
-
-      signed = Buffer.from(TxRaw.encode(signedTxRaw).finish());
+     signed = Buffer.from(TxRaw.encode(signedTxRaw).finish());
       } else {
         signed = await signOfflineWithCustomNonce(
           address,
