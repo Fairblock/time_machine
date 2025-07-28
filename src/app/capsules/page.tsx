@@ -214,16 +214,16 @@ export default function CapsulesPage() {
         const nextToken =
           next?.nextDeadline?.symbol ?? next?.nextDeadline?.token ?? "—";
 
-        const lastH = Number(last?.lastDeadline?.target_block);
+        let lastH = Number(last?.lastDeadline?.target_block);
         const lastToken =
           last?.lastDeadline?.symbol ?? last?.lastDeadline?.token ?? "—";
 
         if (!nextH) throw new Error("deadline height missing");
-
+        if (!lastH) lastH = 0;
         /* 1️⃣ encrypted capsules */
         const encryptedCaps: Capsule[] = [];
         const now = await getCurrentBlockHeight();
-        const minHeight = Math.max(0, now - ONE_WEEK);
+        const minHeight = Math.max(lastH, now - ONE_WEEK);
         const q = encodeURIComponent(
           `tx.height>${minHeight} AND message.action='/fairyring.pep.MsgSubmitEncryptedTx'`
         );
