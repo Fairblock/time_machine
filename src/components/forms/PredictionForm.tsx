@@ -24,6 +24,7 @@ import { Buffer } from "buffer";
 import { useActiveToken } from "@/hooks/useActiveToken";
 import { SigningStargateClient, StdFee } from "@cosmjs/stargate";
 import { upsertProofAction } from "@/app/actions/upsertProof";
+import { hasProof } from "@/app/actions/hasProof";
 
 /* ───────── constants ────────────────────────────────────────────── */
 const MEMO = "price-predict";
@@ -105,60 +106,34 @@ export default function PredictionForm() {
   }, []);
 
   /* ─ did I already submit for this deadline? ─ */
-  useEffect(() => {
-    setSubmitted(false);
-    if (!address || targetHeight == null) {
-      setIsChecking(false);
-      return;
+ /* ─ does this wallet already have a proof row? ─ */
+useEffect(() => {
+  setSubmitted(false);
+
+  if (!address) {           // no wallet connected
+    setIsChecking(false);
+    return;
+  }
+
+  setIsChecking(true);
+  let cancelled = false;
+
+  (async () => {
+    try {
+      const exists = await hasProof(address);   // ← the server action above
+      if (!cancelled) setSubmitted(exists);
+    } catch (err) {
+      console.error("proof lookup failed:", err);
+      // conservative: allow user to try if lookup fails
+      if (!cancelled) setSubmitted(false);
+    } finally {
+      if (!cancelled) setIsChecking(false);
     }
-    setIsChecking(true);
+  })();
 
-    let cancelled = false;
-    (async () => {
-      const last = await fetch("/api/deadline/last").then((r) => r.json());
-      let lastH = Number(last?.lastDeadline?.target_block);
-      if (!lastH) lastH = 333333;
+  return () => { cancelled = true; };
+}, [address]);               // ✅ no targetHeight dependency any more
 
-      const q = encodeURIComponent(
-        `tx.height>${lastH} AND message.action='/fairyring.pep.MsgSubmitEncryptedTx'`
-      );
-
-      let page = 1;
-      while (!cancelled) {
-        const res = await fetch(
-          `${RPC}/tx_search?query=%22${q}%22&order_by=%22desc%22&per_page=${PER_PAGE}&page=${page}`
-        ).then((r) => r.json());
-
-        for (const row of res.result?.txs ?? []) {
-          const raw = TxRaw.decode(Buffer.from(row.tx, "base64"));
-            const body = TxBody.decode(raw.bodyBytes);
-
-          const anyMsg = body.messages.find(
-            (m) => m.typeUrl === "/fairyring.pep.MsgSubmitEncryptedTx"
-          );
-          if (!anyMsg) continue;
-
-          const msg = MsgSubmitEncryptedTx.decode(new Uint8Array(anyMsg.value));
-                  const txTarget = Number(
-                      // `Long` → number (safe while heights < 2^53)
-                      // fallback to `parseInt` covers string builds
-                      (msg as any).targetBlockHeight ?? 0
-                    );
-            
-            if (txTarget === targetHeight && msg.creator === address) {
-            setSubmitted(true);
-            return;
-          }
-        }
-        if ((res.result?.txs ?? []).length < PER_PAGE) break;
-        page += 1;
-      }
-    })().finally(() => !cancelled && setIsChecking(false));
-
-    return () => {
-      cancelled = true;
-    };
-  }, [address, targetHeight]);
 
   /* ─ submit encrypted tx ─ */
   async function submitOnChain(pred: number) {
