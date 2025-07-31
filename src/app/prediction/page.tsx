@@ -171,9 +171,9 @@ export default function Prediction() {
           ].join(" ")}
         >
           {/* next‑token ribbon */}
-          <h3 className="font-medium border border-black mt-4 px-5 py-2 rounded-2xl text-center text-sm uppercase">
+          {/* <h3 className="font-medium border border-black mt-4 px-5 py-2 rounded-2xl text-center text-sm uppercase">
             {nextHeading}
-          </h3>
+          </h3> */}
 
           {/* heading */}
           <h1 className="relative text-2xl sm:text-3xl md:text-4xl font-extrabold uppercase gradient-text text-center z-20">
