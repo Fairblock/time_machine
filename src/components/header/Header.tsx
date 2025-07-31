@@ -562,6 +562,27 @@ function Header() {
                 Connect
               </Button>
             </div>
+            {/* Ledger (coming soon) */}
+<div className="flex items-center justify-between opacity-60" aria-disabled="true">
+  <div className="flex items-center space-x-3">
+    <Image
+      src="/Ledger.png"
+      alt="Ledger icon"
+      width={32}
+      height={32}
+      className="grayscale"
+    />
+    <span className="text-lg font-medium text-gray-500">Ledger</span>
+  </div>
+  <Button
+    variant="outline"
+    disabled
+    title="Ledger is not supported yet"
+    className="px-6 py-1 cursor-not-allowed"
+  >
+    Coming soon
+  </Button>
+</div>
           </div>
 
           {/* ---- MOBILE VIEW ---- */}
@@ -594,6 +615,25 @@ function Header() {
               </span>
               <ChevronRight size={16} />
             </button>
+            {/* Ledger (coming soon) */}
+<button
+  disabled
+  title="Ledger is not supported yet"
+  className="w-full flex items-center justify-between border rounded-lg px-4 py-3 opacity-60 cursor-not-allowed"
+>
+  <span className="flex items-center space-x-3">
+    <Image
+      src="/Ledger.png"
+      alt="Ledger Wallet"
+      width={28}
+      height={28}
+      className="grayscale"
+    />
+    <span className="font-medium text-gray-500">Ledger (coming soon)</span>
+  </span>
+  <ChevronRight size={16} />
+</button>
+
           </div>
         </div>
       )}
