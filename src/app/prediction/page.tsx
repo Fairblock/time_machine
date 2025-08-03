@@ -68,7 +68,7 @@ function fmtTimeUntil(future: Date, now: Date = new Date()) {
 }
 
 export default function Prediction() {
-  const [showCampaignBanner, setShowCampaignBanner] = useState(false);
+  const [showCampaignBanner, setShowCampaignBanner] = useState(true);
   const { data: token, isLoading } = useActiveToken();
 
   /* 1️⃣ loading state */
@@ -142,8 +142,7 @@ export default function Prediction() {
         {showCampaignBanner && (
           <div className="fixed top-24 right-4 sm:right-8 lg:right-16 z-30 max-w-xs w-[90%] sm:w-80 rounded-xl shadow-lg ring-1 ring-gray-300/60 bg-white/85 backdrop-blur px-5 py-3 text-xs sm:text-sm text-gray-800 flex items-center">
             <span className="leading-snug">
-              The campaign has not yet started; all points will be reset before
-              official launch.
+              The official campaign has ended.
             </span>
             <button
               onClick={() => setShowCampaignBanner(false)}
@@ -226,9 +225,10 @@ export default function Prediction() {
                 Prediction window is closed.
               </p>
               <p className="text-sm text-gray-700">
-                Token prediction opens Monday&nbsp;
+                {/* Token prediction opens Monday&nbsp;
                 <strong>11:00 UTC</strong>. <br /> Enjoy your Sunday and touch
-                some grass.
+                some grass. */}
+                The official campaign has ended. <br />
               </p>
             </div>
           </div>
